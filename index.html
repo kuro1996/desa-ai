@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="DesaAI — offline-first AI clerk for Indonesian village offices. Drafts official letters, summarizes documents, and answers procedure questions with on-device Gemini Nano 4 + cloud Gemini fallback (Firebase AI Logic hybrid inference)."
+    />
+    <title>DesaAI — AI Clerk for Village Offices</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">🏛️</span>
+        <div>
+          <h1>DesaAI</h1>
+          <p class="tagline" data-i18n="tagline">
+            AI clerk for village &amp; subdistrict offices
+          </p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <span id="device-chip" class="chip chip-muted" title="On-device model status"
+          >On-device: checking…</span
+        >
+        <span id="firebase-chip" class="chip chip-muted" title="Firebase status"
+          >Firebase: checking…</span
+        >
+        <button id="lang-toggle" class="btn btn-ghost" type="button">🇮🇩 Bahasa Indonesia</button>
+      </div>
+    </header>
+
+    <div id="config-banner" class="banner banner-warn" hidden>
+      <strong data-i18n="demoTitle">Demo mode — Firebase not configured yet.</strong>
+      <span data-i18n="demoText">
+        AI features need a Firebase project (free tier). Follow the setup steps in
+        README.md, then paste your web config into
+        <code>src/firebase-config.js</code>. The forms below still work — drafts are
+        saved locally in this browser until Firebase is connected.
+      </span>
+    </div>
+
+    <main>
+      <nav class="tabs" role="tablist" aria-label="DesaAI features">
+        <button class="tab active" data-tab="letters" role="tab" aria-selected="true" type="button">
+          ✉️ <span data-i18n="tabLetters">Draft Letters</span>
+        </button>
+        <button class="tab" data-tab="summarize" role="tab" aria-selected="false" type="button">
+          📄 <span data-i18n="tabSummarize">Summarize</span>
+        </button>
+        <button class="tab" data-tab="qa" role="tab" aria-selected="false" type="button">
+          ❓ <span data-i18n="tabQa">Procedure Q&amp;A</span>
+        </button>
+        <button class="tab" data-tab="drafts" role="tab" aria-selected="false" type="button">
+          🗂️ <span data-i18n="tabDrafts">My Drafts</span>
+        </button>
+      </nav>
+
+      <!-- ============ LETTERS ============ -->
+      <section id="panel-letters" class="panel" role="tabpanel">
+        <h2 data-i18n="lettersTitle">Draft an official letter</h2>
+        <p class="hint" data-i18n="lettersHint">
+          Pick a template, fill in the fields, add a short instruction if you like.
+          Short drafts run on-device (private, no internet needed); longer ones fall
+          back to the cloud.
+        </p>
+        <div class="form-grid">
+          <label class="field">
+            <span data-i18n="templateLabel">Letter type</span>
+            <select id="letter-template"></select>
+          </label>
+          <div id="letter-fields" class="fields"></div>
+          <label class="field field-wide">
+            <span data-i18n="extraLabel">Extra instruction (optional, short)</span>
+            <input
+              id="letter-extra"
+              type="text"
+              maxlength="300"
+              data-i18n-ph="extraPh"
+              placeholder="e.g. formal tone, mention the musrenbang meeting on Friday"
+            />
+          </label>
+        </div>
+        <div class="actions">
+          <button id="letter-generate" class="btn btn-primary" type="button">
+            ✨ <span data-i18n="generate">Generate draft</span>
+          </button>
+          <button id="letter-clear" class="btn" type="button" data-i18n="clear">Clear</button>
+        </div>
+        <div id="letter-status" class="status" aria-live="polite"></div>
+        <div id="letter-output-wrap" class="output-wrap" hidden>
+          <div class="output-head">
+            <span id="letter-badge" class="badge"></span>
+            <span id="letter-reason" class="reason"></span>
+          </div>
+          <textarea
+            id="letter-output"
+            rows="16"
+            aria-label="Generated letter draft — editable"
+          ></textarea>
+          <div class="actions">
+            <button id="letter-copy" class="btn" type="button" data-i18n="copy">Copy</button>
+            <button id="letter-download" class="btn" type="button" data-i18n="download">
+              Download .txt
+            </button>
+            <button id="letter-save" class="btn" type="button" data-i18n="saveDraft">
+              Save draft
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SUMMARIZE ============ -->
+      <section id="panel-summarize" class="panel" role="tabpanel" hidden>
+        <h2 data-i18n="sumTitle">Summarize a document</h2>
+        <p class="hint" data-i18n="sumHint">
+          Paste a long document (minutes, regulation, report). Long documents are
+          always summarized in the cloud — on-device inference is limited to 9,216
+          input tokens.
+        </p>
+        <label class="field field-wide">
+          <span data-i18n="sumInputLabel">Document text</span>
+          <textarea
+            id="sum-input"
+            rows="10"
+            data-i18n-ph="sumPh"
+            placeholder="Paste the document text here…"
+          ></textarea>
+        </label>
+        <div class="form-grid">
+          <label class="field">
+            <span data-i18n="sumLengthLabel">Summary length</span>
+            <select id="sum-length">
+              <option value="short" data-i18n="sumShort">Short — key points only</option>
+              <option value="medium" selected data-i18n="sumMedium">
+                Medium — key points + details
+              </option>
+              <option value="detailed" data-i18n="sumDetailed">
+                Detailed — structured summary
+              </option>
+            </select>
+          </label>
+          <p class="field meta"><span id="sum-count">0</span> <span data-i18n="chars">characters</span></p>
+        </div>
+        <div class="actions">
+          <button id="sum-generate" class="btn btn-primary" type="button">
+            ✨ <span data-i18n="summarizeBtn">Summarize</span>
+          </button>
+          <button id="sum-clear" class="btn" type="button" data-i18n="clear">Clear</button>
+        </div>
+        <div id="sum-status" class="status" aria-live="polite"></div>
+        <div id="sum-output-wrap" class="output-wrap" hidden>
+          <div class="output-head">
+            <span id="sum-badge" class="badge"></span>
+            <span id="sum-reason" class="reason"></span>
+          </div>
+          <div id="sum-output" class="output-text" aria-live="polite"></div>
+          <div class="actions">
+            <button id="sum-copy" class="btn" type="button" data-i18n="copy">Copy</button>
+            <button id="sum-save" class="btn" type="button" data-i18n="saveDraft">
+              Save as draft
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Q&A ============ -->
+      <section id="panel-qa" class="panel" role="tabpanel" hidden>
+        <h2 data-i18n="qaTitle">Ask about village procedures</h2>
+        <p class="hint" data-i18n="qaHint">
+          Ask how to apply for KTP, KK, domisili, SKTM, birth certificates and more.
+          Answers are grounded in the built-in procedure guide — and the guide itself
+          works fully offline.
+        </p>
+        <label class="field field-wide">
+          <span data-i18n="qaLabel">Your question</span>
+          <input
+            id="qa-input"
+            type="text"
+            maxlength="300"
+            data-i18n-ph="qaPh"
+            placeholder="e.g. What do I need to apply for a KTP?"
+          />
+        </label>
+        <div class="actions">
+          <button id="qa-ask" class="btn btn-primary" type="button">
+            ✨ <span data-i18n="askBtn">Ask</span>
+          </button>
+        </div>
+        <div class="chip-row" id="qa-suggestions" aria-label="Example questions"></div>
+        <div id="qa-status" class="status" aria-live="polite"></div>
+        <div id="qa-output-wrap" class="output-wrap" hidden>
+          <div class="output-head">
+            <span id="qa-badge" class="badge"></span>
+            <span id="qa-reason" class="reason"></span>
+          </div>
+          <div id="qa-output" class="output-text" aria-live="polite"></div>
+          <p id="qa-sources" class="sources"></p>
+        </div>
+        <details class="kb">
+          <summary data-i18n="kbTitle">Built-in procedure guide (works offline)</summary>
+          <div id="kb-list" class="kb-list"></div>
+        </details>
+      </section>
+
+      <!-- ============ DRAFTS ============ -->
+      <section id="panel-drafts" class="panel" role="tabpanel" hidden>
+        <h2 data-i18n="draftsTitle">My drafts</h2>
+        <p class="hint" data-i18n="draftsHint">
+          Saved drafts sync to Firestore when Firebase is connected; otherwise they
+          stay in this browser (localStorage).
+        </p>
+        <div id="drafts-list" class="drafts-list"></div>
+        <p id="drafts-empty" class="hint" data-i18n="draftsEmpty">
+          No drafts yet. Generate a letter or summary and press “Save draft”.
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <p data-i18n="footer">
+        DesaAI — built for #BuildHybridAI 2026. Hybrid inference: on-device Gemini
+        Nano 4 when available, cloud Gemini fallback. AI drafts must be reviewed by
+        a human officer before use.
+      </p>
+    </footer>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
