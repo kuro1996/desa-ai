@@ -56,6 +56,9 @@
         <button class="tab" data-tab="drafts" role="tab" aria-selected="false" type="button">
           🗂️ <span data-i18n="tabDrafts">My Drafts</span>
         </button>
+        <button class="tab" data-tab="kepegawaian" role="tab" aria-selected="false" type="button">
+          👥 <span data-i18n="tabKepegawaian">Personnel (SIAP AKAD)</span>
+        </button>
       </nav>
 
       <!-- ============ LETTERS ============ -->
@@ -86,6 +89,9 @@
         <div class="actions">
           <button id="letter-generate" class="btn btn-primary" type="button">
             ✨ <span data-i18n="generate">Generate draft</span>
+          </button>
+          <button id="letter-autonumber" class="btn" type="button">
+            🔢 <span data-i18n="autoNumber">Auto number</span>
           </button>
           <button id="letter-clear" class="btn" type="button" data-i18n="clear">Clear</button>
         </div>
@@ -216,6 +222,171 @@
         <p id="drafts-empty" class="hint" data-i18n="draftsEmpty">
           No drafts yet. Generate a letter or summary and press “Save draft”.
         </p>
+      </section>
+
+      <!-- ============ KEPEGAWAIAN (SIAP AKAD) ============ -->
+      <section id="panel-kepegawaian" class="panel" role="tabpanel" hidden>
+        <h2 data-i18n="kegTitle">Village personnel — SIAP AKAD (sample data)</h2>
+        <p class="hint" data-i18n="kegHint">
+          Personnel administration for village officers across 10 villages in
+          Simpangkatis subdistrict — adapted from Bos's SIAP AKAD.
+        </p>
+        <p id="keg-demo-note" class="banner banner-warn" data-i18n="kegDemoNote">
+          ⚠️ SAMPLE DATA — not real data. The 15 officer records below are examples
+          from SIAP AKAD (demo NIKs), shown to demonstrate the admin flow and
+          term-expiry notifications.
+        </p>
+
+        <div class="stats">
+          <div class="stat-card stat-blue">
+            <p class="stat-label" data-i18n="kegStatTotal">Total officers</p>
+            <h3 id="keg-stat-total">0</h3>
+          </div>
+          <div class="stat-card stat-green">
+            <p class="stat-label" data-i18n="kegStatDesa">Villages</p>
+            <h3 id="keg-stat-desa">10</h3>
+          </div>
+          <div class="stat-card stat-emerald">
+            <p class="stat-label" data-i18n="kegStatAktif">Active term</p>
+            <h3 id="keg-stat-aktif">0</h3>
+          </div>
+          <div class="stat-card stat-amber">
+            <p class="stat-label" data-i18n="kegStatAkanHabis">Expiring ≤ 90 days</p>
+            <h3 id="keg-stat-akanhabis">0</h3>
+          </div>
+          <div class="stat-card stat-rose">
+            <p class="stat-label" data-i18n="kegStatHabis">Term expired</p>
+            <h3 id="keg-stat-habis">0</h3>
+          </div>
+        </div>
+
+        <h3 class="subhead">
+          <span data-i18n="kegNotifTitle">Personnel notifications — terms of office</span>
+          <span id="keg-notif-count" class="badge badge-cloud"></span>
+        </h3>
+        <ul id="keg-notif-list" class="notif-list"></ul>
+        <p id="keg-notif-empty" class="hint" hidden data-i18n="kegNotifEmpty">
+          No terms expired or expiring within 90 days.
+        </p>
+
+        <div class="actions">
+          <button id="keg-summarize" class="btn btn-primary" type="button">
+            <span data-i18n="kegSummarize">✨ Summarize personnel (AI)</span>
+          </button>
+        </div>
+        <div id="keg-sum-status" class="status" aria-live="polite"></div>
+        <div id="keg-sum-output-wrap" class="output-wrap" hidden>
+          <div class="output-head">
+            <span id="keg-sum-badge" class="badge"></span>
+            <span id="keg-sum-reason" class="reason"></span>
+          </div>
+          <div id="keg-sum-output" class="output-text" aria-live="polite"></div>
+        </div>
+
+        <h3 class="subhead" data-i18n="kegFormTitle">Add village officer</h3>
+        <form id="keg-form" class="form-grid">
+          <label class="field">
+            <span>Nama lengkap *</span>
+            <input id="keg-in-nama" type="text" placeholder="Contoh: Ahmad Sudirman" />
+          </label>
+          <label class="field">
+            <span>NIK</span>
+            <input id="keg-in-nik" type="text" maxlength="16" placeholder="16 digit NIK" />
+          </label>
+          <label class="field">
+            <span>Tempat lahir *</span>
+            <input id="keg-in-tempat" type="text" placeholder="Contoh: Pangkalpinang" />
+          </label>
+          <label class="field">
+            <span>Tanggal lahir *</span>
+            <input id="keg-in-tgl" type="date" />
+          </label>
+          <label class="field">
+            <span>Agama *</span>
+            <select id="keg-in-agama"></select>
+          </label>
+          <label class="field">
+            <span>Jabatan *</span>
+            <select id="keg-in-jabatan"></select>
+          </label>
+          <label class="field">
+            <span>Desa *</span>
+            <select id="keg-in-desa"></select>
+          </label>
+          <label class="field">
+            <span>No. HP / WhatsApp</span>
+            <input id="keg-in-hp" type="tel" placeholder="Contoh: 0812-3456-7890" />
+          </label>
+          <label class="field">
+            <span>Masa bhakti mulai *</span>
+            <input id="keg-in-mulai" type="date" />
+          </label>
+          <label class="field">
+            <span>Masa bhakti selesai *</span>
+            <input id="keg-in-selesai" type="date" />
+          </label>
+          <label class="field field-wide">
+            <span>Alamat lengkap</span>
+            <textarea id="keg-in-alamat" rows="2" placeholder="Alamat lengkap perangkat desa"></textarea>
+          </label>
+          <div class="actions field-wide">
+            <button id="keg-add" class="btn btn-primary" type="submit">
+              💾 <span data-i18n="kegAdd">Save officer</span>
+            </button>
+          </div>
+        </form>
+        <div id="keg-form-status" class="status" aria-live="polite"></div>
+
+        <h3 class="subhead">Rekapan Data Perangkat Desa</h3>
+        <div class="form-grid">
+          <label class="field field-wide">
+            <span class="sr-only">Cari</span>
+            <input
+              id="keg-search"
+              type="text"
+              data-i18n-ph="kegSearchPh"
+              placeholder="Cari nama, jabatan, atau desa…"
+            />
+          </label>
+          <label class="field">
+            <span data-i18n="kegFilterDesa">All villages</span>
+            <select id="keg-filter-desa"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="kegFilterJabatan">All positions</span>
+            <select id="keg-filter-jabatan"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="kegFilterStatus">All statuses</span>
+            <select id="keg-filter-status"></select>
+          </label>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Nama</th>
+                <th>Jabatan</th>
+                <th>Desa</th>
+                <th>TTL</th>
+                <th>Agama</th>
+                <th>No HP</th>
+                <th>Masa Bhakti</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="keg-table-body"></tbody>
+          </table>
+        </div>
+        <p id="keg-count" class="hint"></p>
+
+        <h3 class="subhead" data-i18n="kegDesaTitle">Data per village</h3>
+        <div id="keg-desa-cards" class="desa-cards"></div>
+
+        <h3 class="subhead" data-i18n="kegLembagaTitle">Village institutions</h3>
+        <div id="keg-lembaga-list" class="lembaga-grid"></div>
       </section>
     </main>
 

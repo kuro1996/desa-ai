@@ -85,9 +85,9 @@ export async function saveDraft(
   return draft;
 }
 
-export async function listDrafts(svc: FirebaseServices): Promise<Draft[]> {
+export async function listDrafts(svc: FirebaseServices | null): Promise<Draft[]> {
   const local = loadLocal();
-  if (!firestoreReady(svc)) return local;
+  if (!svc || !firestoreReady(svc)) return local;
   try {
     const q = query(
       collection(svc.db, "users", svc.uid, "drafts"),
@@ -117,10 +117,10 @@ export async function listDrafts(svc: FirebaseServices): Promise<Draft[]> {
 }
 
 export async function deleteDraft(
-  svc: FirebaseServices,
+  svc: FirebaseServices | null,
   draft: Draft,
 ): Promise<void> {
-  if (draft.source === "firestore" && firestoreReady(svc)) {
+  if (draft.source === "firestore" && svc && firestoreReady(svc)) {
     try {
       await deleteDoc(doc(svc.db, "users", svc.uid, "drafts", draft.id));
       return;

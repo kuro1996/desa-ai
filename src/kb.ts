@@ -158,6 +158,43 @@ export const KB: KbEntry[] = [
     ],
     catatanId: "SKU dipakai untuk pengajuan KUR, bantuan UMKM, atau izin usaha mikro.",
   },
+  {
+    id: "perangkat-desa",
+    titleId: "Perangkat Desa & Masa Bhakti",
+    titleEn: "Village Officers & Term of Office",
+    keywords: ["perangkat", "perangkat desa", "masa bhakti", "pengangkatan", "pemberhentian", "kepala desa", "sekdes", "sekretaris desa", "jabatan", "term"],
+    syaratId: [
+      "Warga Negara Indonesia",
+      "Pendidikan paling rendah SMA/sederajat (sesuai peraturan yang berlaku)",
+      "Berusia 20–42 tahun pada saat mendaftar (ketentuan dapat berubah — konfirmasi ke kecamatan)",
+      "Memenuhi syarat administrasi lain yang ditetapkan desa/kecamatan",
+    ],
+    langkahId: [
+      "Desa mengumumkan lowongan perangkat desa",
+      "Calon menyerahkan berkas lamaran ke desa",
+      "Seleksi administrasi dan ujian/penilaian oleh tim seleksi desa",
+      "Kepala Desa menetapkan pengangkatan dengan SK; masa bhakti dicatat dan dipantau",
+    ],
+    catatanId: "Masa bhakti perangkat desa dicatat di modul Kepegawaian (SIAP AKAD) — sistem memberi notifikasi bila masa bhakti habis atau akan habis dalam 90 hari. Selalu konfirmasi syarat terbaru ke Kecamatan.",
+  },
+  {
+    id: "sk-pengangkatan",
+    titleId: "SK Pengangkatan Perangkat Desa",
+    titleEn: "Village Officer Appointment Decree (SK)",
+    keywords: ["sk pengangkatan", "surat keputusan", "sk", "diangkat", "pengangkatan", "appointment", "decree"],
+    syaratId: [
+      "Calon lolos seleksi perangkat desa",
+      "Data diri lengkap: nama, NIK, jabatan, desa, masa bhakti",
+      "Persetujuan/penetapan Kepala Desa",
+    ],
+    langkahId: [
+      "Buka modul Kepegawaian, pilih perangkat, tekan \u201cBuat SK\u201d",
+      "Lengkapi nomor SK, tanggal, dan dasar pertimbangan",
+      "Minta AI membuat draf, lalu periksa isinya sebelum ditandatangani",
+      "SK ditandatangani Kepala Desa dan diarsipkan",
+    ],
+    catatanId: "Draf AI wajib diperiksa petugas sebelum digunakan — jangan mengarang nomor SK, NIP, atau tanggal yang tidak diberikan.",
+  },
 ];
 
 /** Simple keyword matching — returns the best-matching entries (max 3). */

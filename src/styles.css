@@ -388,6 +388,38 @@ textarea:focus {
   padding-left: 18px;
 }
 
+/* Document-requirements checklist inside each KB guide entry. */
+.checklist {
+  list-style: none;
+  padding-left: 0;
+  margin: 8px 0;
+}
+
+.checklist li {
+  margin: 4px 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.checklist label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 400;
+}
+
+.checklist input[type="checkbox"] {
+  width: auto;
+  margin-top: 3px;
+  accent-color: var(--green);
+}
+
+.checklist li.done span {
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+
 .drafts-list {
   display: flex;
   flex-direction: column;
@@ -441,4 +473,252 @@ footer {
   .topbar {
     padding: 12px 14px;
   }
+}
+
+/* ---------- Kepegawaian (SIAP AKAD) ---------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin: 16px 0;
+}
+
+@media (max-width: 640px) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.stat-card {
+  border-radius: var(--radius);
+  padding: 14px;
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+.stat-card .stat-label {
+  margin: 0;
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+.stat-card h3 {
+  margin: 4px 0 0;
+  font-size: 1.8rem;
+}
+
+.stat-blue {
+  background: #2563eb;
+}
+
+.stat-green {
+  background: #059669;
+}
+
+.stat-emerald {
+  background: #0d9488;
+}
+
+.stat-amber {
+  background: #d97706;
+}
+
+.stat-rose {
+  background: #e11d48;
+}
+
+.subhead {
+  margin: 24px 0 10px;
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notif-item {
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--amber);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.92rem;
+  background: #fffbeb;
+}
+
+.notif-item.notif-habis {
+  border-left-color: #dc2626;
+  background: #fef2f2;
+}
+
+.notif-item strong {
+  display: block;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  min-width: 760px;
+}
+
+.data-table th,
+.data-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.data-table thead th {
+  background: var(--green-dark);
+  color: #fff;
+  font-size: 0.82rem;
+}
+
+.data-table tbody tr:hover {
+  background: #f0f7f1;
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-pill.aktif {
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.status-pill.akan-habis {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.status-pill.habis {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.demo-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.row-actions .btn {
+  padding: 4px 10px;
+  font-size: 0.82rem;
+}
+
+.desa-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .desa-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.desa-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.desa-card h4 {
+  margin: 0 0 2px;
+  font-size: 0.98rem;
+}
+
+.desa-card .count {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.desa-card .tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.desa-card .tag {
+  font-size: 0.75rem;
+  background: var(--blue-soft);
+  color: var(--blue);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.lembaga-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .lembaga-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lembaga-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.lembaga-card h4 {
+  margin: 0 0 2px;
+  font-size: 0.98rem;
+}
+
+.lembaga-card p {
+  margin: 4px 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }

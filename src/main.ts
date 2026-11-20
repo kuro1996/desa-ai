@@ -10,6 +10,25 @@ import { deleteDraft, listDrafts, saveDraft, type Draft } from "./drafts";
 import { initFirebase, type FirebaseServices } from "./firebase";
 import { t, type Lang } from "./i18n";
 import { KB, kbEntryToText, matchKb, type KbEntry } from "./kb";
+import {
+  AGAMA_LIST,
+  buildKepegawaianSummary,
+  computeNotifications,
+  computeStats,
+  daysUntilEnd,
+  DESA_LIST,
+  filterPerangkat,
+  formatDateId,
+  isDemoRecord,
+  JABATAN_LIST,
+  LEMBAGA,
+  loadPerangkat,
+  masaStatus,
+  savePerangkat,
+  syncPerangkatToFirestore,
+  type MasaStatus,
+  type Perangkat,
+} from "./kepegawaian";
 import { buildLetterPrompt, TEMPLATES, type LetterTemplate } from "./templates";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
@@ -43,6 +62,7 @@ function applyLang(): void {
   renderLetterFields();
   renderKbList();
   renderQaSuggestions();
+  renderKepegawaian();
   void refreshDrafts();
 }
 
@@ -62,6 +82,7 @@ function initTabs(): void {
         p.hidden = p.id !== `panel-${tab}`;
       });
       if (tab === "drafts") void refreshDrafts();
+      if (tab === "kepegawaian") renderKepegawaian();
     });
   });
 }
@@ -167,6 +188,43 @@ function downloadTxt(filename: string, text: string): void {
 
 // ---------- letters ----------
 
+// Automatic letter numbering: per-template counter, reset every year.
+// Format: {prefix}/{seq 3 digits}/DS/{roman month}/{year}, e.g. 140/001/DS/XI/2026.
+const LETTER_PREFIX: Record<string, string> = {
+  "surat-dinas": "140",
+  sk: "188.4",
+  undangan: "140",
+  pengantar: "140",
+  keterangan: "140",
+  "sk-pengangkatan": "188.4",
+};
+const ROMAN_MONTHS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+
+function nextLetterNumber(tplId: string): string {
+  const key = "desaai-nomor-surat-v1";
+  const now = new Date();
+  const year = now.getFullYear();
+  let store: { year: number; counters: Record<string, number> } = { year, counters: {} };
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { year?: number; counters?: Record<string, number> };
+      if (parsed.year === year && parsed.counters) store = { year, counters: parsed.counters };
+    }
+  } catch {
+    // Start fresh.
+  }
+  const seq = (store.counters[tplId] ?? 0) + 1;
+  store.counters[tplId] = seq;
+  try {
+    localStorage.setItem(key, JSON.stringify(store));
+  } catch {
+    // Storage unavailable — number still filled in for this draft.
+  }
+  const prefix = LETTER_PREFIX[tplId] ?? "140";
+  return `${prefix}/${String(seq).padStart(3, "0")}/DS/${ROMAN_MONTHS[now.getMonth()]}/${year}`;
+}
+
 function renderTemplateSelect(): void {
   const sel = $("letter-template") as HTMLSelectElement;
   const prev = sel.value || currentTemplate.id;
@@ -229,6 +287,18 @@ function initLetters(): void {
     ($("letter-extra") as HTMLInputElement).value = "";
     $("letter-output-wrap").hidden = true;
     setStatus($("letter-status"), "");
+  });
+
+  $("letter-autonumber").addEventListener("click", () => {
+    const hasNomor = currentTemplate.fields.some((f) => f.key === "nomor");
+    if (!hasNomor) {
+      setStatus($("letter-status"), t("statusNeedInput", lang), true);
+      return;
+    }
+    const input = document.getElementById("letter-field-nomor") as HTMLInputElement | null;
+    if (!input) return;
+    input.value = nextLetterNumber(currentTemplate.id);
+    setStatus($("letter-status"), t("autoNumberDone", lang));
   });
 
   $("letter-generate").addEventListener("click", async () => {
@@ -379,6 +449,34 @@ function initSummarizer(): void {
   });
 }
 
+// KB checklist persistence (document-requirements ticks).
+const KB_CHECK_KEY = "desaai-kb-checklist-v1";
+
+function loadKbChecks(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(KB_CHECK_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, boolean>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function isKbChecked(entryId: string, idx: number): boolean {
+  return loadKbChecks()[`${entryId}:${idx}`] === true;
+}
+
+function setKbChecked(entryId: string, idx: number, checked: boolean): void {
+  const map = loadKbChecks();
+  map[`${entryId}:${idx}`] = checked;
+  try {
+    localStorage.setItem(KB_CHECK_KEY, JSON.stringify(map));
+  } catch {
+    // Storage unavailable — checkbox state still works for this session.
+  }
+}
+
 // ---------- Q&A ----------
 
 function renderKbList(): void {
@@ -390,8 +488,27 @@ function renderKbList(): void {
     const h = document.createElement("h3");
     h.textContent = lang === "id" ? e.titleId : `${e.titleId} (${e.titleEn})`;
     div.appendChild(h);
-    const syarat = document.createElement("p");
-    syarat.textContent = `Syarat: ${e.syaratId.join("; ")}`;
+    // Document-requirements checklist (tick off as the clerk collects them).
+    const syarat = document.createElement("ul");
+    syarat.className = "checklist";
+    e.syaratId.forEach((s, idx) => {
+      const li = document.createElement("li");
+      const label = document.createElement("label");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = isKbChecked(e.id, idx);
+      cb.addEventListener("change", () => {
+        setKbChecked(e.id, idx, cb.checked);
+        li.classList.toggle("done", cb.checked);
+      });
+      const span = document.createElement("span");
+      span.textContent = s;
+      label.appendChild(cb);
+      label.appendChild(span);
+      li.appendChild(label);
+      li.classList.toggle("done", cb.checked);
+      syarat.appendChild(li);
+    });
     div.appendChild(syarat);
     const steps = document.createElement("ul");
     for (const s of e.langkahId) {
@@ -409,8 +526,8 @@ function renderQaSuggestions(): void {
   row.innerHTML = "";
   const suggestions =
     lang === "id"
-      ? ["Apa syarat membuat KTP?", "Bagaimana cara mengurus KK baru?", "Apa itu SKTM?"]
-      : ["What do I need to apply for a KTP?", "How do I get a new KK?", "What is an SKTM?"];
+      ? ["Apa syarat membuat KTP?", "Bagaimana cara mengurus KK baru?", "Apa itu SKTM?", "Berapa lama masa bhakti perangkat desa?"]
+      : ["What do I need to apply for a KTP?", "How do I get a new KK?", "What is an SKTM?", "How long is a village officer's term?"];
   for (const s of suggestions) {
     const b = document.createElement("button");
     b.type = "button";
@@ -518,13 +635,22 @@ function initQa(): void {
 // ---------- drafts ----------
 
 async function refreshDrafts(): Promise<void> {
-  if (!svc) return;
+  // Works even while Firebase init is still pending (svc === null):
+  // local drafts are always listable; Firestore sync joins when ready.
   const list = $("drafts-list");
   const empty = $("drafts-empty");
   const drafts = await listDrafts(svc);
   list.innerHTML = "";
   empty.hidden = drafts.length > 0;
-  for (const d of drafts) {
+  const renderGroup = (title: string, group: Draft[]): void => {
+    if (group.length === 0) return;
+    const h = document.createElement("h3");
+    h.className = "subhead";
+    h.textContent = title;
+    list.appendChild(h);
+    for (const d of group) renderDraftItem(d);
+  };
+  const renderDraftItem = (d: Draft): void => {
     const div = document.createElement("div");
     div.className = "draft-item";
     const h = document.createElement("h3");
@@ -550,14 +676,16 @@ async function refreshDrafts(): Promise<void> {
     delBtn.className = "btn";
     delBtn.textContent = t("delete", lang);
     delBtn.addEventListener("click", async () => {
-      await deleteDraft(svc as FirebaseServices, d);
+      await deleteDraft(svc, d);
       await refreshDrafts();
     });
     actions.appendChild(openBtn);
     actions.appendChild(delBtn);
     div.appendChild(actions);
     list.appendChild(div);
-  }
+  };
+  renderGroup(t("kegArchiveLetters", lang), drafts.filter((d) => d.kind === "letter"));
+  renderGroup(t("kegArchiveSummaries", lang), drafts.filter((d) => d.kind !== "letter"));
 }
 
 function openDraft(d: Draft): void {
@@ -574,6 +702,364 @@ function openDraft(d: Draft): void {
   }
 }
 
+// ---------- kepegawaian (SIAP AKAD — sample data) ----------
+
+let kegItems: Perangkat[] = [];
+
+function kegFillSelect(
+  el: HTMLSelectElement,
+  values: string[],
+  allLabel: string,
+): void {
+  el.innerHTML = "";
+  const all = document.createElement("option");
+  all.value = "";
+  all.textContent = allLabel;
+  el.appendChild(all);
+  for (const v of values) {
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = v;
+    el.appendChild(opt);
+  }
+}
+
+function kegStatusPill(p: Perangkat): { text: string; cls: string } {
+  const s = masaStatus(p);
+  if (s === "aktif") return { text: t("kegStatusAktif", lang), cls: "aktif" };
+  if (s === "akan-habis") return { text: t("kegStatusAkanHabis", lang), cls: "akan-habis" };
+  return { text: t("kegStatusHabis", lang), cls: "habis" };
+}
+
+function renderKepegawaian(): void {
+  kegItems = loadPerangkat();
+  const items = kegItems;
+  const stats = computeStats(items);
+  $("keg-stat-total").textContent = String(stats.total);
+  $("keg-stat-desa").textContent = String(stats.desaCount);
+  $("keg-stat-aktif").textContent = String(stats.aktif);
+  $("keg-stat-akanhabis").textContent = String(stats.akanHabis);
+  $("keg-stat-habis").textContent = String(stats.habis);
+
+  // Notifications
+  const notifs = computeNotifications(items);
+  const notifList = $("keg-notif-list");
+  notifList.innerHTML = "";
+  $("keg-notif-count").textContent = String(notifs.length);
+  $("keg-notif-empty").hidden = notifs.length > 0;
+  for (const n of notifs) {
+    const li = document.createElement("li");
+    li.className = `notif-item ${n.kind === "habis" ? "notif-habis" : ""}`;
+    const strong = document.createElement("strong");
+    strong.textContent = `${n.perangkat.nama} — ${n.perangkat.jabatan}, ${n.perangkat.desa}`;
+    li.appendChild(strong);
+    const detail = document.createElement("span");
+    detail.textContent =
+      n.kind === "habis"
+        ? `${t("kegNotifHabis", lang)} ${-n.days} ${t("kegNotifDaysAgo", lang)} (${formatDateId(n.perangkat.masaSelesai)})`
+        : `${t("kegNotifAkanHabis", lang)} ${n.days} ${t("kegNotifDays", lang)} (${formatDateId(n.perangkat.masaSelesai)})`;
+    li.appendChild(detail);
+    notifList.appendChild(li);
+  }
+
+  // Table (search + filters)
+  const search = ($("keg-search") as HTMLInputElement).value ?? "";
+  const desaF = ($("keg-filter-desa") as HTMLSelectElement).value ?? "";
+  const jabF = ($("keg-filter-jabatan") as HTMLSelectElement).value ?? "";
+  const statusSel = $("keg-filter-status") as HTMLSelectElement;
+  const prevStatus = statusSel.value as MasaStatus | "";
+  statusSel.innerHTML = "";
+  const statusOptions: Array<{ value: string; label: string }> = [
+    { value: "", label: t("kegFilterStatus", lang) },
+    { value: "aktif", label: t("kegStatusAktif", lang) },
+    { value: "akan-habis", label: t("kegStatusAkanHabis", lang) },
+    { value: "habis", label: t("kegStatusHabis", lang) },
+  ];
+  for (const o of statusOptions) {
+    const opt = document.createElement("option");
+    opt.value = o.value;
+    opt.textContent = o.label;
+    statusSel.appendChild(opt);
+  }
+  statusSel.value = prevStatus;
+  const filtered = filterPerangkat(items, search, desaF, jabF, prevStatus);
+  const tbody = $("keg-table-body");
+  tbody.innerHTML = "";
+  filtered.forEach((p, i) => {
+    const tr = document.createElement("tr");
+    const pill = kegStatusPill(p);
+    const cells: HTMLElement[] = [];
+    const td = (text: string): HTMLElement => {
+      const c = document.createElement("td");
+      c.textContent = text;
+      return c;
+    };
+    cells.push(td(String(i + 1)));
+    const nameCell = document.createElement("td");
+    nameCell.textContent = p.nama;
+    if (isDemoRecord(p)) {
+      const badge = document.createElement("span");
+      badge.className = "demo-badge";
+      badge.textContent = t("kegDemoBadge", lang);
+      nameCell.appendChild(badge);
+    }
+    cells.push(nameCell);
+    cells.push(td(p.jabatan));
+    cells.push(td(p.desa));
+    cells.push(td(`${p.tempatLahir}, ${formatDateId(p.tglLahir)}`));
+    cells.push(td(p.agama));
+    cells.push(td(p.noHp || "-"));
+    cells.push(td(`${formatDateId(p.masaMulai)} - ${formatDateId(p.masaSelesai)}`));
+    const statusCell = document.createElement("td");
+    const pillEl = document.createElement("span");
+    pillEl.className = `status-pill ${pill.cls}`;
+    pillEl.textContent = pill.text;
+    statusCell.appendChild(pillEl);
+    cells.push(statusCell);
+    const actCell = document.createElement("td");
+    const actWrap = document.createElement("div");
+    actWrap.className = "row-actions";
+    const skBtn = document.createElement("button");
+    skBtn.type = "button";
+    skBtn.className = "btn";
+    skBtn.textContent = t("kegSkBtn", lang);
+    skBtn.dataset.action = "sk";
+    skBtn.dataset.id = p.id;
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "btn";
+    delBtn.textContent = t("delete", lang);
+    delBtn.dataset.action = "delete";
+    delBtn.dataset.id = p.id;
+    actWrap.appendChild(skBtn);
+    actWrap.appendChild(delBtn);
+    actCell.appendChild(actWrap);
+    cells.push(actCell);
+    for (const c of cells) tr.appendChild(c);
+    tbody.appendChild(tr);
+  });
+  $("keg-count").textContent =
+    `${t("kegShowing", lang)} ${filtered.length} ${t("kegOf", lang)} ${items.length} ${t("kegRecords", lang)}`;
+
+  // Desa cards
+  const desaWrap = $("keg-desa-cards");
+  desaWrap.innerHTML = "";
+  for (const desa of DESA_LIST) {
+    const desaData = items.filter((p) => p.desa === desa);
+    const counts: Record<string, number> = {};
+    for (const p of desaData) counts[p.jabatan] = (counts[p.jabatan] ?? 0) + 1;
+    const card = document.createElement("div");
+    card.className = "desa-card";
+    const h = document.createElement("h4");
+    h.textContent = desa;
+    card.appendChild(h);
+    const c = document.createElement("p");
+    c.className = "count";
+    c.textContent = `${desaData.length} ${t("kegStatTotal", lang).toLowerCase()}`;
+    card.appendChild(c);
+    const tags = document.createElement("div");
+    tags.className = "tags";
+    for (const [j, n] of Object.entries(counts)) {
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = `${j}: ${n}`;
+      tags.appendChild(tag);
+    }
+    card.appendChild(tags);
+    const names = document.createElement("p");
+    names.className = "count";
+    names.textContent = desaData
+      .slice(0, 3)
+      .map((p) => p.nama)
+      .join(", ");
+    card.appendChild(names);
+    desaWrap.appendChild(card);
+  }
+
+  // Lembaga
+  const lemWrap = $("keg-lembaga-list");
+  lemWrap.innerHTML = "";
+  for (const l of LEMBAGA) {
+    const card = document.createElement("div");
+    card.className = "lembaga-card";
+    const h = document.createElement("h4");
+    h.textContent = `${l.name} — ${l.fullId}`;
+    card.appendChild(h);
+    const p = document.createElement("p");
+    p.textContent = lang === "id" ? l.descId : l.descEn;
+    card.appendChild(p);
+    lemWrap.appendChild(card);
+  }
+}
+
+function kegSetLetterField(key: string, value: string): void {
+  const el = document.getElementById(`letter-field-${key}`) as
+    | HTMLInputElement
+    | HTMLTextAreaElement
+    | null;
+  if (el) el.value = value;
+}
+
+function kegOpenSk(p: Perangkat): void {
+  const sel = $("letter-template") as HTMLSelectElement;
+  sel.value = "sk-pengangkatan";
+  currentTemplate = TEMPLATES.find((tp) => tp.id === "sk-pengangkatan") ?? TEMPLATES[0];
+  renderLetterFields();
+  const today = new Date().toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  kegSetLetterField("tanggal", today);
+  kegSetLetterField("nama", p.nama);
+  kegSetLetterField("nik", p.nik);
+  kegSetLetterField("jabatan", p.jabatan);
+  kegSetLetterField("desa", p.desa);
+  kegSetLetterField("masaMulai", formatDateId(p.masaMulai));
+  kegSetLetterField("masaSelesai", formatDateId(p.masaSelesai));
+  document.querySelector<HTMLButtonElement>('[data-tab="letters"]')?.click();
+}
+
+function initKepegawaian(): void {
+  kegFillSelect($("keg-in-agama") as HTMLSelectElement, AGAMA_LIST, "—");
+  kegFillSelect($("keg-in-jabatan") as HTMLSelectElement, JABATAN_LIST, "—");
+  kegFillSelect($("keg-in-desa") as HTMLSelectElement, DESA_LIST, "—");
+  kegFillSelect(
+    $("keg-filter-desa") as HTMLSelectElement,
+    DESA_LIST,
+    t("kegFilterDesa", lang),
+  );
+  kegFillSelect(
+    $("keg-filter-jabatan") as HTMLSelectElement,
+    JABATAN_LIST,
+    t("kegFilterJabatan", lang),
+  );
+  renderKepegawaian();
+
+  $("keg-search").addEventListener("input", renderKepegawaian);
+  $("keg-filter-desa").addEventListener("change", renderKepegawaian);
+  $("keg-filter-jabatan").addEventListener("change", renderKepegawaian);
+  $("keg-filter-status").addEventListener("change", renderKepegawaian);
+
+  $("keg-table-body").addEventListener("click", (ev) => {
+    const btn = (ev.target as HTMLElement).closest("button[data-action]") as
+      | HTMLButtonElement
+      | null;
+    if (!btn || !btn.dataset.id) return;
+    const p = kegItems.find((x) => x.id === btn.dataset.id);
+    if (!p) return;
+    if (btn.dataset.action === "sk") {
+      kegOpenSk(p);
+      return;
+    }
+    if (btn.dataset.action === "delete") {
+      if (!window.confirm(`${t("delete", lang)} ${p.nama}?`)) return;
+      kegItems = kegItems.filter((x) => x.id !== p.id);
+      savePerangkat(kegItems);
+      if (svc) void syncPerangkatToFirestore(svc, kegItems);
+      renderKepegawaian();
+      setStatus($("keg-form-status"), t("kegDeleted", lang));
+    }
+  });
+
+  $("keg-form").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const val = (id: string): string =>
+      ($(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value.trim();
+    const nama = val("keg-in-nama");
+    const tempat = val("keg-in-tempat");
+    const tglLahir = val("keg-in-tgl");
+    const agama = val("keg-in-agama");
+    const jabatan = val("keg-in-jabatan");
+    const desa = val("keg-in-desa");
+    const masaMulai = val("keg-in-mulai");
+    const masaSelesai = val("keg-in-selesai");
+    const nik = val("keg-in-nik");
+    const errs: string[] = [];
+    if (!nama || !tempat || !tglLahir || !agama || !jabatan || !desa || !masaMulai || !masaSelesai) {
+      errs.push(t("kegNeedName", lang));
+    }
+    if (nik && !/^\d{16}$/.test(nik)) errs.push(t("kegNikInvalid", lang));
+    if (masaMulai && masaSelesai && masaSelesai <= masaMulai) errs.push(t("kegDateInvalid", lang));
+    if (tglLahir) {
+      const dd = new Date();
+      const todayStr = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, "0")}-${String(dd.getDate()).padStart(2, "0")}`;
+      if (tglLahir > todayStr) errs.push(t("kegBirthInvalid", lang));
+    }
+    if (errs.length > 0) {
+      setStatus($("keg-form-status"), errs.join(" "), true);
+      return;
+    }
+    const np: Perangkat = {
+      id: `k-${Date.now()}`,
+      nama,
+      nik,
+      tempatLahir: tempat,
+      tglLahir,
+      agama,
+      jabatan,
+      desa,
+      noHp: val("keg-in-hp"),
+      masaMulai,
+      masaSelesai,
+      alamat: val("keg-in-alamat"),
+    };
+    kegItems = [...kegItems, np];
+    savePerangkat(kegItems);
+    if (svc) void syncPerangkatToFirestore(svc, kegItems);
+    ($("keg-form") as HTMLFormElement).reset();
+    renderKepegawaian();
+    setStatus($("keg-form-status"), t("kegSaved", lang));
+  });
+
+  $("keg-summarize").addEventListener("click", async () => {
+    const btn = $("keg-summarize") as HTMLButtonElement;
+    const status = $("keg-sum-status");
+    const wrap = $("keg-sum-output-wrap");
+    const output = $("keg-sum-output");
+    const badge = $("keg-sum-badge");
+    const reason = $("keg-sum-reason");
+    const recap = buildKepegawaianSummary(kegItems);
+    wrap.hidden = false;
+    if (!svc || svc.status !== "ready") {
+      output.textContent = recap;
+      badge.textContent = t("badgeUnknown", lang);
+      badge.className = "badge badge-unknown";
+      reason.textContent = t("kegSumOfflineNote", lang);
+      setStatus(status, "");
+      return;
+    }
+    btn.disabled = true;
+    setStatus(status, t("statusThinking", lang));
+    output.textContent = "";
+    try {
+      const prompt = [
+        "Buat ringkasan eksekutif kepegawaian perangkat desa dalam Bahasa Indonesia formal dan singkat, berdasarkan rekap berikut.",
+        "Sorot: berapa yang masa bhaktinya habis, siapa yang akan habis dalam 90 hari, dan apa tindak lanjut yang disarankan untuk kecamatan.",
+        "Jangan menambahkan fakta di luar rekap.",
+        "",
+        "REKAP:",
+        recap,
+      ].join("\n");
+      const result = await generateStream(
+        svc,
+        prompt,
+        { forceCloud: true, onDevice },
+        (text) => {
+          output.textContent = text;
+        },
+      );
+      showBadge(badge, reason, result.source, result.route.reason);
+      setStatus(status, "");
+    } catch (e) {
+      console.error("DesaAI: kepegawaian summary failed", e);
+      setStatus(status, t("statusAiError", lang), true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 // ---------- boot ----------
 
 async function boot(): Promise<void> {
@@ -581,6 +1067,7 @@ async function boot(): Promise<void> {
   initLetters();
   initSummarizer();
   initQa();
+  initKepegawaian();
 
   $("lang-toggle").addEventListener("click", () => {
     lang = lang === "en" ? "id" : "en";

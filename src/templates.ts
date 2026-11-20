@@ -91,6 +91,24 @@ export const TEMPLATES: LetterTemplate[] = [
     structureId:
       "Kop surat desa, nomor/tanggal, judul SURAT KETERANGAN, isi yang menerangkan identitas dan hal yang diterangkan, penutup, tanda tangan Kepala Desa beserta nama dan NIP (tulis [NAMA] dan [NIP] bila tidak diberikan).",
   },
+  {
+    id: "sk-pengangkatan",
+    nameId: "SK Pengangkatan Perangkat Desa",
+    nameEn: "Village Officer Appointment Decree (SK)",
+    fields: [
+      { key: "nomor", labelId: "Nomor SK", labelEn: "Decree number", placeholder: "cth: 188.4/12/DS/2026" },
+      { key: "tanggal", labelId: "Tanggal", labelEn: "Date", placeholder: "cth: 20 November 2026" },
+      { key: "nama", labelId: "Nama perangkat", labelEn: "Officer name", placeholder: "cth: Ahmad Fauzi" },
+      { key: "nik", labelId: "NIK", labelEn: "National ID (NIK)", placeholder: "cth: 1901010101010001" },
+      { key: "jabatan", labelId: "Jabatan", labelEn: "Position", placeholder: "cth: Kepala Desa" },
+      { key: "desa", labelId: "Desa", labelEn: "Village", placeholder: "cth: Simpangkatis" },
+      { key: "masaMulai", labelId: "Masa bhakti mulai", labelEn: "Term start", placeholder: "cth: 1 Januari 2021" },
+      { key: "masaSelesai", labelId: "Masa bhakti selesai", labelEn: "Term end", placeholder: "cth: 31 Desember 2027" },
+      { key: "dasar", labelId: "Dasar pertimbangan", labelEn: "Basis / considerations", placeholder: "cth: Hasil musyawarah desa dan rekomendasi Camat…", type: "textarea" },
+    ],
+    structureId:
+      "Kop surat, judul SURAT KEPUTUSAN KEPALA DESA, nomor dan tentang Pengangkatan Perangkat Desa, Menimbang, Mengingat (UU Desa dan peraturan turunannya), Memutuskan: KESATU mengangkat nama, NIK, jabatan, dan desa yang bersangkutan; KEDUA masa bhakti mulai sampai selesai; KETIGA tugas dan kewajiban; KEEMPAT keputusan berlaku sejak tanggal ditetapkan; tempat/tanggal penetapan, tanda tangan Kepala Desa.",
+  },
 ];
 
 /** Build the prompt sent to the model for a letter draft. */
