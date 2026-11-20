@@ -127,6 +127,10 @@ function activateTab(tab: string, updateHash = true): void {
   if (tab === "kepegawaian") renderKepegawaian();
   if (tab === "ikm") renderIkm();
   if (tab === "pengaduan") renderPengaduan();
+  // A detail dialog belongs to its tab — close it when leaving the tab.
+  document.querySelectorAll("dialog[open]").forEach((d) => {
+    (d as HTMLDialogElement).close();
+  });
   if (updateHash) {
     history.replaceState(null, "", `#${HASH_BY_TAB[tab] ?? tab}`);
   }
@@ -247,8 +251,8 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-function downloadTxt(filename: string, text: string): void {
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+function downloadFile(filename: string, text: string, mime: string): void {
+  const blob = new Blob([text], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -257,6 +261,20 @@ function downloadTxt(filename: string, text: string): void {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+function downloadTxt(filename: string, text: string): void {
+  downloadFile(filename, text, "text/plain;charset=utf-8");
+}
+
+/** Read a JSON value from localStorage without throwing (backup export). */
+function readLocalJson(key: string): unknown {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as unknown) : null;
+  } catch {
+    return null;
+  }
 }
 
 // ---------- letters ----------
@@ -423,6 +441,18 @@ function initLetters(): void {
       `${currentTemplate.id}-${new Date().toISOString().slice(0, 10)}.txt`,
       ($("letter-output") as HTMLTextAreaElement).value,
     );
+  });
+  $("letter-print").addEventListener("click", () => {
+    const text = ($("letter-output") as HTMLTextAreaElement).value;
+    $("letter-print-title").textContent =
+      lang === "id" ? currentTemplate.nameId : currentTemplate.nameEn;
+    $("letter-print-date").textContent = new Date().toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+    $("letter-print-body").textContent = text;
+    window.print();
   });
   $("letter-save").addEventListener("click", async () => {
     if (!svc) return;
@@ -707,14 +737,26 @@ function initQa(): void {
 
 // ---------- drafts ----------
 
+let draftsQuery = "";
+
 async function refreshDrafts(): Promise<void> {
   // Works even while Firebase init is still pending (svc === null):
   // local drafts are always listable; Firestore sync joins when ready.
   const list = $("drafts-list");
   const empty = $("drafts-empty");
-  const drafts = await listDrafts(svc);
+  const all = await listDrafts(svc);
+  const q = draftsQuery.trim().toLowerCase();
+  const drafts = q
+    ? all.filter(
+        (d) =>
+          d.title.toLowerCase().includes(q) ||
+          d.content.toLowerCase().includes(q),
+      )
+    : all;
   list.innerHTML = "";
   empty.hidden = drafts.length > 0;
+  empty.textContent =
+    drafts.length === 0 && q ? t("draftsNoMatch", lang) : t("draftsEmpty", lang);
   const renderGroup = (title: string, group: Draft[]): void => {
     if (group.length === 0) return;
     const h = document.createElement("h3");
@@ -750,6 +792,7 @@ async function refreshDrafts(): Promise<void> {
     delBtn.textContent = t("delete", lang);
     delBtn.addEventListener("click", async () => {
       await deleteDraft(svc, d);
+      setStatus($("drafts-status"), t("statusDeleted", lang));
       await refreshDrafts();
     });
     actions.appendChild(openBtn);
@@ -784,6 +827,31 @@ function openDraft(d: Draft): void {
     $("sum-output").textContent = d.content;
     lastSummaryText = d.content;
   }
+}
+
+function initDrafts(): void {
+  ($("drafts-search") as HTMLInputElement).addEventListener("input", (ev) => {
+    draftsQuery = (ev.target as HTMLInputElement).value;
+    void refreshDrafts();
+  });
+  $("backup-export").addEventListener("click", async () => {
+    const backup = {
+      app: "DesaAI",
+      exportedAt: new Date().toISOString(),
+      drafts: await listDrafts(svc),
+      perangkat: loadPerangkat(),
+      ikm: loadIkm(),
+      pengaduan: loadAduan(),
+      letterNumbers: readLocalJson("desaai-nomor-surat-v1"),
+      kbChecklist: readLocalJson("desaai-kb-checklist-v1"),
+    };
+    downloadFile(
+      `desaai-cadangan-${new Date().toISOString().slice(0, 10)}.json`,
+      JSON.stringify(backup, null, 2),
+      "application/json;charset=utf-8",
+    );
+    setStatus($("drafts-status"), t("backupDone", lang));
+  });
 }
 
 // ---------- kepegawaian (SIAP AKAD — sample data) ----------
@@ -918,6 +986,12 @@ function renderKepegawaian(): void {
     const actCell = document.createElement("td");
     const actWrap = document.createElement("div");
     actWrap.className = "row-actions";
+    const detailBtn = document.createElement("button");
+    detailBtn.type = "button";
+    detailBtn.className = "btn";
+    detailBtn.textContent = t("detail", lang);
+    detailBtn.dataset.action = "detail";
+    detailBtn.dataset.id = p.id;
     const skBtn = document.createElement("button");
     skBtn.type = "button";
     skBtn.className = "btn";
@@ -930,6 +1004,7 @@ function renderKepegawaian(): void {
     delBtn.textContent = t("delete", lang);
     delBtn.dataset.action = "delete";
     delBtn.dataset.id = p.id;
+    actWrap.appendChild(detailBtn);
     actWrap.appendChild(skBtn);
     actWrap.appendChild(delBtn);
     actCell.appendChild(actWrap);
@@ -990,6 +1065,41 @@ function renderKepegawaian(): void {
     lemWrap.appendChild(card);
   }
   renderQuickStats();
+}
+
+function kegShowDetail(p: Perangkat): void {
+  const dlg = $("keg-detail") as HTMLDialogElement;
+  const pill = kegStatusPill(p);
+  const days = daysUntilEnd(p);
+  $("keg-detail-title").textContent = `${t("kegDetailTitle", lang)} — ${p.nama}`;
+  const rows: Array<[string, string]> = [
+    [t("kegUnitCol", lang), p.unit === "kecamatan" ? t("kegUnitKecOpt", lang) : t("kegUnitDesaOpt", lang)],
+    ["Jabatan", p.jabatan],
+    ["Desa", p.desa],
+    ["NIK", p.nik || "—"],
+    ["TTL", `${p.tempatLahir}, ${formatDateId(p.tglLahir)}`],
+    ["Agama", p.agama],
+    ["No. HP", p.noHp || "—"],
+    ["Masa bhakti", `${formatDateId(p.masaMulai)} – ${formatDateId(p.masaSelesai)}`],
+    [
+      "Status",
+      days < 0
+        ? `${pill.text} (${-days} ${t("kegNotifDaysAgo", lang)})`
+        : `${pill.text} (${days} ${t("kegNotifDays", lang)})`,
+    ],
+    ["Alamat", p.alamat || "—"],
+  ];
+  const body = $("keg-detail-body");
+  body.innerHTML = "";
+  for (const [k, v] of rows) {
+    const dt = document.createElement("dt");
+    dt.textContent = k;
+    const dd = document.createElement("dd");
+    dd.textContent = v;
+    body.appendChild(dt);
+    body.appendChild(dd);
+  }
+  if (!dlg.open) dlg.showModal();
 }
 
 function kegSetLetterField(key: string, value: string): void {
@@ -1096,6 +1206,10 @@ function initKepegawaian(): void {
     if (!btn || !btn.dataset.id) return;
     const p = kegItems.find((x) => x.id === btn.dataset.id);
     if (!p) return;
+    if (btn.dataset.action === "detail") {
+      kegShowDetail(p);
+      return;
+    }
     if (btn.dataset.action === "sk") {
       kegOpenSk(p);
       return;
@@ -1253,6 +1367,8 @@ function renderIkm(): void {
     const fill = document.createElement("div");
     fill.className = "ikm-fill";
     fill.style.width = `${Math.round((avg / 4) * 100)}%`;
+    // Band color: green ≥ 3.5, amber 2.5–3.5, red below 2.5 (scale 1–4).
+    fill.dataset.band = avg >= 3.5 ? "good" : avg >= 2.5 ? "mid" : "low";
     track.appendChild(fill);
     const value = document.createElement("span");
     value.className = "ikm-bar-value";
@@ -1414,6 +1530,28 @@ function initIkm(): void {
     const stats = computeIkm(ikmItems);
     void ikmShare(ikmShareResultsText(stats, surveyLink()));
   });
+  $("ikm-export").addEventListener("click", () => {
+    const stats = computeIkm(ikmItems);
+    const fmt = (v: number): string => v.toFixed(2).replace(".", ",");
+    const lines = [
+      "Hasil IKM — Pelayanan Surat, Kecamatan Simpangkatis",
+      `Tanggal;${new Date().toLocaleDateString("id-ID")}`,
+      `Skor IKM;${fmt(stats.overall)}`,
+      `Kategori;${stats.category}`,
+      `Responden;${stats.count}`,
+      "",
+      "Unsur;Rata-rata",
+      ...IKM_ELEMENTS.map(
+        (el, i) => `${lang === "id" ? el.labelId : el.labelEn};${fmt(stats.perElement[i] ?? 0)}`,
+      ),
+    ];
+    downloadFile(
+      `ikm-hasil-${new Date().toISOString().slice(0, 10)}.csv`,
+      lines.join("\n"),
+      "text/csv;charset=utf-8",
+    );
+    setStatus($("ikm-share-status"), t("ikmExported", lang));
+  });
   $("ikm-qr-copy").addEventListener("click", async () => {
     const link = ($("ikm-survey-link") as HTMLInputElement).value;
     const ok = await copyText(link);
@@ -1478,7 +1616,21 @@ function renderPengaduan(): void {
     filterSel.appendChild(opt);
   }
   filterSel.value = prevFilter;
-  const list = filterAduan(aduItems, prevFilter);
+  const jenisFilterSel = $("adu-filter-jenis") as HTMLSelectElement;
+  const prevJenisFilter = jenisFilterSel.value;
+  jenisFilterSel.innerHTML = "";
+  const allJenis = document.createElement("option");
+  allJenis.value = "";
+  allJenis.textContent = t("aduFilterJenis", lang);
+  jenisFilterSel.appendChild(allJenis);
+  ADUAN_JENIS.forEach((j, i) => {
+    const opt = document.createElement("option");
+    opt.value = j;
+    opt.textContent = t(`aduJenis${i + 1}`, lang);
+    jenisFilterSel.appendChild(opt);
+  });
+  jenisFilterSel.value = prevJenisFilter;
+  const list = filterAduan(aduItems, prevFilter, prevJenisFilter);
   const wrap = $("adu-list");
   wrap.innerHTML = "";
   $("adu-empty").hidden = list.length > 0;
@@ -1526,6 +1678,12 @@ function renderPengaduan(): void {
     }
     sel.value = a.status;
     row.appendChild(sel);
+    const detailBtn = document.createElement("button");
+    detailBtn.type = "button";
+    detailBtn.className = "btn";
+    detailBtn.textContent = t("detail", lang);
+    detailBtn.dataset.id = a.id;
+    row.appendChild(detailBtn);
     div.appendChild(row);
     wrap.appendChild(div);
   }
@@ -1563,9 +1721,45 @@ function renderPengaduan(): void {
   renderQuickStats();
 }
 
+function aduShowDetail(a: Aduan): void {
+  const dlg = $("adu-detail") as HTMLDialogElement;
+  const pill = aduStatusPill(a.status);
+  const tpl = TEMPLATES.find((tp) => tp.id === a.jenisSurat);
+  const suratName = tpl ? (lang === "id" ? tpl.nameId : tpl.nameEn) : a.jenisSurat;
+  $("adu-detail-title").textContent = `${t("aduDetailTitle", lang)} — ${a.nama || t("ikmAnon", lang)}`;
+  const rows: Array<[string, string]> = [
+    [t("aduJenis", lang), a.jenis],
+    [t("aduLetterType", lang), suratName],
+    [t("aduFilterStatus", lang), pill.text],
+    [t("aduKontak", lang), a.kontak || "—"],
+    ["Tanggal", new Date(a.createdAt).toLocaleString()],
+  ];
+  const body = $("adu-detail-body");
+  body.innerHTML = "";
+  for (const [k, v] of rows) {
+    const dt = document.createElement("dt");
+    dt.textContent = k;
+    const dd = document.createElement("dd");
+    dd.textContent = v;
+    body.appendChild(dt);
+    body.appendChild(dd);
+  }
+  $("adu-detail-isi").textContent = a.isi;
+  if (!dlg.open) dlg.showModal();
+}
+
 function initPengaduan(): void {
   renderPengaduan();
   $("adu-filter-status").addEventListener("change", renderPengaduan);
+  $("adu-filter-jenis").addEventListener("change", renderPengaduan);
+  $("adu-list").addEventListener("click", (ev) => {
+    const btn = (ev.target as HTMLElement).closest(
+      "button[data-id]",
+    ) as HTMLButtonElement | null;
+    if (!btn || !btn.dataset.id) return;
+    const a = aduItems.find((x) => x.id === btn.dataset.id);
+    if (a) aduShowDetail(a);
+  });
   $("adu-list").addEventListener("change", (ev) => {
     const sel = (ev.target as HTMLElement).closest(
       "select.aduan-status",
@@ -1615,6 +1809,7 @@ async function boot(): Promise<void> {
   initLetters();
   initSummarizer();
   initQa();
+  initDrafts();
   initKepegawaian();
   initIkm();
   initPengaduan();

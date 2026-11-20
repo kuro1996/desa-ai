@@ -148,7 +148,7 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   kegRecords: { en: "records", id: "data" },
   kegDesaTitle: { en: "Data per village", id: "Data per desa" },
   kegLembagaTitle: { en: "Village institutions", id: "Lembaga desa" },
-  kegSummarize: { en: "✨ Summarize personnel (AI)", id: "✨ Ringkas kepegawaian (AI)" },
+  kegSummarize: { en: "Summarize personnel (AI)", id: "Ringkas kepegawaian (AI)" },
   kegSumOfflineNote: {
     en: "Offline recap (no AI call — Firebase not connected). Connect Firebase to get an AI-written summary.",
     id: "Rekap offline (tanpa panggilan AI — Firebase belum terhubung). Hubungkan Firebase untuk ringkasan AI.",
@@ -185,8 +185,8 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   ikmSubmit: { en: "Submit survey", id: "Kirim survei" },
   ikmNeedAll: { en: "Please answer all 9 elements and choose the letter service.", id: "Jawab semua 9 unsur dan pilih jenis surat yang diurus." },
   ikmSaved: { en: "Thank you! Your survey has been saved.", id: "Terima kasih! Survei Anda tersimpan." },
-  ikmShareSurvey: { en: "🔗 Share survey", id: "🔗 Bagikan Survei" },
-  ikmShareResults: { en: "📣 Share results", id: "📣 Bagikan Hasil" },
+  ikmShareSurvey: { en: "Share survey", id: "Bagikan Survei" },
+  ikmShareResults: { en: "Share results", id: "Bagikan Hasil" },
   ikmShared: { en: "Shared.", id: "Dibagikan." },
   ikmCopied: { en: "Link copied to clipboard — share it with the community.", id: "Tautan disalin ke clipboard — sebarkan ke masyarakat." },
   ikmCopyManual: { en: "Copy the text below manually.", id: "Salin teks di bawah ini secara manual." },
@@ -297,6 +297,32 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   },
   open: { en: "Open", id: "Buka" },
   delete: { en: "Delete", id: "Hapus" },
+  print: { en: "Print", id: "Cetak" },
+  detail: { en: "Detail", id: "Detail" },
+  close: { en: "Close", id: "Tutup" },
+  // Drafts search + data backup (Archive tab)
+  draftsSearch: { en: "Search drafts", id: "Cari draf" },
+  draftsSearchPh: { en: "Search drafts by title or text…", id: "Cari draf berdasarkan judul atau isi…" },
+  draftsNoMatch: { en: "No drafts match your search.", id: "Tidak ada draf yang cocok dengan pencarian." },
+  backupTitle: { en: "Data backup", id: "Cadangan data" },
+  backupHint: {
+    en: "Download all local data (letters, personnel, IKM, complaints, checklists) as one JSON file — keep it as a backup or move it to another device.",
+    id: "Unduh semua data lokal (surat, kepegawaian, IKM, pengaduan, checklist) dalam satu file JSON — simpan sebagai cadangan atau pindahkan ke perangkat lain.",
+  },
+  backupExport: { en: "Download backup (JSON)", id: "Unduh cadangan (JSON)" },
+  backupDone: { en: "Backup downloaded.", id: "Cadangan diunduh." },
+  // IKM export + clearer per-element chart
+  ikmExport: { en: "Download results (CSV)", id: "Unduh hasil (CSV)" },
+  ikmExported: { en: "IKM results downloaded.", id: "Hasil IKM diunduh." },
+  ikmScaleNote: {
+    en: "Scale 1–4 (4 = best). Green ≥ 3.5, amber 2.5–3.5, red below 2.5.",
+    id: "Skala 1–4 (4 = terbaik). Hijau ≥ 3,5, kuning 2,5–3,5, merah di bawah 2,5.",
+  },
+  // Pengaduan: type filter + detail dialog
+  aduFilterJenis: { en: "All types", id: "Semua jenis" },
+  aduDetailTitle: { en: "Complaint detail", id: "Detail pengaduan" },
+  // Kepegawaian: detail dialog
+  kegDetailTitle: { en: "Officer detail", id: "Detail pegawai" },
   savedAt: { en: "Saved ", id: "Disimpan " },
   deviceAvailable: { en: "On-device: ready", id: "Perangkat: siap" },
   deviceDownloading: { en: "On-device: downloading…", id: "Perangkat: mengunduh…" },

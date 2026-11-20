@@ -23,7 +23,7 @@
 // the "0 console errors / 0 failed requests" assertions and asserts zero
 // for everything else (local assets, app JS errors).
 import { createHash } from "node:crypto";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import puppeteer from "puppeteer-core";
 
@@ -139,12 +139,47 @@ async function main() {
       letterStatus,
     );
 
-    // Letter copy/download buttons exist and are wired (no-op without text is fine)
+    // Letter copy/download/print/save buttons exist and are wired (no-op without text is fine)
     const letterBtns = await page.$$eval(
-      "#letter-copy, #letter-download, #letter-save",
+      "#letter-copy, #letter-download, #letter-print, #letter-save",
       (els) => els.map((e) => e.id),
     );
-    check("letter actions present", letterBtns.length === 3, letterBtns.join(","));
+    check("letter actions present", letterBtns.length === 4, letterBtns.join(","));
+
+    // 2d. Print: the letter renders into a print-only area and calls window.print()
+    await page.evaluate(() => {
+      window.print = () => {
+        window.__printed = true;
+      };
+      const out = document.getElementById("letter-output");
+      out.value =
+        "SURAT UNDANGAN\n\nDengan hormat, warga diundang musyawarah desa.";
+      document.getElementById("letter-output-wrap").hidden = false;
+    });
+    await page.click("#letter-print");
+    await sleep(300);
+    const printOk = await page.evaluate(() => ({
+      printed: window.__printed === true,
+      body: document.getElementById("letter-print-body")?.textContent ?? "",
+      title: document.getElementById("letter-print-title")?.textContent ?? "",
+    }));
+    check(
+      "letter print fills the print area and calls window.print()",
+      printOk.printed && /musyawarah desa/i.test(printOk.body) && printOk.title.length > 0,
+      `printed=${printOk.printed} title=${printOk.title}`,
+    );
+    // The built CSS carries a real print stylesheet (checked on disk).
+    const cssFiles = readdirSync(join(DIST, "assets")).filter((f) => f.endsWith(".css"));
+    const cssText = cssFiles
+      .map((f) => readFileSync(join(DIST, "assets", f), "utf8"))
+      .join("\n");
+    check(
+      "print stylesheet hides the app chrome and shows only the letter",
+      /@media print/.test(cssText) &&
+        /letter-print-area/.test(cssText) &&
+        /visibility:\s*hidden/.test(cssText),
+      cssFiles.join(","),
+    );
 
     // 2b. SK Pengangkatan template exists (kepegawaian integration)
     const tplOptions = await page.$$eval("#letter-template option", (els) => els.map((e) => e.value));
@@ -425,6 +460,30 @@ async function main() {
     const totalAfterDel = await page.$eval("#keg-stat-total", (el) => el.textContent);
     check("kepegawaian delete removes the record", totalAfterDel === "23", `total=${totalAfterDel}`);
 
+    // 6c. Officer detail dialog
+    await page.$eval("#keg-search", (el) => {
+      el.value = "";
+    });
+    await page.evaluate(() =>
+      document.getElementById("keg-search")?.dispatchEvent(new Event("input", { bubbles: true })),
+    );
+    await sleep(300);
+    await page.evaluate(() => {
+      document.querySelector('#keg-table-body tr button[data-action="detail"]')?.click();
+    });
+    await sleep(300);
+    const kegDetail = await page.evaluate(() => ({
+      open: document.getElementById("keg-detail").open,
+      title: document.getElementById("keg-detail-title")?.textContent ?? "",
+      text: document.getElementById("keg-detail-body")?.textContent ?? "",
+    }));
+    check(
+      "kepegawaian detail dialog shows the officer record",
+      kegDetail.open && /Ahmad Fauzi/.test(kegDetail.title) && /Masa bhakti/.test(kegDetail.text),
+      `${kegDetail.title} | ${kegDetail.text.slice(0, 60)}`,
+    );
+    await page.evaluate(() => document.getElementById("keg-detail")?.close());
+
     // 6b. Unit dimension: kecamatan vs desa
     const unitStats = await page.evaluate(() => {
       const num = (id) => Number(document.getElementById(id)?.textContent ?? 0);
@@ -574,6 +633,50 @@ async function main() {
       archiveItems.includes("Surat Undangan") && archiveItems.includes("Ringkasan dokumen"),
       archiveItems.join(" | "),
     );
+
+    // 5b. Drafts search + delete + data backup export
+    await page.type("#drafts-search", "Undangan");
+    await sleep(400);
+    const searchItems = await page.$$eval("#drafts-list .draft-item h3", (els) =>
+      els.map((e) => e.textContent),
+    );
+    check(
+      "drafts search filters by title",
+      searchItems.length === 1 && searchItems[0] === "Surat Undangan",
+      searchItems.join(" | "),
+    );
+    await page.$eval("#drafts-search", (el) => {
+      el.value = "";
+    });
+    await page.evaluate(() =>
+      document.getElementById("drafts-search")?.dispatchEvent(new Event("input", { bubbles: true })),
+    );
+    await sleep(400);
+    const allDraftItems = await page.$$eval("#drafts-list .draft-item h3", (els) => els.length);
+    check("clearing drafts search shows all drafts", allDraftItems === 2, `${allDraftItems} items`);
+    await page.click("#backup-export");
+    await sleep(300);
+    const backupStatus = await page.$eval("#drafts-status", (el) => el.textContent);
+    check("backup export reports the download", /downloaded/i.test(backupStatus), backupStatus);
+    await page.evaluate(() => {
+      const items = [...document.querySelectorAll("#drafts-list .draft-item")];
+      const target = items.find(
+        (d) => d.querySelector("h3")?.textContent === "Ringkasan dokumen",
+      );
+      const btns = [...(target?.querySelectorAll(".actions .btn") ?? [])];
+      btns.find((b) => b.textContent.trim() === "Delete")?.click();
+    });
+    await sleep(500);
+    const afterDelete = await page.$$eval("#drafts-list .draft-item h3", (els) =>
+      els.map((e) => e.textContent),
+    );
+    const deleteStatus = await page.$eval("#drafts-status", (el) => el.textContent);
+    check(
+      "drafts delete removes the draft",
+      afterDelete.length === 1 && afterDelete[0] === "Surat Undangan" && /deleted/i.test(deleteStatus),
+      `${afterDelete.join(" | ")} status=${deleteStatus}`,
+    );
+
     const rateBtn = await page.$(".draft-item .rate-btn");
     check("archive letter item has a rate-this-service link", rateBtn !== null);
     if (rateBtn) {
@@ -710,6 +813,19 @@ async function main() {
       cat: document.getElementById("ikm-category")?.textContent ?? "",
     }));
     check("ikm all-1 survey scores 25, category D", ikmAll1.score === 25 && ikmAll1.cat.startsWith("D"), `score=${ikmAll1.score} cat=${ikmAll1.cat}`);
+    // 7b. Per-element chart bands + CSV export
+    const ikmBands = await page.$$eval("#ikm-bars .ikm-fill", (els) =>
+      els.map((e) => e.dataset.band),
+    );
+    check(
+      "ikm chart fills carry a readability band",
+      ikmBands.length === 9 && ikmBands.every((b) => ["good", "mid", "low"].includes(b)),
+      ikmBands.join(","),
+    );
+    await page.click("#ikm-export");
+    await sleep(300);
+    const ikmExpStatus = await page.$eval("#ikm-share-status", (el) => el.textContent);
+    check("ikm export reports the CSV download", /downloaded/i.test(ikmExpStatus), ikmExpStatus);
     // Link from IKM to Pengaduan
     await page.click("#ikm-to-pengaduan");
     await sleep(400);
@@ -782,6 +898,29 @@ async function main() {
     await page.select("#adu-filter-status", "");
     await sleep(200);
 
+    // 8b. Complaint type filter + detail dialog
+    await page.select("#adu-filter-jenis", "Keterlambatan");
+    await sleep(300);
+    const keterItems = await page.$$eval("#adu-list .aduan-item", (els) => els.length);
+    check("pengaduan type filter shows delay complaints", keterItems === 3, `${keterItems} items`);
+    await page.evaluate(() => {
+      document.querySelector("#adu-list .aduan-item .actions .btn")?.click();
+    });
+    await sleep(300);
+    const aduDetail = await page.evaluate(() => ({
+      open: document.getElementById("adu-detail").open,
+      isi: document.getElementById("adu-detail-isi")?.textContent ?? "",
+      body: document.getElementById("adu-detail-body")?.textContent ?? "",
+    }));
+    check(
+      "pengaduan detail dialog shows the complaint",
+      aduDetail.open && aduDetail.isi.length > 10 && /Keterlambatan/.test(aduDetail.body),
+      aduDetail.isi.slice(0, 60),
+    );
+    await page.evaluate(() => document.getElementById("adu-detail")?.close());
+    await page.select("#adu-filter-jenis", "");
+    await sleep(200);
+
     // 9. Modern layout: no horizontal overflow at phone width; all 7 tabs work
     await page.setViewport({ width: 390, height: 844 });
     await sleep(400);
@@ -821,6 +960,12 @@ async function main() {
       }
     }
     check("all 7 tabs open at phone width", tabsOk, tabsDetail || "7/7 tabs");
+    const heroPhoneH = await page.$eval(".hero", (el) => el.getBoundingClientRect().height);
+    check(
+      "hero is slim on phones (180–280px)",
+      heroPhoneH >= 180 && heroPhoneH <= 280,
+      `height=${Math.round(heroPhoneH)}px`,
+    );
     await page.setViewport({ width: 1280, height: 900 });
     await sleep(300);
 
@@ -869,6 +1014,29 @@ async function main() {
       (el) => el.getAttribute("href") ?? "",
     );
     check("favicon link is set", /favicon\.png/.test(faviconHref), faviconHref);
+    // Office photo hero (Paket 4): photo loads, overlay keeps text readable
+    const heroOk = await page.$eval("#hero-photo", (el) => el.naturalWidth > 0 && el.complete);
+    check("hero office photo loads (naturalWidth > 0)", heroOk);
+    check("office photo is bundled in dist", existsSync(join(DIST, "kantor.jpg")));
+    const heroOverlay = await page.$eval(".hero-overlay", (el) =>
+      getComputedStyle(el).backgroundImage.includes("linear-gradient"),
+    );
+    check("hero has a dark overlay gradient for readable text", heroOverlay);
+    const heroH1Color = await page.$eval(".hero h1", (el) => getComputedStyle(el).color);
+    check("hero title is white over the photo", heroH1Color === "rgb(255, 255, 255)", heroH1Color);
+    const heroDeskH = await page.$eval(".hero", (el) => el.getBoundingClientRect().height);
+    check(
+      "hero is taller on desktop (260–340px)",
+      heroDeskH >= 260 && heroDeskH <= 340,
+      `height=${Math.round(heroDeskH)}px`,
+    );
+    // Design polish: gentle panel entrance + quiet white stat cards
+    const panelAnim = await page.$eval("#panel-letters", (el) =>
+      getComputedStyle(el).animationName,
+    );
+    check("panels have a gentle entrance animation", panelAnim === "panel-in", panelAnim);
+    const statBg = await page.$eval(".stat-card", (el) => getComputedStyle(el).backgroundColor);
+    check("stat cards use a quiet white surface", statBg === "rgb(255, 255, 255)", statBg);
     // Every tab has an inline SVG icon + a label (no emoji tabs anymore)
     const tabIcons = await page.$$eval(".tab", (els) =>
       els.map((b) => ({

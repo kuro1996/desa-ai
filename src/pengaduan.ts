@@ -111,10 +111,15 @@ export function computeAduanStats(items: Aduan[]): AduanStats {
   return { total: items.length, baru, diproses, selesai };
 }
 
-export function filterAduan(items: Aduan[], status: AduanStatus | ""): Aduan[] {
+export function filterAduan(
+  items: Aduan[],
+  status: AduanStatus | "",
+  jenis = "",
+): Aduan[] {
   const sorted = [...items].sort((a, b) => b.createdAt - a.createdAt);
-  if (!status) return sorted;
-  return sorted.filter((a) => a.status === status);
+  return sorted.filter(
+    (a) => (!status || a.status === status) && (!jenis || a.jenis === jenis),
+  );
 }
 
 // ---------- storage (localStorage first, Firestore mirror best-effort) ----------

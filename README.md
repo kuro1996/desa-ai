@@ -16,7 +16,8 @@ back to **cloud Gemini**. Every answer shows a visible routing badge
    Surat Undangan, Surat Pengantar, and Surat Keterangan, plus **SK
    Pengangkatan Perangkat Desa** (prefillable from a personnel record).
    Fill the fields, add a short instruction, get a formal Indonesian draft.
-   Editable in place, copy / download `.txt`, save to the drafts library.
+   Editable in place, copy / download `.txt` / **print** (a clean formal
+   print layout with the office header), save to the drafts library.
    **Automatic letter numbering** fills the next number
    (`140/001/DS/XI/2026`, per-template counter, yearly reset), and saved
    letters are kept in the **letter archive** (Arsip surat) on the Archive
@@ -31,7 +32,9 @@ back to **cloud Gemini**. Every answer shows a visible routing badge
    guide entry lists its document requirements as a **tickable checklist**
    (saved in the browser).
 4. **Drafts library** — persisted in Firestore (anonymous auth) when
-   Firebase is connected, otherwise in localStorage.
+   Firebase is connected, otherwise in localStorage. Search drafts by
+   title or text, delete drafts, and download a **data backup (JSON)**
+   of all local data (letters, personnel, IKM, complaints, checklists).
 5. **Kepegawaian (SIAP AKAD)** — personnel administration for the
    Simpangkatis subdistrict office **and** the village officers of its
    10 villages, adapted from Bos's own SIAP AKAD app ("Sistem Update Data
@@ -41,7 +44,9 @@ back to **cloud Gemini**. Every answer shows a visible routing badge
    stats, **term-of-office notifications** (expired + expiring within 90
    days), per-unit summary cards and statistics, unit filter, officer
    input form (position options change with the chosen unit), searchable/
-   filterable recap table with a Unit column, per-village cards, and the
+   filterable recap table with a Unit column, **detail dialog per
+   officer** (NIK, birthplace/date, religion, position, village, phone,
+   term dates, status), per-village cards, and the
    6 village institutions (BPD, LPM, PKK, Posyandu, Linmas, Karang
    Taruna). The 23 records (8 subdistrict staff + 15 village officers)
    are **SAMPLE DATA, clearly labelled "Data Contoh — bukan data asli"**
@@ -62,8 +67,10 @@ back to **cloud Gemini**. Every answer shows a visible routing badge
    Sarana dan Prasarana), scale 1–4. **IKM = mean score × 25 (25–100)**,
    categories A (88,31–100, Sangat Baik), B (76,61–88,30), C
    (65,00–76,60), D (25,00–64,99). Dashboard shows the overall score +
-   category, per-element averages, lowest/highest element, and
-   respondent count. **Shareable**: "Bagikan Survei" (Web Share API,
+   category, per-element averages with **band colors** (green ≥ 3.5,
+   amber 2.5–3.5, red below 2.5 on the 1–4 scale), lowest/highest
+   element, and respondent count. Results can be **exported as CSV**.
+   **Shareable**: "Bagikan Survei" (Web Share API,
    clipboard fallback, manual-copy fallback) sends the app link +
    invitation; "Bagikan Hasil" shares a text summary of the score.
    The survey also has a **share card** with a deep link
@@ -79,21 +86,27 @@ back to **cloud Gemini**. Every answer shows a visible routing badge
    (Keterlambatan, Persyaratan tidak jelas, Pelayanan kurang ramah,
    Biaya tidak sesuai, Lainnya), optionally anonymous, with the related
    letter service and an optional phone contact. The office tracks each
-   report **Baru → Diproses → Selesai** (status filter + per-item
-   status change, per-status statistics). The 6 seed complaints are
+   report **Baru → Diproses → Selesai** (status filter + **type filter**,
+   per-item status change, **detail dialog per complaint**, per-status
+   statistics). The 6 seed complaints are
    **SAMPLE DATA, clearly labelled**. Linked from the IKM tab ("Punya
    keluhan? Sampaikan pengaduan").
 8. **Bilingual UI** — English default (required by the rules) with an
    Indonesian toggle. Letters and procedure answers are always in formal
    Indonesian.
 
-The UI is modern and mobile-first: emerald/teal gradient header with the
-office logo ("Heritage of Simpangkatis") and identity (Kecamatan
-Simpangkatis • Kabupaten Bangka Tengah), a live quick-stats strip
-(letters saved, IKM score, complaints resolved), a sticky scrollable
-tab bar where every tab has its own SVG icon + name, large touch
-targets, soft-shadow cards, and clear color-coded status chips — while
-keeping every feature working exactly as before.
+The UI is modern and mobile-first: a **photo hero header** — the
+Kecamatan Simpangkatis office building as the backdrop, with a dark
+emerald gradient overlay so the office logo ("Heritage of
+Simpangkatis"), the DesaAI name, and the office identity (Kecamatan
+Simpangkatis • Kabupaten Bangka Tengah) stay readable; slim on phones
+(~210 px) and taller on desktop (~280 px). Below it, a live
+quick-stats strip (letters saved, IKM score, complaints resolved), a
+sticky scrollable tab bar where every tab has its own SVG icon + name,
+gentle panel transitions (disabled when the user prefers reduced
+motion), quiet white stat cards with one colored accent each, large
+touch targets, and clear color-coded status chips — while keeping every
+feature working exactly as before.
 
 ## How hybrid inference works
 
@@ -196,6 +209,8 @@ keeping every feature working exactly as before.
 index.html            — shell: header chips, 7 tabs, banner
 public/logo.png       — office logo ("Heritage of Simpangkatis"),
                         black background made transparent
+public/kantor.jpg      — office photo for the hero header (resized to
+                        1600 px, JPEG quality 80)
 public/favicon.png    — 64×64 favicon (same logo)
 src/main.ts           — app wiring (tabs, i18n, feature handlers,
                         kepegawaian, IKM, pengaduan, hash routing,

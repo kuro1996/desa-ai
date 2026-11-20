@@ -12,32 +12,41 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
-    <header class="topbar">
-      <div class="brand">
-        <img
-          id="brand-logo"
-          class="brand-logo"
-          src="./logo.png"
-          alt="Logo Kecamatan Simpangkatis"
-        />
-        <div>
-          <h1>DesaAI</h1>
-          <p class="tagline" data-i18n="tagline">
-            AI clerk for village &amp; subdistrict offices
-          </p>
-          <p class="office-line" data-i18n="officeLine">
-            Kecamatan Simpangkatis • Kabupaten Bangka Tengah
-          </p>
+    <header class="hero">
+      <img
+        id="hero-photo"
+        class="hero-photo"
+        src="./kantor.jpg"
+        alt="Foto Kantor Kecamatan Simpangkatis"
+      />
+      <div class="hero-overlay" aria-hidden="true"></div>
+      <div class="hero-inner">
+        <div class="brand">
+          <img
+            id="brand-logo"
+            class="brand-logo"
+            src="./logo.png"
+            alt="Logo Kecamatan Simpangkatis"
+          />
+          <div>
+            <h1>DesaAI</h1>
+            <p class="tagline" data-i18n="tagline">
+              AI clerk for village &amp; subdistrict offices
+            </p>
+            <p class="office-line" data-i18n="officeLine">
+              Kecamatan Simpangkatis • Kabupaten Bangka Tengah
+            </p>
+          </div>
         </div>
-      </div>
-      <div class="top-actions">
-        <span id="device-chip" class="chip chip-muted" title="On-device model status"
-          >On-device: checking…</span
-        >
-        <span id="firebase-chip" class="chip chip-muted" title="Firebase status"
-          >Firebase: checking…</span
-        >
-        <button id="lang-toggle" class="btn btn-ghost" type="button">🇮🇩 Bahasa Indonesia</button>
+        <div class="top-actions">
+          <span id="device-chip" class="chip chip-muted" title="On-device model status"
+            >On-device: checking…</span
+          >
+          <span id="firebase-chip" class="chip chip-muted" title="Firebase status"
+            >Firebase: checking…</span
+          >
+          <button id="lang-toggle" class="btn btn-ghost" type="button">🇮🇩 Bahasa Indonesia</button>
+        </div>
       </div>
     </header>
 
@@ -128,10 +137,10 @@
         </div>
         <div class="actions">
           <button id="letter-generate" class="btn btn-primary" type="button">
-            ✨ <span data-i18n="generate">Generate draft</span>
+            <span data-i18n="generate">Generate draft</span>
           </button>
           <button id="letter-autonumber" class="btn" type="button">
-            🔢 <span data-i18n="autoNumber">Auto number</span>
+            <span data-i18n="autoNumber">Auto number</span>
           </button>
           <button id="letter-clear" class="btn" type="button" data-i18n="clear">Clear</button>
         </div>
@@ -151,10 +160,21 @@
             <button id="letter-download" class="btn" type="button" data-i18n="download">
               Download .txt
             </button>
+            <button id="letter-print" class="btn" type="button" data-i18n="print">
+              Print
+            </button>
             <button id="letter-save" class="btn" type="button" data-i18n="saveDraft">
               Save draft
             </button>
           </div>
+        </div>
+        <!-- Print-only rendering of the letter (filled in by JS before window.print()). -->
+        <div id="letter-print-area" class="print-only" aria-hidden="true">
+          <p class="print-head-office">Kecamatan Simpangkatis • Kabupaten Bangka Tengah</p>
+          <p class="print-head-title" id="letter-print-title"></p>
+          <p class="print-head-date" id="letter-print-date"></p>
+          <hr />
+          <div class="print-body" id="letter-print-body"></div>
         </div>
       </section>
 
@@ -258,10 +278,36 @@
           Saved drafts sync to Firestore when Firebase is connected; otherwise they
           stay in this browser (localStorage).
         </p>
+        <div class="form-grid">
+          <label class="field field-wide">
+            <span data-i18n="draftsSearch">Search drafts</span>
+            <input
+              id="drafts-search"
+              type="text"
+              data-i18n-ph="draftsSearchPh"
+              placeholder="Search drafts by title or text…"
+            />
+          </label>
+        </div>
         <div id="drafts-list" class="drafts-list"></div>
         <p id="drafts-empty" class="hint" data-i18n="draftsEmpty">
           No drafts yet. Generate a letter or summary and press “Save draft”.
         </p>
+
+        <div class="backup-card">
+          <h3 class="subhead" data-i18n="backupTitle">Data backup</h3>
+          <p class="hint" data-i18n="backupHint">
+            Download all local data (letters, personnel, IKM, complaints,
+            checklists) as one JSON file — keep it as a backup or move it to
+            another device.
+          </p>
+          <div class="actions">
+            <button id="backup-export" class="btn" type="button">
+              <span data-i18n="backupExport">Download backup (JSON)</span>
+            </button>
+          </div>
+          <div id="drafts-status" class="status" aria-live="polite"></div>
+        </div>
       </section>
 
       <!-- ============ KEPEGAWAIAN (SIAP AKAD) ============ -->
@@ -409,7 +455,7 @@
           </label>
           <div class="actions field-wide">
             <button id="keg-add" class="btn btn-primary" type="submit">
-              💾 <span data-i18n="kegAdd">Save officer</span>
+              <span data-i18n="kegAdd">Save officer</span>
             </button>
           </div>
         </form>
@@ -465,6 +511,14 @@
         </div>
         <p id="keg-count" class="hint"></p>
 
+        <dialog id="keg-detail" class="detail-dialog">
+          <h3 id="keg-detail-title"></h3>
+          <dl id="keg-detail-body" class="detail-rows"></dl>
+          <form method="dialog" class="actions">
+            <button class="btn" type="submit" data-i18n="close">Close</button>
+          </form>
+        </dialog>
+
         <h3 class="subhead" data-i18n="kegDesaTitle">Data per village</h3>
         <div id="keg-desa-cards" class="desa-cards"></div>
 
@@ -501,15 +555,21 @@
               <span data-i18n="ikmHighest">Highest</span>:
               <strong id="ikm-highest">–</strong>
             </p>
+            <p class="hint ikm-scale-note" data-i18n="ikmScaleNote">
+              Scale 1–4 (4 = best). Green ≥ 3.5, amber 2.5–3.5, red below 2.5.
+            </p>
           </div>
         </div>
 
         <div class="actions">
           <button id="ikm-share-survey" class="btn btn-primary" type="button">
-            <span data-i18n="ikmShareSurvey">🔗 Share survey</span>
+            <span data-i18n="ikmShareSurvey">Share survey</span>
           </button>
           <button id="ikm-share-results" class="btn" type="button">
-            <span data-i18n="ikmShareResults">📣 Share results</span>
+            <span data-i18n="ikmShareResults">Share results</span>
+          </button>
+          <button id="ikm-export" class="btn" type="button">
+            <span data-i18n="ikmExport">Download results (CSV)</span>
           </button>
         </div>
         <div id="ikm-share-status" class="status" aria-live="polite"></div>
@@ -564,7 +624,7 @@
           </label>
           <div class="actions field-wide">
             <button id="ikm-submit" class="btn btn-primary" type="submit">
-              📝 <span data-i18n="ikmSubmit">Submit survey</span>
+              <span data-i18n="ikmSubmit">Submit survey</span>
             </button>
           </div>
         </form>
@@ -631,7 +691,7 @@
           </label>
           <div class="actions field-wide">
             <button id="adu-submit" class="btn btn-primary" type="submit">
-              📢 <span data-i18n="aduSubmit">Submit complaint</span>
+              <span data-i18n="aduSubmit">Submit complaint</span>
             </button>
           </div>
         </form>
@@ -643,12 +703,25 @@
             <span data-i18n="aduFilterStatus">All statuses</span>
             <select id="adu-filter-status"></select>
           </label>
+          <label class="field">
+            <span data-i18n="aduFilterJenis">All types</span>
+            <select id="adu-filter-jenis"></select>
+          </label>
         </div>
         <div id="adu-list" class="drafts-list"></div>
         <p id="adu-empty" class="hint" hidden data-i18n="aduEmpty">
           No complaints with this status.
         </p>
         <p id="adu-count" class="hint"></p>
+
+        <dialog id="adu-detail" class="detail-dialog">
+          <h3 id="adu-detail-title"></h3>
+          <dl id="adu-detail-body" class="detail-rows"></dl>
+          <p id="adu-detail-isi" class="detail-text"></p>
+          <form method="dialog" class="actions">
+            <button class="btn" type="submit" data-i18n="close">Close</button>
+          </form>
+        </dialog>
       </section>
     </main>
 
