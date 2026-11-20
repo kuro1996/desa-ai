@@ -1651,6 +1651,14 @@ html[data-theme="dark"] .ikm-radios label:has(input:checked) {
   margin-top: 10px;
 }
 
+.bento-kpi .notif-list {
+  margin-top: 10px;
+}
+
+#home-aduan-list .notif-item {
+  cursor: pointer;
+}
+
 .report-preview {
   margin: 8px 0;
 }

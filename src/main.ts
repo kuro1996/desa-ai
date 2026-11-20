@@ -357,11 +357,37 @@ function printMonthlyReport(): void {
     month: "long",
     year: "numeric",
   });
+  // Attention list for the printed file: oldest open complaints + terms
+  // expiring soon, so the paper copy is actionable, not just counts.
+  const attention: string[] = [];
+  const openAduan = loadAduan()
+    .filter((a) => a.status !== "selesai")
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .slice(0, 5);
+  for (const a of openAduan) {
+    const days = Math.max(
+      0,
+      Math.floor((Date.now() - a.createdAt) / 86_400_000),
+    );
+    attention.push(
+      `- ${a.nama || "Anonim"} — ${a.jenis} (${new Date(a.createdAt).toLocaleDateString("id-ID")}, ${days} hari menunggu)`,
+    );
+  }
+  for (const n of computeNotifications(loadPerangkat(), new Date()).slice(0, 5)) {
+    attention.push(
+      n.kind === "habis"
+        ? `- ${n.perangkat.nama} — ${n.perangkat.jabatan}, ${n.perangkat.desa} (masa bhakti habis ${formatDateId(n.perangkat.masaSelesai)})`
+        : `- ${n.perangkat.nama} — ${n.perangkat.jabatan}, ${n.perangkat.desa} (masa bhakti habis ${formatDateId(n.perangkat.masaSelesai)}, ${n.days} hari lagi)`,
+    );
+  }
   $("report-print-body").textContent = [
     `Surat tersimpan bulan ini: ${d.letters}`,
     `IKM: skor ${d.ikmCount === 0 ? "–" : ikmFmt(d.ikmScore)} (kategori ${d.ikmCat}), ${d.ikmCount} responden`,
     `Pengaduan bulan ini: ${d.aduTotal} (Baru ${d.aduBaru}, Diproses ${d.aduDiproses}, Selesai ${d.aduSelesai})`,
     `Kepegawaian: ${d.kegTotal} pegawai — aktif ${d.kegAktif}, akan habis ${d.kegAkan}, habis ${d.kegHabis}`,
+    "",
+    "Perlu perhatian:",
+    ...(attention.length > 0 ? attention : ["- Tidak ada."]),
     "",
     "Data contoh ditandai pada masing-masing modul (bukan data asli).",
   ].join("\n");
@@ -502,6 +528,29 @@ function renderHome(): void {
   $("home-aduan-baru").textContent = String(
     computeAduanStats(loadAduan()).baru,
   );
+  // Oldest unresolved complaints (waiting longest first).
+  const openAduan = loadAduan()
+    .filter((a) => a.status !== "selesai")
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .slice(0, 3);
+  const aduanList = $("home-aduan-list");
+  aduanList.innerHTML = "";
+  $("home-aduan-empty").hidden = openAduan.length > 0;
+  for (const a of openAduan) {
+    const li = document.createElement("li");
+    li.className = "notif-item";
+    const strong = document.createElement("strong");
+    strong.textContent = `${a.nama || t("ikmAnon", lang)} — ${a.jenis}`;
+    li.appendChild(strong);
+    const days = Math.max(
+      0,
+      Math.floor((now.getTime() - a.createdAt) / 86_400_000),
+    );
+    const detail = document.createElement("span");
+    detail.textContent = `${days} ${t("homeAduanWaiting", lang)} (${new Date(a.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })})`;
+    li.appendChild(detail);
+    aduanList.appendChild(li);
+  }
   // Terms of office needing attention (expired first, then expiring soon).
   const notifs = computeNotifications(loadPerangkat(), now);
   $("home-masa-akan").textContent = String(
@@ -557,6 +606,10 @@ function initHome(): void {
     document.querySelector<HTMLButtonElement>('[data-tab="ikm"]')?.click(),
   );
   $("home-go-aduan").addEventListener("click", () =>
+    document.querySelector<HTMLButtonElement>('[data-tab="pengaduan"]')?.click(),
+  );
+  // Tapping an unresolved complaint on the dashboard opens the list.
+  $("home-aduan-list").addEventListener("click", () =>
     document.querySelector<HTMLButtonElement>('[data-tab="pengaduan"]')?.click(),
   );
   $("home-go-keg").addEventListener("click", () =>
@@ -666,6 +719,12 @@ function downloadFile(filename: string, text: string, mime: string): void {
 
 function downloadTxt(filename: string, text: string): void {
   downloadFile(filename, text, "text/plain;charset=utf-8");
+}
+
+/** Escape one CSV cell (semicolon-separated export): quote when the value
+ * contains a separator, quote, or newline; double inner quotes. */
+function csvEscape(v: string): string {
+  return /[;"\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 }
 
 /** Read a JSON value from localStorage without throwing (backup export). */
@@ -2155,6 +2214,35 @@ function initPengaduan(): void {
   renderPengaduan();
   $("adu-filter-status").addEventListener("change", renderPengaduan);
   $("adu-filter-jenis").addEventListener("change", renderPengaduan);
+  $("adu-export").addEventListener("click", () => {
+    const rows = [
+      ["Tanggal", "Nama", "Jenis", "Layanan surat", "Status", "Kontak", "Isi"],
+      ...aduItems.map((a) => {
+        const tpl = TEMPLATES.find((tp) => tp.id === a.jenisSurat);
+        const statusKey =
+          a.status === "baru"
+            ? "aduStatusBaru"
+            : a.status === "diproses"
+              ? "aduStatusDiproses"
+              : "aduStatusSelesai";
+        return [
+          new Date(a.createdAt).toLocaleString("id-ID"),
+          a.nama || t("ikmAnon", lang),
+          a.jenis,
+          tpl ? (lang === "id" ? tpl.nameId : tpl.nameEn) : a.jenisSurat,
+          t(statusKey, lang),
+          a.kontak,
+          a.isi,
+        ];
+      }),
+    ];
+    downloadFile(
+      `pengaduan-${new Date().toISOString().slice(0, 10)}.csv`,
+      rows.map((r) => r.map(csvEscape).join(";")).join("\n"),
+      "text/csv;charset=utf-8",
+    );
+    setStatus($("adu-export-status"), t("aduExported", lang));
+  });
   $("adu-list").addEventListener("click", (ev) => {
     const btn = (ev.target as HTMLElement).closest(
       "button[data-id]",

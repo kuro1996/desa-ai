@@ -13,8 +13,8 @@ back to **cloud Gemini**. Every answer shows a visible routing badge
 ## Features
 
 1. **Draft Letters** — templates for Surat Dinas, Surat Keputusan (SK),
-   Surat Undangan, Surat Pengantar, and Surat Keterangan, plus **SK
-   Pengangkatan Perangkat Desa** (prefillable from a personnel record).
+   Surat Undangan, Surat Pengantar, Surat Keterangan, **Surat Keterangan
+   Tidak Mampu (SKTM)**, and SK Pengangkatan Perangkat Desa (prefillable from a personnel record).
    Fill the fields, add a short instruction, get a formal Indonesian draft.
    Editable in place, copy / download `.txt` / **print** (a clean formal
    print layout with the office header), save to the drafts library.
@@ -88,7 +88,7 @@ back to **cloud Gemini**. Every answer shows a visible routing badge
    letter service and an optional phone contact. The office tracks each
    report **Baru → Diproses → Selesai** (status filter + **type filter**,
    per-item status change, **detail dialog per complaint**, per-status
-   statistics). The 6 seed complaints are
+   statistics, **CSV export** of the whole list). The 6 seed complaints are
    **SAMPLE DATA, clearly labelled**. Linked from the IKM tab ("Punya
    keluhan? Sampaikan pengaduan").
 8. **Bilingual UI** — English default (required by the rules) with an
@@ -97,11 +97,14 @@ back to **cloud Gemini**. Every answer shows a visible routing badge
 9. **Beranda (Home dashboard)** — the default tab: a **bento grid**
    (modular cards of different sizes, the dominant dashboard pattern in
    2026) with today's snapshot — big IKM score card, letters saved
-   today, new complaints, terms of office needing attention (expired +
+   today, new complaints **with the 3 oldest unresolved complaints listed
+   (name, type, days waiting — tap to open the list)**, terms of office needing attention (expired +
    expiring ≤ 90 days, top 3 listed), this month's totals, a
    **hand-rolled SVG IKM trend chart** (cumulative score after each
    answer), and a **printable monthly report** (letters + IKM +
-   complaints + personnel snapshot for the running month). A **global
+   complaints + personnel snapshot for the running month, **plus a
+   "Perlu perhatian" section** naming the oldest open complaints and the
+   officers whose terms expire soon, so the paper copy is actionable). A **global
    search** box finds letters/drafts, officers, and complaints from one
    place and jumps straight to the record (officer/complaint detail
    dialog, or the draft itself). A **dark mode** toggle in the header

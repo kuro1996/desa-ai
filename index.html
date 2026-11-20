@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0e7a4d" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1a13" media="(prefers-color-scheme: dark)" />
     <meta
       name="description"
       content="DesaAI — offline-first AI clerk for Indonesian village offices. Drafts official letters, summarizes documents, and answers procedure questions with on-device Gemini Nano 4 + cloud Gemini fallback (Firebase AI Logic hybrid inference)."
@@ -189,6 +191,10 @@
             <p class="bento-label" data-i18n="homeAduanBaru">New complaints</p>
             <p class="bento-num"><strong id="home-aduan-baru">0</strong></p>
             <p class="bento-sub" data-i18n="homeAduanBaruHint">waiting for follow-up</p>
+            <ul id="home-aduan-list" class="notif-list"></ul>
+            <p id="home-aduan-empty" class="hint" hidden data-i18n="homeAduanEmpty">
+              All complaints resolved.
+            </p>
             <div class="actions">
               <button id="home-go-aduan" class="btn" type="button">
                 <span data-i18n="homeGoAduan">New complaint</span>
@@ -859,6 +865,12 @@
           No complaints with this status.
         </p>
         <p id="adu-count" class="hint"></p>
+        <div class="actions">
+          <button id="adu-export" class="btn" type="button">
+            <span data-i18n="aduExport">Export complaints (CSV)</span>
+          </button>
+        </div>
+        <div id="adu-export-status" class="status" aria-live="polite"></div>
 
         <dialog id="adu-detail" class="detail-dialog">
           <h3 id="adu-detail-title"></h3>

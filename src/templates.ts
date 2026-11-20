@@ -92,6 +92,23 @@ export const TEMPLATES: LetterTemplate[] = [
       "Kop surat desa, nomor/tanggal, judul SURAT KETERANGAN, isi yang menerangkan identitas dan hal yang diterangkan, penutup, tanda tangan Kepala Desa beserta nama dan NIP (tulis [NAMA] dan [NIP] bila tidak diberikan).",
   },
   {
+    id: "sktm",
+    nameId: "Surat Keterangan Tidak Mampu (SKTM)",
+    nameEn: "Certificate of Low Income (SKTM)",
+    fields: [
+      { key: "nomor", labelId: "Nomor surat", labelEn: "Letter number", placeholder: "cth: 140/55/DS/XI/2026" },
+      { key: "tanggal", labelId: "Tanggal", labelEn: "Date", placeholder: "cth: 21 November 2026" },
+      { key: "nama", labelId: "Nama pemohon", labelEn: "Applicant name", placeholder: "cth: Budi Santoso" },
+      { key: "nik", labelId: "NIK", labelEn: "National ID (NIK)", placeholder: "cth: 1901010101010001" },
+      { key: "alamat", labelId: "Alamat", labelEn: "Address", placeholder: "cth: Dusun Katis RT 02 RW 01, Desa Katis" },
+      { key: "pekerjaan", labelId: "Pekerjaan", labelEn: "Occupation", placeholder: "cth: Buruh harian lepas" },
+      { key: "penghasilan", labelId: "Penghasilan per bulan", labelEn: "Monthly income", placeholder: "cth: Rp800.000" },
+      { key: "keperluan", labelId: "Keperluan", labelEn: "Purpose", placeholder: "cth: Keringanan biaya pendidikan anak" },
+    ],
+    structureId:
+      "Kop surat desa, nomor/tanggal, judul SURAT KETERANGAN TIDAK MAMPU, isi yang menerangkan identitas pemohon (nama, NIK, alamat, pekerjaan, penghasilan per bulan) dan menyatakan bahwa yang bersangkutan benar-benar termasuk keluarga tidak mampu, keperluan surat, penutup, tanda tangan Kepala Desa beserta nama dan NIP (tulis [NAMA] dan [NIP] bila tidak diberikan).",
+  },
+  {
     id: "sk-pengangkatan",
     nameId: "SK Pengangkatan Perangkat Desa",
     nameEn: "Village Officer Appointment Decree (SK)",

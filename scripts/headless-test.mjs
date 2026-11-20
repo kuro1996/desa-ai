@@ -164,6 +164,28 @@ async function main() {
       masa.akan === kegStats.akan && masa.habis === kegStats.habis && masa.items > 0,
       `bento ${masa.akan}/${masa.habis} vs keg ${kegStats.akan}/${kegStats.habis} items=${masa.items}`,
     );
+    // Paket 6: dashboard lists the oldest unresolved complaints (waiting longest first).
+    const homeAduan = await page.evaluate(() => ({
+      items: document.querySelectorAll("#home-aduan-list li").length,
+      first: document.querySelector("#home-aduan-list li")?.textContent ?? "",
+    }));
+    check(
+      "home lists 3 oldest unresolved complaints with waiting time",
+      homeAduan.items === 3 && /Biaya tidak sesuai/.test(homeAduan.first) && /waiting|menunggu/.test(homeAduan.first),
+      `items=${homeAduan.items} first=${homeAduan.first.slice(0, 60)}`,
+    );
+    // Paket 6: printed monthly report carries an attention section.
+    await page.evaluate(() => {
+      window.print = () => {};
+    });
+    await page.click("#home-report-print");
+    await sleep(200);
+    const reportBody = await page.$eval("#report-print-body", (el) => el.textContent ?? "");
+    check(
+      "monthly print report lists open complaints + expiring terms under 'Perlu perhatian'",
+      /Perlu perhatian/.test(reportBody) && /hari menunggu/.test(reportBody),
+      reportBody.slice(0, 120),
+    );
     // IKM trend chart: SVG line with one point per answer, last point = score.
     const trend = await page.evaluate(() => {
       const svg = document.querySelector("#home-ikm-trend svg");
@@ -357,6 +379,16 @@ async function main() {
       tplOptions.includes("sk-pengangkatan"),
       tplOptions.join(","),
     );
+    // Paket 6: SKTM template exists with its own fields.
+    check(
+      "SKTM template present",
+      tplOptions.includes("sktm"),
+      tplOptions.join(","),
+    );
+    await page.select("#letter-template", "sktm");
+    await sleep(200);
+    const sktmFields = await page.$$eval("#letter-fields input, #letter-fields textarea", (els) => els.length);
+    check("SKTM template renders 8 fields", sktmFields === 8, `${sktmFields} fields`);
 
     // 2c. Automatic letter numbering (per-template counter, yearly reset)
     await page.click("#letter-autonumber");
@@ -1066,6 +1098,15 @@ async function main() {
     check("pengaduan status filter shows new complaints", baruItems === 3, `${baruItems} items`);
     await page.select("#adu-filter-status", "");
     await sleep(200);
+    // Paket 6: CSV export reports success.
+    await page.click("#adu-export");
+    await sleep(200);
+    const aduExportStatus = await page.$eval("#adu-export-status", (el) => el.textContent ?? "");
+    check(
+      "pengaduan CSV export reports success",
+      /diekspor|exported/i.test(aduExportStatus),
+      `status=${aduExportStatus}`,
+    );
 
     // 8b. Complaint type filter + detail dialog
     await page.select("#adu-filter-jenis", "Keterlambatan");

@@ -40,6 +40,8 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   homeLettersTodayHint: { en: "drafts saved today", id: "draf tersimpan hari ini" },
   homeAduanBaru: { en: "New complaints", id: "Pengaduan baru" },
   homeAduanBaruHint: { en: "waiting for follow-up", id: "menunggu ditindaklanjuti" },
+  homeAduanWaiting: { en: "days waiting", id: "hari menunggu" },
+  homeAduanEmpty: { en: "All complaints resolved.", id: "Semua pengaduan sudah selesai." },
   homeMasaTitle: { en: "Terms of office — needs attention", id: "Masa bhakti — perlu perhatian" },
   homeMasaAkanHabis: { en: "Expiring ≤ 90 days", id: "Akan habis ≤ 90 hari" },
   homeMasaHabis: { en: "Expired", id: "Sudah habis" },
@@ -297,6 +299,8 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   aduListTitle: { en: "Complaint list", id: "Daftar pengaduan" },
   aduEmpty: { en: "No complaints with this status.", id: "Belum ada pengaduan dengan status ini." },
   aduStatusChanged: { en: "Status updated.", id: "Status diperbarui." },
+  aduExport: { en: "Export complaints (CSV)", id: "Ekspor pengaduan (CSV)" },
+  aduExported: { en: "Complaints exported.", id: "Pengaduan diekspor." },
   // Dynamic strings
   badgeDevice: { en: "On-device • private", id: "Di perangkat • privat" },
   badgeCloud: { en: "Cloud", id: "Cloud" },
