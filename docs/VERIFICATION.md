@@ -2,7 +2,10 @@
 
 Built and verified on 2026-11-15 (build VM, Asia/Jakarta); rebuilt and
 re-verified 2026-11-20 after merging the SIAP AKAD personnel module and
-the supporting features (three pillars: letters, personnel, status).
+the supporting features (three pillars: letters, personnel, status);
+re-verified again 2026-11-20 evening after the package: subdistrict-office
+unit scope in Kepegawaian, the IKM (community satisfaction) tab, the
+Pengaduan tab, and the modern mobile-first design refresh.
 
 ## What was verified live
 
@@ -11,9 +14,12 @@ the supporting features (three pillars: letters, personnel, status).
 | `npm install` (firebase 12.19.0, vite 6.4.6, TS 5.9) | ✅ 166 packages, exit 0 |
 | Hybrid API surface in installed SDK | ✅ `InferenceMode.PREFER_ON_DEVICE` / `ONLY_IN_CLOUD`, `initializeDeviceModel`, `response.inferenceSource`, `useLimitedUseAppCheckTokens` all present in `@firebase/ai` |
 | `npm run build` (`tsc -b && vite build`) | ✅ passes; `dist/` = index.html + 1 CSS + 1 JS bundle (862 kB, 213 kB gzip). One non-fatal warning: chunk > 500 kB (Firebase SDK) — acceptable for a static app |
-| `npm run test:headless` (43 checks) | ✅ **43/43 passed**, exit 0 (2026-11-20) |
-| Headless-Chrome UI flows | ✅ app loads; 5 tabs incl. Kepegawaian; letters form (Undangan, 7 fields); auto letter numbering `140/001/DS/XI/2026` → `140/002/DS/XI/2026`; summarizer char counter; Q&A answered from offline KB with routing badge + sources (10 KB entries incl. perangkat desa & SK pengangkatan); KB syarat checklist ticks; EN→ID language toggle; drafts empty state; letter archive groups (Arsip surat / Ringkasan tersimpan) |
-| Kepegawaian module (SIAP AKAD sample data) | ✅ 15 demo records seeded, labelled "DATA CONTOH — bukan data asli"; stats 15 total / 10 villages / 12 active / 2 expiring ≤90d / 1 expired (matches masa bhakti dates recomputed in-test); 3 notifications; 10 village cards; 6 lembaga cards; form validation rejects empty submit, non-16-digit NIK, end-before-start dates; add → 16, delete → 15; search + village + status filters; "Buat SK" prefills SK Pengangkatan template; offline personnel recap renders |
+| `npm run test:headless` (78 checks) | ✅ **78/78 passed**, exit 0 (2026-11-20, run twice, identical results) |
+| Headless-Chrome UI flows | ✅ app loads; 7 tabs incl. Kepegawaian, IKM, Pengaduan; letters form (Undangan, 7 fields); auto letter numbering `140/001/DS/XI/2026` → `140/002/DS/XI/2026`; summarizer char counter; Q&A answered from offline KB with routing badge + sources (10 KB entries incl. perangkat desa & SK pengangkatan); KB syarat checklist ticks; EN→ID language toggle; drafts empty state; letter archive groups (Arsip surat / Ringkasan tersimpan); archive letter item has a "Beri penilaian" link that opens the IKM tab |
+| Kepegawaian module (SIAP AKAD sample data) | ✅ 23 demo records seeded, labelled "DATA CONTOH — bukan data asli" (8 subdistrict-office staff + 15 village officers); stats 23 total / 10 villages / 16 active / 4 expiring ≤90d / 3 expired (matches masa bhakti dates recomputed in-test); per-unit stats 8/4/2/2 (kecamatan) and 15/12/2/1 (desa); 7 notifications (incl. kecamatan staff); 10 village cards; 6 lembaga cards; form validation rejects empty submit, non-16-digit NIK, end-before-start dates; add → 24, delete → 23; search + village + status + unit filters (unit filter: 8 kecamatan rows / 15 desa rows); form unit switch changes position options and locks the village to "Kecamatan Simpangkatis" for unit Kecamatan; add kecamatan record → 24 (kec 9), delete → 23 (kec 8); "Buat SK" prefills SK Pengangkatan template for a desa record (Ahmad Fauzi) and a kecamatan record (Rizky Ramadhan — Kepala Seksi Pelayanan); offline personnel recap renders |
+| IKM module (PermenPAN-RB No. 14/2017) | ✅ 12 sample answers, labelled "DATA CONTOH — bukan data asli"; dashboard count 12, 9 per-element bars; score = mean per element × 25 verified in-test (sample mean 3.6111 → IKM 90.28, category A); category band checked against the score; share buttons exist; "Bagikan Survei" clipboard fallback works in headless (status "Link copied to clipboard"); full-survey submit → 13 respondents, formula still holds; exact endpoints verified from a clean state: all 4s → IKM 100, category A; all 1s → IKM 25, category D; IKM → Pengaduan link opens the Pengaduan tab |
+| Pengaduan module | ✅ 6 demo complaints, labelled "DATA CONTOH — bukan data asli"; stats 3 Baru / 2 Diproses / 1 Selesai; empty submit rejected; submit adds a complaint (7 items, Baru 4); status change Baru → Selesai updates stats (Baru 3, Selesai 2); status filter shows 2 Selesai / 3 Baru |
+| Modern design / mobile | ✅ no horizontal overflow at 390 px phone width (scrollWidth 390); all 7 tabs clickable at phone width; modern emerald/teal + amber design (gradient header with office identity, rounded white cards, soft shadows, 44 px touch targets, colored status chips) — no function changed |
 | Console errors / failed requests | ✅ **0 console errors, 0 failed requests** (excluding this VM's blocked tunnel to Google endpoints — see environment notes) |
 
 ## What was NOT verified live (honest status)
@@ -54,9 +60,19 @@ the supporting features (three pillars: letters, personnel, status).
 - The "On-device • private" badge on a Q&A answer means the answer came
   from the **local offline guide with no network call** — it is NOT a
   Gemini Nano inference. The badge's reason text says exactly that.
-- The 15 personnel records are **SAMPLE DATA from SIAP AKAD** (demo NIKs),
+- The 23 personnel records are **SAMPLE DATA from SIAP AKAD** (demo NIKs),
   labelled in the UI. They demonstrate the admin flow and term-expiry
-  notifications; they are not real personnel data.
+  notifications; they are not real personnel data. The 8 subdistrict-office
+  records use generic example names (e.g. Budi Prasetyo, Siti Rahmawati)
+  and are NOT the real office holders — never present them as such.
+- **IKM Web Share was NOT verified live.** Headless Chrome has no
+  `navigator.share`, so the test verifies the clipboard fallback ("Link
+  copied to clipboard") and the manual-copy box path, not the native
+  share sheet — that needs a real phone browser.
+- **The modern design was verified structurally only** (no horizontal
+  overflow at 390 px, all 7 tabs clickable, chips/cards render) — no
+  visual-design review was done; a human look on a real phone is still
+  the honest check for "modern and attractive".
 
 ## Environment notes (for the next run)
 

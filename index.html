@@ -19,6 +19,9 @@
           <p class="tagline" data-i18n="tagline">
             AI clerk for village &amp; subdistrict offices
           </p>
+          <p class="office-line" data-i18n="officeLine">
+            Kecamatan Simpangkatis • Kabupaten Bangka Tengah
+          </p>
         </div>
       </div>
       <div class="top-actions">
@@ -58,6 +61,12 @@
         </button>
         <button class="tab" data-tab="kepegawaian" role="tab" aria-selected="false" type="button">
           👥 <span data-i18n="tabKepegawaian">Personnel (SIAP AKAD)</span>
+        </button>
+        <button class="tab" data-tab="ikm" role="tab" aria-selected="false" type="button">
+          ⭐ <span data-i18n="tabIkm">Satisfaction (IKM)</span>
+        </button>
+        <button class="tab" data-tab="pengaduan" role="tab" aria-selected="false" type="button">
+          📢 <span data-i18n="tabPengaduan">Complaints</span>
         </button>
       </nav>
 
@@ -260,6 +269,40 @@
           </div>
         </div>
 
+        <h3 class="subhead" data-i18n="kegUnitTitle">Summary per unit</h3>
+        <div class="unit-cards">
+          <div class="unit-card unit-kecamatan">
+            <h4 data-i18n="kegUnitKecamatan">Subdistrict Office</h4>
+            <p class="count">
+              <strong id="keg-unit-kec-total">0</strong>
+              <span data-i18n="kegRecords">records</span>
+            </p>
+            <p class="count">
+              <span data-i18n="kegStatusAktif">Active</span>:
+              <strong id="keg-unit-kec-aktif">0</strong> ·
+              <span data-i18n="kegStatusAkanHabis">Expiring soon</span>:
+              <strong id="keg-unit-kec-akanhabis">0</strong> ·
+              <span data-i18n="kegStatusHabis">Expired</span>:
+              <strong id="keg-unit-kec-habis">0</strong>
+            </p>
+          </div>
+          <div class="unit-card unit-desa">
+            <h4 data-i18n="kegUnitDesa">Village Officers</h4>
+            <p class="count">
+              <strong id="keg-unit-desa-total">0</strong>
+              <span data-i18n="kegRecords">records</span>
+            </p>
+            <p class="count">
+              <span data-i18n="kegStatusAktif">Active</span>:
+              <strong id="keg-unit-desa-aktif">0</strong> ·
+              <span data-i18n="kegStatusAkanHabis">Expiring soon</span>:
+              <strong id="keg-unit-desa-akanhabis">0</strong> ·
+              <span data-i18n="kegStatusHabis">Expired</span>:
+              <strong id="keg-unit-desa-habis">0</strong>
+            </p>
+          </div>
+        </div>
+
         <h3 class="subhead">
           <span data-i18n="kegNotifTitle">Personnel notifications — terms of office</span>
           <span id="keg-notif-count" class="badge badge-cloud"></span>
@@ -285,6 +328,10 @@
 
         <h3 class="subhead" data-i18n="kegFormTitle">Add village officer</h3>
         <form id="keg-form" class="form-grid">
+          <label class="field">
+            <span data-i18n="kegUnitCol">Unit</span>
+            <select id="keg-in-unit"></select>
+          </label>
           <label class="field">
             <span>Nama lengkap *</span>
             <input id="keg-in-nama" type="text" placeholder="Contoh: Ahmad Sudirman" />
@@ -353,6 +400,10 @@
             <select id="keg-filter-desa"></select>
           </label>
           <label class="field">
+            <span data-i18n="kegFilterUnit">All units</span>
+            <select id="keg-filter-unit"></select>
+          </label>
+          <label class="field">
             <span data-i18n="kegFilterJabatan">All positions</span>
             <select id="keg-filter-jabatan"></select>
           </label>
@@ -367,6 +418,7 @@
               <tr>
                 <th>No</th>
                 <th>Nama</th>
+                <th data-i18n="kegUnitCol">Unit</th>
                 <th>Jabatan</th>
                 <th>Desa</th>
                 <th>TTL</th>
@@ -387,6 +439,155 @@
 
         <h3 class="subhead" data-i18n="kegLembagaTitle">Village institutions</h3>
         <div id="keg-lembaga-list" class="lembaga-grid"></div>
+      </section>
+
+      <!-- ============ IKM (Kepuasan Masyarakat) ============ -->
+      <section id="panel-ikm" class="panel" role="tabpanel" hidden>
+        <h2 data-i18n="ikmTitle">Community Satisfaction Index (IKM) — letter services</h2>
+        <p class="hint" data-i18n="ikmHint">
+          Survey based on PermenPAN-RB No. 14/2017: 9 service elements, scale 1–4.
+        </p>
+        <p id="ikm-demo-note" class="banner banner-warn" data-i18n="ikmDemoNote">
+          ⚠️ SAMPLE DATA — not real data. The 12 survey answers below are examples
+          to demonstrate the dashboard.
+        </p>
+
+        <div class="ikm-dashboard">
+          <div class="ikm-score-card">
+            <p class="stat-label" data-i18n="ikmScoreLabel">IKM score</p>
+            <h3 id="ikm-score" data-score="0">–</h3>
+            <p>
+              <span id="ikm-category" class="badge badge-cloud"></span>
+              <span id="ikm-count" class="count"></span>
+            </p>
+          </div>
+          <div>
+            <h3 class="subhead" data-i18n="ikmPerElement">Average per element</h3>
+            <div id="ikm-bars" class="ikm-bars"></div>
+            <p class="hint">
+              <span data-i18n="ikmLowest">Lowest</span>:
+              <strong id="ikm-lowest">–</strong> ·
+              <span data-i18n="ikmHighest">Highest</span>:
+              <strong id="ikm-highest">–</strong>
+            </p>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="ikm-share-survey" class="btn btn-primary" type="button">
+            <span data-i18n="ikmShareSurvey">🔗 Share survey</span>
+          </button>
+          <button id="ikm-share-results" class="btn" type="button">
+            <span data-i18n="ikmShareResults">📣 Share results</span>
+          </button>
+        </div>
+        <div id="ikm-share-status" class="status" aria-live="polite"></div>
+        <div id="ikm-share-output-wrap" hidden>
+          <textarea id="ikm-share-output" readonly rows="6" aria-label="Share text"></textarea>
+        </div>
+
+        <h3 class="subhead" data-i18n="ikmFormTitle">Fill in the satisfaction survey</h3>
+        <form id="ikm-form" class="form-grid">
+          <label class="field">
+            <span data-i18n="ikmName">Your name (optional — may stay anonymous)</span>
+            <input id="ikm-in-nama" type="text" placeholder="Contoh: Sari" />
+          </label>
+          <label class="field">
+            <span data-i18n="ikmLetterType">Letter service used</span>
+            <select id="ikm-in-surat"></select>
+          </label>
+          <div id="ikm-questions" class="field-wide"></div>
+          <label class="field field-wide">
+            <span data-i18n="ikmComment">Comments / suggestions (optional)</span>
+            <textarea id="ikm-in-komentar" rows="2" placeholder="Tulis saran Anda di sini…"></textarea>
+          </label>
+          <div class="actions field-wide">
+            <button id="ikm-submit" class="btn btn-primary" type="submit">
+              📝 <span data-i18n="ikmSubmit">Submit survey</span>
+            </button>
+          </div>
+        </form>
+        <div id="ikm-form-status" class="status" aria-live="polite"></div>
+        <p class="hint">
+          <button id="ikm-to-pengaduan" class="btn-link" type="button" data-i18n="ikmToPengaduan">
+            Have a complaint? Submit it here →
+          </button>
+        </p>
+      </section>
+
+      <!-- ============ PENGADUAN ============ -->
+      <section id="panel-pengaduan" class="panel" role="tabpanel" hidden>
+        <h2 data-i18n="aduTitle">Complaints — letter services</h2>
+        <p class="hint" data-i18n="aduHint">
+          Report problems with letter services. Complaints can be anonymous.
+        </p>
+        <p id="adu-demo-note" class="banner banner-warn" data-i18n="aduDemoNote">
+          ⚠️ SAMPLE DATA — not real data. The 6 complaints below are examples
+          to demonstrate the workflow.
+        </p>
+
+        <div class="stats adu-stats">
+          <div class="stat-card stat-rose">
+            <p class="stat-label" data-i18n="aduStatusBaru">New</p>
+            <h3 id="adu-stat-baru">0</h3>
+          </div>
+          <div class="stat-card stat-amber">
+            <p class="stat-label" data-i18n="aduStatusDiproses">In progress</p>
+            <h3 id="adu-stat-diproses">0</h3>
+          </div>
+          <div class="stat-card stat-green">
+            <p class="stat-label" data-i18n="aduStatusSelesai">Done</p>
+            <h3 id="adu-stat-selesai">0</h3>
+          </div>
+        </div>
+
+        <h3 class="subhead" data-i18n="aduFormTitle">Submit a complaint</h3>
+        <form id="adu-form" class="form-grid">
+          <label class="field">
+            <span data-i18n="aduName">Your name (optional — may stay anonymous)</span>
+            <input id="adu-in-nama" type="text" placeholder="Contoh: Warga Katis" />
+          </label>
+          <label class="field">
+            <span data-i18n="aduJenis">Complaint type</span>
+            <select id="adu-in-jenis"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="aduLetterType">Related letter service</span>
+            <select id="adu-in-surat"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="aduKontak">Contact (optional — phone)</span>
+            <input id="adu-in-kontak" type="tel" placeholder="Contoh: 0812-3456-7890" />
+          </label>
+          <label class="field field-wide">
+            <span data-i18n="aduIsi">Complaint details</span>
+            <textarea
+              id="adu-in-isi"
+              rows="3"
+              data-i18n-ph="aduIsiPh"
+              placeholder="Describe the problem…"
+            ></textarea>
+          </label>
+          <div class="actions field-wide">
+            <button id="adu-submit" class="btn btn-primary" type="submit">
+              📢 <span data-i18n="aduSubmit">Submit complaint</span>
+            </button>
+          </div>
+        </form>
+        <div id="adu-form-status" class="status" aria-live="polite"></div>
+
+        <h3 class="subhead" data-i18n="aduListTitle">Complaint list</h3>
+        <div class="form-grid">
+          <label class="field">
+            <span data-i18n="aduFilterStatus">All statuses</span>
+            <select id="adu-filter-status"></select>
+          </label>
+        </div>
+        <div id="adu-list" class="drafts-list"></div>
+        <p id="adu-empty" class="hint" hidden data-i18n="aduEmpty">
+          No complaints with this status.
+        </p>
+        <p id="adu-count" class="hint"></p>
       </section>
     </main>
 

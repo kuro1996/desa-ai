@@ -1,25 +1,39 @@
-/* DesaAI — clean, professional, mobile-responsive. System fonts only;
-   no external fonts or CDNs (the only network dependency is Firebase). */
+/* DesaAI — modern, clean, professional. Mobile-first, public-service
+   theme for Indonesian village/subdistrict offices: emerald/teal primary
+   with a warm amber accent, white cards, soft shadows, generous spacing.
+   System fonts only; no external fonts or CDNs (the only network
+   dependency is Firebase). */
 
 :root {
-  --bg: #f6f7f5;
+  --bg: #f2f5f1;
   --surface: #ffffff;
-  --ink: #1c2b22;
-  --muted: #5c6b60;
-  --line: #dfe5df;
-  --green: #1b6b3a;
-  --green-dark: #14532d;
-  --green-soft: #e6f2e9;
-  --amber: #8a5a00;
-  --amber-soft: #fdf3d7;
+  --ink: #17251c;
+  --muted: #5a6b5e;
+  --line: #dfe7de;
+  --green: #0e7a4d;
+  --green-dark: #0a5c38;
+  --green-soft: #e3f2e9;
+  --teal: #0f766e;
+  --teal-soft: #e0f2f0;
+  --amber: #b45309;
+  --amber-soft: #fef3c7;
   --blue: #175cd3;
   --blue-soft: #e8f0fe;
-  --radius: 12px;
-  --shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+  --rose: #be123c;
+  --rose-soft: #ffe4e6;
+  --radius: 16px;
+  --radius-sm: 12px;
+  --shadow: 0 2px 10px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 10px 28px rgb(0 0 0 / 0.09);
 }
 
 * {
   box-sizing: border-box;
+}
+
+html,
+body {
+  overflow-x: hidden;
 }
 
 body {
@@ -28,8 +42,10 @@ body {
   color: var(--ink);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, sans-serif;
-  line-height: 1.55;
+  line-height: 1.6;
 }
+
+/* ---------- header ---------- */
 
 .topbar {
   display: flex;
@@ -37,9 +53,10 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 20px;
-  background: var(--green-dark);
+  padding: 18px 20px;
+  background: linear-gradient(135deg, var(--green-dark) 0%, var(--teal) 100%);
   color: #fff;
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.15);
 }
 
 .brand {
@@ -49,19 +66,30 @@ body {
 }
 
 .brand-mark {
-  font-size: 2rem;
+  font-size: 2.2rem;
+  line-height: 1;
 }
 
 .brand h1 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   letter-spacing: 0.02em;
+  line-height: 1.15;
 }
 
 .tagline {
-  margin: 0;
-  font-size: 0.85rem;
-  opacity: 0.85;
+  margin: 2px 0 0;
+  font-size: 0.88rem;
+  opacity: 0.9;
+}
+
+.office-line {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.75;
 }
 
 .top-actions {
@@ -73,9 +101,10 @@ body {
 
 .chip {
   display: inline-block;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 999px;
   font-size: 0.8rem;
+  font-weight: 600;
   background: rgb(255 255 255 / 0.16);
   color: #fff;
   white-space: nowrap;
@@ -97,14 +126,14 @@ body {
   margin: 16px auto 0;
   max-width: 960px;
   padding: 12px 16px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   font-size: 0.92rem;
 }
 
 .banner-warn {
   background: var(--amber-soft);
-  border: 1px solid #ecd28a;
-  color: #5c3d00;
+  border: 1px solid #f2d492;
+  color: #6b3a00;
 }
 
 .banner code {
@@ -116,43 +145,69 @@ body {
 main {
   max-width: 960px;
   margin: 0 auto;
-  padding: 16px 16px 40px;
+  padding: 16px 16px 48px;
 }
 
+/* ---------- tabs (sticky, thumb-friendly, scrollable on phones) ---------- */
+
 .tabs {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 16px;
+  margin: 0 -4px 18px;
+  padding: 10px 4px;
+  background: var(--bg);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tab {
+  flex: 0 0 auto;
+  min-height: 44px;
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--ink);
   border-radius: 999px;
-  padding: 8px 16px;
+  padding: 10px 18px;
   font-size: 0.95rem;
+  font-weight: 600;
   cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.tab:hover {
+  transform: translateY(-1px);
 }
 
 .tab.active {
-  background: var(--green);
-  border-color: var(--green);
+  background: linear-gradient(135deg, var(--green) 0%, var(--teal) 100%);
+  border-color: transparent;
   color: #fff;
 }
+
+/* ---------- panels & typography ---------- */
 
 .panel {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 20px;
+  box-shadow: var(--shadow-lg);
+  padding: 24px;
 }
 
 .panel h2 {
-  margin: 0 0 4px;
-  font-size: 1.25rem;
+  margin: 0 0 6px;
+  font-size: 1.35rem;
+  line-height: 1.3;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--green-soft);
 }
 
 .hint {
@@ -164,13 +219,13 @@ main {
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 14px;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   font-size: 0.9rem;
   font-weight: 600;
 }
@@ -190,12 +245,15 @@ main {
 }
 
 input[type="text"],
+input[type="tel"],
+input[type="date"],
 select,
 textarea {
   width: 100%;
-  padding: 9px 10px;
+  min-height: 44px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font: inherit;
   font-size: 0.95rem;
   font-weight: 400;
@@ -212,6 +270,7 @@ select:focus,
 textarea:focus {
   outline: 2px solid var(--green);
   outline-offset: 1px;
+  border-color: var(--green);
 }
 
 .actions {
@@ -222,33 +281,39 @@ textarea:focus {
 }
 
 .btn {
+  min-height: 44px;
   border: 1px solid var(--line);
   background: #fff;
   color: var(--ink);
-  border-radius: 8px;
-  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
   font: inherit;
   font-size: 0.95rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
 }
 
 .btn:hover {
-  background: #f0f2f0;
+  background: #f0f4f0;
+  transform: translateY(-1px);
 }
 
 .btn:disabled {
   opacity: 0.55;
   cursor: wait;
+  transform: none;
 }
 
 .btn-primary {
-  background: var(--green);
-  border-color: var(--green);
+  background: linear-gradient(135deg, var(--green) 0%, var(--teal) 100%);
+  border-color: transparent;
   color: #fff;
+  box-shadow: 0 4px 12px rgb(14 122 77 / 0.3);
 }
 
 .btn-primary:hover {
-  background: var(--green-dark);
+  background: linear-gradient(135deg, var(--green-dark) 0%, #0c5e58 100%);
 }
 
 .btn-ghost {
@@ -259,6 +324,23 @@ textarea:focus {
 
 .btn-ghost:hover {
   background: rgb(255 255 255 / 0.12);
+}
+
+.btn-link {
+  min-height: 0;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: var(--green);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.btn-link:hover {
+  color: var(--green-dark);
+  background: none;
+  transform: none;
 }
 
 .status {
@@ -288,7 +370,7 @@ textarea:focus {
 
 .badge {
   display: inline-block;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 700;
@@ -319,7 +401,7 @@ textarea:focus {
   word-wrap: break-word;
   background: #fbfcfb;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 14px;
   font-size: 0.95rem;
 }
@@ -342,9 +424,10 @@ textarea:focus {
   background: var(--green-soft);
   color: var(--green-dark);
   border-radius: 999px;
-  padding: 5px 12px;
+  padding: 6px 14px;
   font: inherit;
   font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -368,8 +451,9 @@ textarea:focus {
 
 .kb-item {
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  background: #fbfdfb;
 }
 
 .kb-item h3 {
@@ -411,6 +495,7 @@ textarea:focus {
 
 .checklist input[type="checkbox"] {
   width: auto;
+  min-height: 0;
   margin-top: 3px;
   accent-color: var(--green);
 }
@@ -423,13 +508,14 @@ textarea:focus {
 .drafts-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .draft-item {
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  background: #fbfdfb;
 }
 
 .draft-item h3 {
@@ -452,6 +538,7 @@ textarea:focus {
 }
 
 .draft-item .btn {
+  min-height: 36px;
   padding: 6px 12px;
   font-size: 0.85rem;
 }
@@ -471,7 +558,15 @@ footer {
   }
 
   .topbar {
-    padding: 12px 14px;
+    padding: 14px;
+  }
+
+  .panel {
+    padding: 18px 16px;
+  }
+
+  .brand h1 {
+    font-size: 1.4rem;
   }
 }
 
@@ -500,37 +595,39 @@ footer {
 .stat-card .stat-label {
   margin: 0;
   font-size: 0.8rem;
-  opacity: 0.9;
+  font-weight: 600;
+  opacity: 0.92;
 }
 
 .stat-card h3 {
   margin: 4px 0 0;
-  font-size: 1.8rem;
+  font-size: 1.9rem;
+  line-height: 1.1;
 }
 
 .stat-blue {
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
 }
 
 .stat-green {
-  background: #059669;
+  background: linear-gradient(135deg, #059669, #047857);
 }
 
 .stat-emerald {
-  background: #0d9488;
+  background: linear-gradient(135deg, #0d9488, #0f766e);
 }
 
 .stat-amber {
-  background: #d97706;
+  background: linear-gradient(135deg, #d97706, #b45309);
 }
 
 .stat-rose {
-  background: #e11d48;
+  background: linear-gradient(135deg, #e11d48, #be123c);
 }
 
 .subhead {
-  margin: 24px 0 10px;
-  font-size: 1.05rem;
+  margin: 26px 0 10px;
+  font-size: 1.08rem;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -549,7 +646,7 @@ footer {
 .notif-item {
   border: 1px solid var(--line);
   border-left: 5px solid var(--amber);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   font-size: 0.92rem;
   background: #fffbeb;
@@ -567,7 +664,7 @@ footer {
 .table-wrap {
   overflow-x: auto;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   margin-top: 12px;
 }
 
@@ -575,12 +672,12 @@ footer {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.88rem;
-  min-width: 760px;
+  min-width: 820px;
 }
 
 .data-table th,
 .data-table td {
-  padding: 8px 10px;
+  padding: 9px 10px;
   text-align: left;
   border-bottom: 1px solid var(--line);
   vertical-align: top;
@@ -598,7 +695,7 @@ footer {
 
 .status-pill {
   display: inline-block;
-  padding: 2px 9px;
+  padding: 3px 10px;
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 700;
@@ -620,6 +717,21 @@ footer {
   color: #b91c1c;
 }
 
+.status-pill.baru {
+  background: var(--rose-soft);
+  color: var(--rose);
+}
+
+.status-pill.diproses {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.status-pill.selesai {
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
 .demo-badge {
   display: inline-block;
   margin-left: 6px;
@@ -638,8 +750,45 @@ footer {
 }
 
 .row-actions .btn {
+  min-height: 36px;
   padding: 4px 10px;
   font-size: 0.82rem;
+}
+
+/* Per-unit summary cards (Kantor Kecamatan / Perangkat Desa). */
+.unit-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .unit-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.unit-card {
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--teal);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  background: #fbfdfb;
+}
+
+.unit-card.unit-desa {
+  border-left-color: var(--blue);
+}
+
+.unit-card h4 {
+  margin: 0 0 2px;
+  font-size: 1rem;
+}
+
+.unit-card .count {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin: 4px 0;
 }
 
 .desa-cards {
@@ -656,8 +805,9 @@ footer {
 
 .desa-card {
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  background: #fbfdfb;
 }
 
 .desa-card h4 {
@@ -699,8 +849,9 @@ footer {
 
 .lembaga-card {
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  background: #fbfdfb;
 }
 
 .lembaga-card h4 {
@@ -721,4 +872,165 @@ footer {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+}
+
+/* ---------- IKM (Kepuasan Masyarakat) ---------- */
+
+.ikm-dashboard {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 20px;
+  align-items: start;
+  margin: 16px 0;
+}
+
+@media (max-width: 640px) {
+  .ikm-dashboard {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ikm-score-card {
+  border-radius: var(--radius);
+  padding: 18px;
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--green) 0%, var(--teal) 100%);
+  box-shadow: var(--shadow);
+}
+
+.ikm-score-card .stat-label {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  opacity: 0.92;
+  color: #fff;
+}
+
+.ikm-score-card h3 {
+  margin: 6px 0;
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+.ikm-score-card .count {
+  margin: 6px 0 0;
+  font-size: 0.88rem;
+  color: #fff;
+  opacity: 0.92;
+}
+
+.ikm-score-card .badge {
+  background: rgb(255 255 255 / 0.22);
+  color: #fff;
+}
+
+.ikm-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ikm-bar {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) 1fr 44px;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.86rem;
+}
+
+.ikm-bar-label {
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+
+.ikm-track {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--green-soft);
+  overflow: hidden;
+}
+
+.ikm-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--green), var(--teal));
+}
+
+.ikm-bar-value {
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ikm-q {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin: 0 0 10px;
+  background: #fbfdfb;
+}
+
+.ikm-q legend {
+  font-weight: 700;
+  font-size: 0.92rem;
+  padding: 0 6px;
+}
+
+.ikm-radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ikm-radios label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #fff;
+}
+
+.ikm-radios label:has(input:checked) {
+  background: var(--green-soft);
+  border-color: var(--green);
+  color: var(--green-dark);
+}
+
+.ikm-radios input[type="radio"] {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  accent-color: var(--green);
+}
+
+#ikm-share-output {
+  margin-top: 12px;
+}
+
+/* ---------- Pengaduan ---------- */
+
+.adu-stats {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.aduan-item h3 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.aduan-item .aduan-status {
+  min-height: 36px;
+  width: auto;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
 }

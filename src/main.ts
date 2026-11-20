@@ -9,6 +9,16 @@ import {
 import { deleteDraft, listDrafts, saveDraft, type Draft } from "./drafts";
 import { initFirebase, type FirebaseServices } from "./firebase";
 import { t, type Lang } from "./i18n";
+import {
+  computeIkm,
+  IKM_ELEMENTS,
+  ikmShareResultsText,
+  ikmShareSurveyText,
+  loadIkm,
+  saveIkm,
+  syncIkmToFirestore,
+  type IkmResponse,
+} from "./ikm";
 import { KB, kbEntryToText, matchKb, type KbEntry } from "./kb";
 import {
   AGAMA_LIST,
@@ -20,7 +30,9 @@ import {
   filterPerangkat,
   formatDateId,
   isDemoRecord,
+  JABATAN_KECAMATAN,
   JABATAN_LIST,
+  KECAMATAN_LABEL,
   LEMBAGA,
   loadPerangkat,
   masaStatus,
@@ -29,6 +41,17 @@ import {
   type MasaStatus,
   type Perangkat,
 } from "./kepegawaian";
+import {
+  ADUAN_JENIS,
+  computeAduanStats,
+  filterAduan,
+  isAduanDemoRecord,
+  loadAduan,
+  saveAduan,
+  syncAduanToFirestore,
+  type Aduan,
+  type AduanStatus,
+} from "./pengaduan";
 import { buildLetterPrompt, TEMPLATES, type LetterTemplate } from "./templates";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
@@ -63,6 +86,8 @@ function applyLang(): void {
   renderKbList();
   renderQaSuggestions();
   renderKepegawaian();
+  renderIkm();
+  renderPengaduan();
   void refreshDrafts();
 }
 
@@ -83,6 +108,8 @@ function initTabs(): void {
       });
       if (tab === "drafts") void refreshDrafts();
       if (tab === "kepegawaian") renderKepegawaian();
+      if (tab === "ikm") renderIkm();
+      if (tab === "pengaduan") renderPengaduan();
     });
   });
 }
@@ -681,6 +708,16 @@ async function refreshDrafts(): Promise<void> {
     });
     actions.appendChild(openBtn);
     actions.appendChild(delBtn);
+    if (d.kind === "letter") {
+      const rateBtn = document.createElement("button");
+      rateBtn.type = "button";
+      rateBtn.className = "btn btn-link rate-btn";
+      rateBtn.textContent = t("rateThis", lang);
+      rateBtn.addEventListener("click", () => {
+        document.querySelector<HTMLButtonElement>('[data-tab="ikm"]')?.click();
+      });
+      actions.appendChild(rateBtn);
+    }
     div.appendChild(actions);
     list.appendChild(div);
   };
@@ -740,6 +777,14 @@ function renderKepegawaian(): void {
   $("keg-stat-aktif").textContent = String(stats.aktif);
   $("keg-stat-akanhabis").textContent = String(stats.akanHabis);
   $("keg-stat-habis").textContent = String(stats.habis);
+  $("keg-unit-kec-total").textContent = String(stats.kecamatan.total);
+  $("keg-unit-kec-aktif").textContent = String(stats.kecamatan.aktif);
+  $("keg-unit-kec-akanhabis").textContent = String(stats.kecamatan.akanHabis);
+  $("keg-unit-kec-habis").textContent = String(stats.kecamatan.habis);
+  $("keg-unit-desa-total").textContent = String(stats.desa.total);
+  $("keg-unit-desa-aktif").textContent = String(stats.desa.aktif);
+  $("keg-unit-desa-akanhabis").textContent = String(stats.desa.akanHabis);
+  $("keg-unit-desa-habis").textContent = String(stats.desa.habis);
 
   // Notifications
   const notifs = computeNotifications(items);
@@ -766,6 +811,10 @@ function renderKepegawaian(): void {
   const search = ($("keg-search") as HTMLInputElement).value ?? "";
   const desaF = ($("keg-filter-desa") as HTMLSelectElement).value ?? "";
   const jabF = ($("keg-filter-jabatan") as HTMLSelectElement).value ?? "";
+  const unitF = ($("keg-filter-unit") as HTMLSelectElement).value as
+    | "kecamatan"
+    | "desa"
+    | "";
   const statusSel = $("keg-filter-status") as HTMLSelectElement;
   const prevStatus = statusSel.value as MasaStatus | "";
   statusSel.innerHTML = "";
@@ -782,7 +831,7 @@ function renderKepegawaian(): void {
     statusSel.appendChild(opt);
   }
   statusSel.value = prevStatus;
-  const filtered = filterPerangkat(items, search, desaF, jabF, prevStatus);
+  const filtered = filterPerangkat(items, search, desaF, jabF, prevStatus, unitF);
   const tbody = $("keg-table-body");
   tbody.innerHTML = "";
   filtered.forEach((p, i) => {
@@ -804,6 +853,9 @@ function renderKepegawaian(): void {
       nameCell.appendChild(badge);
     }
     cells.push(nameCell);
+    cells.push(
+      td(p.unit === "kecamatan" ? t("kegUnitKecOpt", lang) : t("kegUnitDesaOpt", lang)),
+    );
     cells.push(td(p.jabatan));
     cells.push(td(p.desa));
     cells.push(td(`${p.tempatLahir}, ${formatDateId(p.tglLahir)}`));
@@ -920,10 +972,54 @@ function kegOpenSk(p: Perangkat): void {
   document.querySelector<HTMLButtonElement>('[data-tab="letters"]')?.click();
 }
 
+/** Switch the form's position + village selects to match the chosen unit. */
+function kegSetUnit(unit: "kecamatan" | "desa"): void {
+  const jabSel = $("keg-in-jabatan") as HTMLSelectElement;
+  const desaSel = $("keg-in-desa") as HTMLSelectElement;
+  if (unit === "kecamatan") {
+    kegFillSelect(jabSel, JABATAN_KECAMATAN, "—");
+    desaSel.innerHTML = "";
+    const opt = document.createElement("option");
+    opt.value = KECAMATAN_LABEL;
+    opt.textContent = KECAMATAN_LABEL;
+    desaSel.appendChild(opt);
+    desaSel.value = KECAMATAN_LABEL;
+    desaSel.disabled = true;
+  } else {
+    kegFillSelect(jabSel, JABATAN_LIST, "—");
+    kegFillSelect(desaSel, DESA_LIST, "—");
+    desaSel.disabled = false;
+  }
+}
+
 function initKepegawaian(): void {
   kegFillSelect($("keg-in-agama") as HTMLSelectElement, AGAMA_LIST, "—");
-  kegFillSelect($("keg-in-jabatan") as HTMLSelectElement, JABATAN_LIST, "—");
-  kegFillSelect($("keg-in-desa") as HTMLSelectElement, DESA_LIST, "—");
+  // Unit select (form) + unit filter — values are stable ids, labels are i18n.
+  const unitSel = $("keg-in-unit") as HTMLSelectElement;
+  unitSel.innerHTML = "";
+  for (const [value, key] of [
+    ["desa", "kegUnitDesaOpt"],
+    ["kecamatan", "kegUnitKecOpt"],
+  ] as const) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = t(key, lang);
+    unitSel.appendChild(opt);
+  }
+  unitSel.value = "desa";
+  const unitFilter = $("keg-filter-unit") as HTMLSelectElement;
+  unitFilter.innerHTML = "";
+  for (const [value, label] of [
+    ["", t("kegFilterUnit", lang)],
+    ["kecamatan", t("kegUnitKecOpt", lang)],
+    ["desa", t("kegUnitDesaOpt", lang)],
+  ] as const) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = label;
+    unitFilter.appendChild(opt);
+  }
+  kegSetUnit("desa");
   kegFillSelect(
     $("keg-filter-desa") as HTMLSelectElement,
     DESA_LIST,
@@ -931,13 +1027,17 @@ function initKepegawaian(): void {
   );
   kegFillSelect(
     $("keg-filter-jabatan") as HTMLSelectElement,
-    JABATAN_LIST,
+    [...new Set([...JABATAN_LIST, ...JABATAN_KECAMATAN])],
     t("kegFilterJabatan", lang),
   );
   renderKepegawaian();
 
+  unitSel.addEventListener("change", () => {
+    kegSetUnit(unitSel.value as "kecamatan" | "desa");
+  });
   $("keg-search").addEventListener("input", renderKepegawaian);
   $("keg-filter-desa").addEventListener("change", renderKepegawaian);
+  $("keg-filter-unit").addEventListener("change", renderKepegawaian);
   $("keg-filter-jabatan").addEventListener("change", renderKepegawaian);
   $("keg-filter-status").addEventListener("change", renderKepegawaian);
 
@@ -971,7 +1071,8 @@ function initKepegawaian(): void {
     const tglLahir = val("keg-in-tgl");
     const agama = val("keg-in-agama");
     const jabatan = val("keg-in-jabatan");
-    const desa = val("keg-in-desa");
+    const unit = val("keg-in-unit") as "kecamatan" | "desa";
+    const desa = unit === "kecamatan" ? KECAMATAN_LABEL : val("keg-in-desa");
     const masaMulai = val("keg-in-mulai");
     const masaSelesai = val("keg-in-selesai");
     const nik = val("keg-in-nik");
@@ -999,6 +1100,7 @@ function initKepegawaian(): void {
       agama,
       jabatan,
       desa,
+      unit,
       noHp: val("keg-in-hp"),
       masaMulai,
       masaSelesai,
@@ -1008,6 +1110,9 @@ function initKepegawaian(): void {
     savePerangkat(kegItems);
     if (svc) void syncPerangkatToFirestore(svc, kegItems);
     ($("keg-form") as HTMLFormElement).reset();
+    // reset() clears the unit select too — restore the desa default.
+    ($("keg-in-unit") as HTMLSelectElement).value = "desa";
+    kegSetUnit("desa");
     renderKepegawaian();
     setStatus($("keg-form-status"), t("kegSaved", lang));
   });
@@ -1060,6 +1165,358 @@ function initKepegawaian(): void {
   });
 }
 
+// ---------- IKM (Indeks Kepuasan Masyarakat) ----------
+
+let ikmItems: IkmResponse[] = [];
+
+function ikmFmt(v: number): string {
+  return v.toFixed(2).replace(".", ",");
+}
+
+function renderIkm(): void {
+  ikmItems = loadIkm();
+  const stats = computeIkm(ikmItems);
+  const scoreEl = $("ikm-score");
+  scoreEl.textContent = stats.count === 0 ? "–" : ikmFmt(stats.overall);
+  scoreEl.dataset.score = String(stats.overall);
+  const catEl = $("ikm-category");
+  catEl.textContent =
+    stats.count === 0 ? "" : `${stats.category} — ${t(`ikmCat${stats.category}`, lang)}`;
+  catEl.className = `badge ${
+    stats.category === "A"
+      ? "badge-device"
+      : stats.category === "B"
+        ? "badge-cloud"
+        : "badge-unknown"
+  }`;
+  $("ikm-count").textContent = `${stats.count} ${t("ikmRespondents", lang)}`;
+  // Per-element bars (values only — no inputs here).
+  const bars = $("ikm-bars");
+  bars.innerHTML = "";
+  IKM_ELEMENTS.forEach((el, i) => {
+    const avg = stats.perElement[i] ?? 0;
+    const row = document.createElement("div");
+    row.className = "ikm-bar";
+    const label = document.createElement("span");
+    label.className = "ikm-bar-label";
+    label.textContent = lang === "id" ? el.labelId : el.labelEn;
+    const track = document.createElement("div");
+    track.className = "ikm-track";
+    const fill = document.createElement("div");
+    fill.className = "ikm-fill";
+    fill.style.width = `${Math.round((avg / 4) * 100)}%`;
+    track.appendChild(fill);
+    const value = document.createElement("span");
+    value.className = "ikm-bar-value";
+    value.dataset.avg = String(avg);
+    value.textContent = stats.count === 0 ? "–" : ikmFmt(avg);
+    row.appendChild(label);
+    row.appendChild(track);
+    row.appendChild(value);
+    bars.appendChild(row);
+  });
+  const elLabel = (idx: number): string =>
+    lang === "id" ? IKM_ELEMENTS[idx].labelId : IKM_ELEMENTS[idx].labelEn;
+  $("ikm-lowest").textContent =
+    stats.count === 0
+      ? "–"
+      : `${elLabel(stats.minIdx)} (${ikmFmt(stats.perElement[stats.minIdx])})`;
+  $("ikm-highest").textContent =
+    stats.count === 0
+      ? "–"
+      : `${elLabel(stats.maxIdx)} (${ikmFmt(stats.perElement[stats.maxIdx])})`;
+  // Keep the survey-type select in sync with the current language.
+  const suratSel = $("ikm-in-surat") as HTMLSelectElement;
+  const prevSurat = suratSel.value;
+  suratSel.innerHTML = "";
+  const ph = document.createElement("option");
+  ph.value = "";
+  ph.textContent = "—";
+  suratSel.appendChild(ph);
+  for (const tp of TEMPLATES) {
+    const opt = document.createElement("option");
+    opt.value = tp.id;
+    opt.textContent = lang === "id" ? tp.nameId : tp.nameEn;
+    suratSel.appendChild(opt);
+  }
+  suratSel.value = prevSurat;
+  buildIkmQuestions();
+}
+
+function buildIkmQuestions(): void {
+  // Preserve in-progress answers across re-renders (e.g. language toggle).
+  const wrap = $("ikm-questions");
+  const prev: Array<number | null> = IKM_ELEMENTS.map((_, i) => {
+    const checked = wrap.querySelector<HTMLInputElement>(
+      `input[name="ikm-q${i}"]:checked`,
+    );
+    return checked ? Number(checked.value) : null;
+  });
+  wrap.innerHTML = "";
+  IKM_ELEMENTS.forEach((el, i) => {
+    const fs = document.createElement("fieldset");
+    fs.className = "ikm-q";
+    const legend = document.createElement("legend");
+    legend.textContent = `${i + 1}. ${lang === "id" ? el.labelId : el.labelEn}`;
+    fs.appendChild(legend);
+    const radios = document.createElement("div");
+    radios.className = "ikm-radios";
+    for (let v = 1; v <= 4; v += 1) {
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = `ikm-q${i}`;
+      input.value = String(v);
+      if (prev[i] === v) input.checked = true;
+      const span = document.createElement("span");
+      span.textContent = t(`ikmScale${v}`, lang);
+      label.appendChild(input);
+      label.appendChild(span);
+      radios.appendChild(label);
+    }
+    fs.appendChild(radios);
+    wrap.appendChild(fs);
+  });
+}
+
+async function ikmShare(text: string): Promise<void> {
+  const status = $("ikm-share-status");
+  const outWrap = $("ikm-share-output-wrap");
+  const out = $("ikm-share-output") as HTMLTextAreaElement;
+  outWrap.hidden = true;
+  out.value = "";
+  try {
+    if (typeof navigator.share === "function") {
+      await navigator.share({ text });
+      setStatus(status, t("ikmShared", lang));
+      return;
+    }
+  } catch {
+    // Fall through to clipboard.
+  }
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      setStatus(status, t("ikmCopied", lang));
+      return;
+    }
+  } catch {
+    // Fall through to the manual-copy box.
+  }
+  out.value = text;
+  outWrap.hidden = false;
+  setStatus(status, t("ikmCopyManual", lang));
+}
+
+function initIkm(): void {
+  renderIkm();
+  $("ikm-form").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const scores: number[] = [];
+    let complete = true;
+    for (let i = 0; i < IKM_ELEMENTS.length; i += 1) {
+      const checked = document.querySelector<HTMLInputElement>(
+        `input[name="ikm-q${i}"]:checked`,
+      );
+      if (!checked) {
+        complete = false;
+        break;
+      }
+      scores.push(Number(checked.value));
+    }
+    const jenisSurat = ($("ikm-in-surat") as HTMLSelectElement).value;
+    if (!complete || !jenisSurat) {
+      setStatus($("ikm-form-status"), t("ikmNeedAll", lang), true);
+      return;
+    }
+    const resp: IkmResponse = {
+      id: `ikm-${Date.now()}`,
+      nama: ($("ikm-in-nama") as HTMLInputElement).value.trim(),
+      jenisSurat,
+      scores,
+      komentar: ($("ikm-in-komentar") as HTMLTextAreaElement).value.trim(),
+      createdAt: Date.now(),
+    };
+    ikmItems = [...ikmItems, resp];
+    saveIkm(ikmItems);
+    if (svc) void syncIkmToFirestore(svc, ikmItems);
+    ($("ikm-form") as HTMLFormElement).reset();
+    renderIkm();
+    setStatus($("ikm-form-status"), t("ikmSaved", lang));
+  });
+  $("ikm-share-survey").addEventListener("click", () => {
+    void ikmShare(ikmShareSurveyText(window.location.href.split("#")[0]));
+  });
+  $("ikm-share-results").addEventListener("click", () => {
+    const stats = computeIkm(ikmItems);
+    void ikmShare(ikmShareResultsText(stats, window.location.href.split("#")[0]));
+  });
+  $("ikm-to-pengaduan").addEventListener("click", () => {
+    document.querySelector<HTMLButtonElement>('[data-tab="pengaduan"]')?.click();
+  });
+}
+
+// ---------- Pengaduan ----------
+
+let aduItems: Aduan[] = [];
+
+function aduStatusPill(status: AduanStatus): { text: string; cls: string } {
+  if (status === "baru") return { text: t("aduStatusBaru", lang), cls: "baru" };
+  if (status === "diproses")
+    return { text: t("aduStatusDiproses", lang), cls: "diproses" };
+  return { text: t("aduStatusSelesai", lang), cls: "selesai" };
+}
+
+function renderPengaduan(): void {
+  aduItems = loadAduan();
+  const stats = computeAduanStats(aduItems);
+  $("adu-stat-baru").textContent = String(stats.baru);
+  $("adu-stat-diproses").textContent = String(stats.diproses);
+  $("adu-stat-selesai").textContent = String(stats.selesai);
+  const filterSel = $("adu-filter-status") as HTMLSelectElement;
+  const prevFilter = filterSel.value as AduanStatus | "";
+  filterSel.innerHTML = "";
+  for (const [value, key] of [
+    ["", "aduFilterStatus"],
+    ["baru", "aduStatusBaru"],
+    ["diproses", "aduStatusDiproses"],
+    ["selesai", "aduStatusSelesai"],
+  ] as const) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = t(key, lang);
+    filterSel.appendChild(opt);
+  }
+  filterSel.value = prevFilter;
+  const list = filterAduan(aduItems, prevFilter);
+  const wrap = $("adu-list");
+  wrap.innerHTML = "";
+  $("adu-empty").hidden = list.length > 0;
+  for (const a of list) {
+    const div = document.createElement("div");
+    div.className = "draft-item aduan-item";
+    div.dataset.id = a.id;
+    const h = document.createElement("h3");
+    h.textContent = a.nama || t("ikmAnon", lang);
+    if (isAduanDemoRecord(a)) {
+      const badge = document.createElement("span");
+      badge.className = "demo-badge";
+      badge.textContent = t("kegDemoBadge", lang);
+      h.appendChild(badge);
+    }
+    div.appendChild(h);
+    const meta = document.createElement("p");
+    const tpl = TEMPLATES.find((tp) => tp.id === a.jenisSurat);
+    const suratName = tpl ? (lang === "id" ? tpl.nameId : tpl.nameEn) : a.jenisSurat;
+    meta.textContent = `${a.jenis} • ${suratName} • ${new Date(a.createdAt).toLocaleString()}${a.kontak ? ` • ${a.kontak}` : ""}`;
+    div.appendChild(meta);
+    const isi = document.createElement("p");
+    isi.textContent = a.isi;
+    div.appendChild(isi);
+    const row = document.createElement("div");
+    row.className = "actions";
+    const pill = aduStatusPill(a.status);
+    const pillEl = document.createElement("span");
+    pillEl.className = `status-pill ${pill.cls}`;
+    pillEl.textContent = pill.text;
+    row.appendChild(pillEl);
+    const sel = document.createElement("select");
+    sel.className = "aduan-status";
+    sel.dataset.id = a.id;
+    sel.setAttribute("aria-label", t("aduFilterStatus", lang));
+    for (const [value, key] of [
+      ["baru", "aduStatusBaru"],
+      ["diproses", "aduStatusDiproses"],
+      ["selesai", "aduStatusSelesai"],
+    ] as const) {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = t(key, lang);
+      sel.appendChild(opt);
+    }
+    sel.value = a.status;
+    row.appendChild(sel);
+    div.appendChild(row);
+    wrap.appendChild(div);
+  }
+  $("adu-count").textContent =
+    `${t("kegShowing", lang)} ${list.length} ${t("kegOf", lang)} ${aduItems.length} ${t("kegRecords", lang)}`;
+  // Keep the form selects in sync with the current language.
+  const jenisSel = $("adu-in-jenis") as HTMLSelectElement;
+  const prevJenis = jenisSel.value;
+  jenisSel.innerHTML = "";
+  const phJ = document.createElement("option");
+  phJ.value = "";
+  phJ.textContent = "—";
+  jenisSel.appendChild(phJ);
+  ADUAN_JENIS.forEach((j, i) => {
+    const opt = document.createElement("option");
+    opt.value = j;
+    opt.textContent = t(`aduJenis${i + 1}`, lang);
+    jenisSel.appendChild(opt);
+  });
+  jenisSel.value = prevJenis;
+  const suratSel = $("adu-in-surat") as HTMLSelectElement;
+  const prevSurat = suratSel.value;
+  suratSel.innerHTML = "";
+  const phS = document.createElement("option");
+  phS.value = "";
+  phS.textContent = "—";
+  suratSel.appendChild(phS);
+  for (const tp of TEMPLATES) {
+    const opt = document.createElement("option");
+    opt.value = tp.id;
+    opt.textContent = lang === "id" ? tp.nameId : tp.nameEn;
+    suratSel.appendChild(opt);
+  }
+  suratSel.value = prevSurat;
+}
+
+function initPengaduan(): void {
+  renderPengaduan();
+  $("adu-filter-status").addEventListener("change", renderPengaduan);
+  $("adu-list").addEventListener("change", (ev) => {
+    const sel = (ev.target as HTMLElement).closest(
+      "select.aduan-status",
+    ) as HTMLSelectElement | null;
+    if (!sel || !sel.dataset.id) return;
+    const next = sel.value as AduanStatus;
+    aduItems = aduItems.map((a) =>
+      a.id === sel.dataset.id ? { ...a, status: next } : a,
+    );
+    saveAduan(aduItems);
+    if (svc) void syncAduanToFirestore(svc, aduItems);
+    renderPengaduan();
+    setStatus($("adu-form-status"), t("aduStatusChanged", lang));
+  });
+  $("adu-form").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const jenis = ($("adu-in-jenis") as HTMLSelectElement).value;
+    const jenisSurat = ($("adu-in-surat") as HTMLSelectElement).value;
+    const isi = ($("adu-in-isi") as HTMLTextAreaElement).value.trim();
+    if (!jenis || !isi) {
+      setStatus($("adu-form-status"), t("aduNeedIsi", lang), true);
+      return;
+    }
+    const aduan: Aduan = {
+      id: `adu-${Date.now()}`,
+      nama: ($("adu-in-nama") as HTMLInputElement).value.trim(),
+      jenis,
+      jenisSurat,
+      isi,
+      kontak: ($("adu-in-kontak") as HTMLInputElement).value.trim(),
+      status: "baru",
+      createdAt: Date.now(),
+    };
+    aduItems = [...aduItems, aduan];
+    saveAduan(aduItems);
+    if (svc) void syncAduanToFirestore(svc, aduItems);
+    ($("adu-form") as HTMLFormElement).reset();
+    renderPengaduan();
+    setStatus($("adu-form-status"), t("aduSaved", lang));
+  });
+}
+
 // ---------- boot ----------
 
 async function boot(): Promise<void> {
@@ -1068,6 +1525,8 @@ async function boot(): Promise<void> {
   initSummarizer();
   initQa();
   initKepegawaian();
+  initIkm();
+  initPengaduan();
 
   $("lang-toggle").addEventListener("click", () => {
     lang = lang === "en" ? "id" : "en";

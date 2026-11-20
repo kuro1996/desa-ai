@@ -3,8 +3,9 @@
 // http://127.0.0.1 navigations with Local Network Access checks; the Vite
 // build uses relative asset paths so file:// works), exercises all feature
 // flows end to end — letters, summarizer, Q&A (offline KB path), drafts,
-// and the Kepegawaian (SIAP AKAD sample data) module — and fails on ANY
-// console error or failed request from the app itself.
+// the Kepegawaian module (subdistrict + village scope), the IKM
+// satisfaction survey, and the Pengaduan (complaints) module — and fails
+// on ANY console error or failed request from the app itself.
 // Run after `npm run build`:
 //   npm run test:headless
 //
@@ -272,7 +273,7 @@ async function main() {
       let akanHabis = 0;
       let aktif = 0;
       for (const tr of rows) {
-        const masa = tr.children[7]?.textContent ?? "";
+        const masa = tr.children[8]?.textContent ?? "";
         const m = masa.match(/(\d{2}) (\w{3}) (\d{4})\s*$/);
         if (!m) continue;
         const end = new Date(`${m[3]}-${({ Jan: "01", Feb: "02", Mar: "03", Apr: "04", Mei: "05", Jun: "06", Jul: "07", Agu: "08", Sep: "09", Okt: "10", Nov: "11", Des: "12" })[m[2]]}-${m[1]}T00:00:00`);
@@ -295,14 +296,14 @@ async function main() {
         notifItems: document.querySelectorAll("#keg-notif-list li").length,
       };
     });
-    check("kepegawaian seeds 15 demo records", kegCounts.total === 15 && kegCounts.rows === 15, `total=${kegCounts.total} rows=${kegCounts.rows}`);
+    check("kepegawaian seeds 23 demo records (8 kecamatan + 15 desa)", kegCounts.total === 23 && kegCounts.rows === 23, `total=${kegCounts.total} rows=${kegCounts.rows}`);
     check("kepegawaian covers 10 villages", kegCounts.desa === 10, `desa=${kegCounts.desa}`);
     check(
       "kepegawaian stats match masa bhakti dates",
       kegCounts.aktif === kegCounts.calcAktif &&
         kegCounts.akanHabis === kegCounts.calcAkanHabis &&
         kegCounts.habis === kegCounts.calcHabis &&
-        kegCounts.aktif + kegCounts.akanHabis + kegCounts.habis === 15,
+        kegCounts.aktif + kegCounts.akanHabis + kegCounts.habis === 23,
       `stats aktif=${kegCounts.aktif} akanHabis=${kegCounts.akanHabis} habis=${kegCounts.habis} | calc ${kegCounts.calcAktif}/${kegCounts.calcAkanHabis}/${kegCounts.calcHabis}`,
     );
     check(
@@ -325,7 +326,7 @@ async function main() {
     const totalAfterEmpty = await page.$eval("#keg-stat-total", (el) => el.textContent);
     check(
       "kepegawaian form rejects an empty submit",
-      /required/i.test(emptyStatus) && totalAfterEmpty === "15",
+      /required/i.test(emptyStatus) && totalAfterEmpty === "23",
       `status=${emptyStatus} total=${totalAfterEmpty}`,
     );
     await page.type("#keg-in-nama", "Tes Tambah");
@@ -343,7 +344,7 @@ async function main() {
     const totalAfterNik = await page.$eval("#keg-stat-total", (el) => el.textContent);
     check(
       "kepegawaian form rejects a non-16-digit NIK",
-      /16 digits/i.test(nikStatus) && totalAfterNik === "15",
+      /16 digits/i.test(nikStatus) && totalAfterNik === "23",
       `status=${nikStatus} total=${totalAfterNik}`,
     );
     await page.$eval("#keg-in-nik", (el) => { el.value = ""; });
@@ -354,7 +355,7 @@ async function main() {
     const totalAfterDate = await page.$eval("#keg-stat-total", (el) => el.textContent);
     check(
       "kepegawaian form rejects end date before start date",
-      /after the term start/i.test(dateStatus) && totalAfterDate === "15",
+      /after the term start/i.test(dateStatus) && totalAfterDate === "23",
       `status=${dateStatus} total=${totalAfterDate}`,
     );
     await page.$eval("#keg-in-selesai", (el) => { el.value = "2027-12-31"; });
@@ -362,7 +363,7 @@ async function main() {
     await sleep(400);
     const totalAfterAdd = await page.$eval("#keg-stat-total", (el) => el.textContent);
     const formStatus = await page.$eval("#keg-form-status", (el) => el.textContent);
-    check("kepegawaian add form saves a record", totalAfterAdd === "16", `total=${totalAfterAdd} status=${formStatus}`);
+    check("kepegawaian add form saves a record", totalAfterAdd === "24", `total=${totalAfterAdd} status=${formStatus}`);
 
     // Search filter
     await page.$eval("#keg-search", (el) => { el.value = ""; });
@@ -383,14 +384,15 @@ async function main() {
     await sleep(200);
 
     // Status filter: expired / expiring soon are computed from term dates
+    // (desa 1 habis + kecamatan 2 habis = 3; desa 2 akan-habis + kecamatan 2 = 4)
     await page.select("#keg-filter-status", "habis");
     await sleep(300);
     const habisRows = await page.$$eval("#keg-table-body tr", (els) => els.length);
-    check("kepegawaian status filter shows expired terms", habisRows === 1, `${habisRows} rows`);
+    check("kepegawaian status filter shows expired terms", habisRows === 3, `${habisRows} rows`);
     await page.select("#keg-filter-status", "akan-habis");
     await sleep(300);
     const akanRows = await page.$$eval("#keg-table-body tr", (els) => els.length);
-    check("kepegawaian status filter shows expiring terms", akanRows === 2, `${akanRows} rows`);
+    check("kepegawaian status filter shows expiring terms", akanRows === 4, `${akanRows} rows`);
     await page.select("#keg-filter-status", "");
     await sleep(200);
 
@@ -421,7 +423,134 @@ async function main() {
     });
     await sleep(400);
     const totalAfterDel = await page.$eval("#keg-stat-total", (el) => el.textContent);
-    check("kepegawaian delete removes the record", totalAfterDel === "15", `total=${totalAfterDel}`);
+    check("kepegawaian delete removes the record", totalAfterDel === "23", `total=${totalAfterDel}`);
+
+    // 6b. Unit dimension: kecamatan vs desa
+    const unitStats = await page.evaluate(() => {
+      const num = (id) => Number(document.getElementById(id)?.textContent ?? 0);
+      return {
+        kecTotal: num("keg-unit-kec-total"),
+        kecAktif: num("keg-unit-kec-aktif"),
+        kecAkan: num("keg-unit-kec-akanhabis"),
+        kecHabis: num("keg-unit-kec-habis"),
+        desaTotal: num("keg-unit-desa-total"),
+        desaAktif: num("keg-unit-desa-aktif"),
+        desaAkan: num("keg-unit-desa-akanhabis"),
+        desaHabis: num("keg-unit-desa-habis"),
+      };
+    });
+    check(
+      "kepegawaian per-unit stats (kecamatan 8, desa 15)",
+      unitStats.kecTotal === 8 && unitStats.desaTotal === 15,
+      `kec=${unitStats.kecTotal} desa=${unitStats.desaTotal}`,
+    );
+    check(
+      "kepegawaian per-unit status breakdown",
+      unitStats.kecAktif === 4 && unitStats.kecAkan === 2 && unitStats.kecHabis === 2 &&
+        unitStats.desaAktif === 12 && unitStats.desaAkan === 2 && unitStats.desaHabis === 1,
+      `kec ${unitStats.kecAktif}/${unitStats.kecAkan}/${unitStats.kecHabis} desa ${unitStats.desaAktif}/${unitStats.desaAkan}/${unitStats.desaHabis}`,
+    );
+    // (The search box still holds "Tes Tambah" from the delete check above —
+    // clear it first so the unit filter is measured on its own.)
+    await page.$eval("#keg-search", (el) => { el.value = ""; });
+    await page.evaluate(() => document.getElementById("keg-search")?.dispatchEvent(new Event("input", { bubbles: true })));
+    await sleep(200);
+    await page.select("#keg-filter-unit", "kecamatan");
+    await sleep(300);
+    const kecRows = await page.$$eval("#keg-table-body tr", (els) => els.length);
+    check("kepegawaian unit filter shows kecamatan staff", kecRows === 8, `${kecRows} rows`);
+    await page.select("#keg-filter-unit", "desa");
+    await sleep(300);
+    const desaRows = await page.$$eval("#keg-table-body tr", (els) => els.length);
+    check("kepegawaian unit filter shows village officers", desaRows === 15, `${desaRows} rows`);
+    await page.select("#keg-filter-unit", "");
+    await sleep(200);
+    const notifText = await page.$eval("#keg-notif-list", (el) => el.textContent);
+    check(
+      "kepegawaian notifications cover kecamatan staff",
+      /Andi Wijaya|Rizky Ramadhan|Agus Setiawan|Dewi Lestari/.test(notifText),
+      notifText.slice(0, 120),
+    );
+    // Form: unit switch changes the position options
+    await page.select("#keg-in-unit", "kecamatan");
+    await sleep(300);
+    const kecJabOptions = await page.$$eval("#keg-in-jabatan option", (els) => els.map((e) => e.value));
+    check(
+      "kepegawaian form shows kecamatan positions for unit Kecamatan",
+      kecJabOptions.includes("Camat") && !kecJabOptions.includes("Kepala Desa"),
+      kecJabOptions.join(","),
+    );
+    const kecDesaDisabled = await page.$eval("#keg-in-desa", (el) => el.disabled);
+    const kecDesaValue = await page.$eval("#keg-in-desa", (el) => el.value);
+    check(
+      "kepegawaian form locks village to Kecamatan Simpangkatis for unit Kecamatan",
+      kecDesaDisabled && kecDesaValue === "Kecamatan Simpangkatis",
+      `disabled=${kecDesaDisabled} value=${kecDesaValue}`,
+    );
+    await page.select("#keg-in-unit", "desa");
+    await sleep(300);
+    const desaJabOptions = await page.$$eval("#keg-in-jabatan option", (els) => els.map((e) => e.value));
+    check(
+      "kepegawaian form shows village positions for unit Desa",
+      desaJabOptions.includes("Kepala Desa") && !desaJabOptions.includes("Camat"),
+      desaJabOptions.join(","),
+    );
+    // Add a kecamatan record, then delete it again
+    await page.select("#keg-in-unit", "kecamatan");
+    await sleep(300);
+    await page.type("#keg-in-nama", "Tes Kecamatan");
+    await page.type("#keg-in-tempat", "Pangkalpinang");
+    await page.type("#keg-in-nik", "1901010101010099");
+    await page.select("#keg-in-agama", "Islam");
+    await page.select("#keg-in-jabatan", "Staf Kecamatan");
+    await page.$eval("#keg-in-tgl", (el) => { el.value = "1992-05-10"; });
+    await page.$eval("#keg-in-mulai", (el) => { el.value = "2025-01-01"; });
+    await page.$eval("#keg-in-selesai", (el) => { el.value = "2027-12-31"; });
+    await page.click("#keg-add");
+    await sleep(400);
+    const totalAfterKecAdd = await page.$eval("#keg-stat-total", (el) => el.textContent);
+    const kecTotalAfterAdd = await page.$eval("#keg-unit-kec-total", (el) => el.textContent);
+    check(
+      "kepegawaian add form saves a kecamatan record",
+      totalAfterKecAdd === "24" && kecTotalAfterAdd === "9",
+      `total=${totalAfterKecAdd} kec=${kecTotalAfterAdd}`,
+    );
+    await page.$eval("#keg-search", (el) => { el.value = ""; });
+    await page.type("#keg-search", "Tes Kecamatan");
+    await sleep(300);
+    await page.evaluate(() => {
+      const btn = document.querySelector('#keg-table-body tr button[data-action="delete"]');
+      btn.click();
+    });
+    await sleep(400);
+    const totalAfterKecDel = await page.$eval("#keg-stat-total", (el) => el.textContent);
+    const kecTotalAfterDel = await page.$eval("#keg-unit-kec-total", (el) => el.textContent);
+    check(
+      "kepegawaian delete removes the kecamatan record",
+      totalAfterKecDel === "23" && kecTotalAfterDel === "8",
+      `total=${totalAfterKecDel} kec=${kecTotalAfterDel}`,
+    );
+    // "Buat SK" works for a kecamatan record too
+    await page.$eval("#keg-search", (el) => { el.value = ""; });
+    await page.type("#keg-search", "Rizky Ramadhan");
+    await sleep(300);
+    await page.evaluate(() => {
+      const btn = document.querySelector('#keg-table-body tr button[data-action="sk"]');
+      btn.click();
+    });
+    await sleep(400);
+    const skKecNama = await page.$eval("#letter-field-nama", (el) => el.value);
+    const skKecJab = await page.$eval("#letter-field-jabatan", (el) => el.value);
+    check(
+      "Buat SK prefills a kecamatan record",
+      skKecNama === "Rizky Ramadhan" && skKecJab === "Kepala Seksi Pelayanan",
+      `nama=${skKecNama} jabatan=${skKecJab}`,
+    );
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(300);
+    await page.$eval("#keg-search", (el) => { el.value = ""; });
+    await page.evaluate(() => document.getElementById("keg-search")?.dispatchEvent(new Event("input", { bubbles: true })));
+    await sleep(200);
 
     // Letter archive: saved letters + summaries are grouped on the Archive tab
     await page.evaluate(() => {
@@ -445,6 +574,16 @@ async function main() {
       archiveItems.includes("Surat Undangan") && archiveItems.includes("Ringkasan dokumen"),
       archiveItems.join(" | "),
     );
+    const rateBtn = await page.$(".draft-item .rate-btn");
+    check("archive letter item has a rate-this-service link", rateBtn !== null);
+    if (rateBtn) {
+      await page.evaluate(() => {
+        document.querySelector(".draft-item .rate-btn").click();
+      });
+      await sleep(400);
+      const ikmVisibleAfterRate = await page.$eval("#panel-ikm", (el) => !el.hidden);
+      check("rate link opens the IKM tab", ikmVisibleAfterRate);
+    }
     await page.click('[data-tab="kepegawaian"]');
     await sleep(300);
 
@@ -462,7 +601,230 @@ async function main() {
       sumText.slice(0, 80),
     );
 
-    // 7. No console errors / failed requests (excluding the VM tunnel noise)
+    // 7. IKM tab (PermenPAN-RB No. 14/2017 — 9 elements, scale 1-4)
+    await page.click('[data-tab="ikm"]');
+    await sleep(400);
+    const ikmVisible = await page.$eval("#panel-ikm", (el) => !el.hidden);
+    check("ikm tab opens", ikmVisible);
+    const ikmNote = await page.$eval("#ikm-demo-note", (el) => el.textContent);
+    check(
+      "ikm shows clear SAMPLE DATA label",
+      /contoh|sample/i.test(ikmNote) && /bukan data asli|not real data/i.test(ikmNote),
+      ikmNote.slice(0, 80),
+    );
+    const ikmDash = await page.evaluate(() => {
+      const avgs = [...document.querySelectorAll("#ikm-bars .ikm-bar-value")].map((el) =>
+        Number(el.dataset.avg ?? 0),
+      );
+      const score = Number(document.getElementById("ikm-score")?.dataset.score ?? 0);
+      const count = Number(
+        (document.getElementById("ikm-count")?.textContent ?? "0").replace(/\D/g, ""),
+      );
+      const cat = document.getElementById("ikm-category")?.textContent ?? "";
+      return { avgs, score, count, cat };
+    });
+    check("ikm dashboard shows 12 sample respondents", ikmDash.count === 12 && ikmDash.avgs.length === 9, `count=${ikmDash.count} bars=${ikmDash.avgs.length}`);
+    const ikmMean = ikmDash.avgs.reduce((a, b) => a + b, 0) / 9;
+    check(
+      "ikm score = mean per element x 25",
+      Math.abs(ikmDash.score - ikmMean * 25) < 0.05,
+      `score=${ikmDash.score} mean=${ikmMean.toFixed(4)} expected=${(ikmMean * 25).toFixed(2)}`,
+    );
+    const ikmCatOk =
+      (ikmDash.score >= 88.31 && ikmDash.cat.startsWith("A")) ||
+      (ikmDash.score >= 76.61 && ikmDash.cat.startsWith("B")) ||
+      (ikmDash.score >= 65 && ikmDash.cat.startsWith("C")) ||
+      (ikmDash.score < 65 && ikmDash.cat.startsWith("D"));
+    check("ikm category matches the score band", ikmCatOk, `score=${ikmDash.score} cat=${ikmDash.cat}`);
+    const ikmShareBtns = await page.$$eval("#ikm-share-survey, #ikm-share-results", (els) => els.map((e) => e.id));
+    check("ikm share buttons exist", ikmShareBtns.length === 2, ikmShareBtns.join(","));
+    await page.click("#ikm-share-survey");
+    await sleep(400);
+    const shareStatus = await page.$eval("#ikm-share-status", (el) => el.textContent);
+    const shareOutVisible = await page.$eval("#ikm-share-output-wrap", (el) => !el.hidden);
+    const shareOutText = await page.$eval("#ikm-share-output", (el) => el.value);
+    check(
+      "ikm share survey copies or shows the share text",
+      /disalin|dibagikan|salin|copied/i.test(shareStatus) ||
+        (shareOutVisible && /IKM|Survei/i.test(shareOutText)),
+      `status=${shareStatus} output=${shareOutText.slice(0, 60)}`,
+    );
+    // Submit a full survey (all 4s) — count rises and the formula still holds
+    const fillIkm = async (value) => {
+      await page.evaluate((v) => {
+        for (let i = 0; i < 9; i += 1) {
+          document.querySelector(`input[name="ikm-q${i}"][value="${v}"]`).click();
+        }
+      }, value);
+    };
+    await fillIkm(4);
+    await page.select("#ikm-in-surat", "undangan");
+    await page.click("#ikm-submit");
+    await sleep(400);
+    const ikmAfter = await page.evaluate(() => {
+      const avgs = [...document.querySelectorAll("#ikm-bars .ikm-bar-value")].map((el) =>
+        Number(el.dataset.avg ?? 0),
+      );
+      const score = Number(document.getElementById("ikm-score")?.dataset.score ?? 0);
+      const count = Number(
+        (document.getElementById("ikm-count")?.textContent ?? "0").replace(/\D/g, ""),
+      );
+      return { avgs, score, count };
+    });
+    const ikmMeanAfter = ikmAfter.avgs.reduce((a, b) => a + b, 0) / 9;
+    check(
+      "ikm submit adds a response and keeps the formula",
+      ikmAfter.count === 13 && Math.abs(ikmAfter.score - ikmMeanAfter * 25) < 0.05,
+      `count=${ikmAfter.count} score=${ikmAfter.score}`,
+    );
+    // Exact endpoints: all 4s -> 100 (A); all 1s -> 25 (D), from a clean state
+    const resetIkm = async () => {
+      await page.evaluate(() => {
+        localStorage.setItem("desaai-ikm-v1", "[]");
+        localStorage.setItem("desaai-ikm-meta-v1", JSON.stringify({ seeded: true }));
+      });
+      await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+      await sleep(1200);
+      await page.click('[data-tab="ikm"]');
+      await sleep(400);
+    };
+    await resetIkm();
+    const ikmEmpty = await page.$eval("#ikm-count", (el) => el.textContent);
+    check("ikm can start from zero respondents", /0/.test(ikmEmpty), ikmEmpty);
+    await fillIkm(4);
+    await page.select("#ikm-in-surat", "pengantar");
+    await page.click("#ikm-submit");
+    await sleep(400);
+    const ikmAll4 = await page.evaluate(() => ({
+      score: Number(document.getElementById("ikm-score")?.dataset.score ?? 0),
+      cat: document.getElementById("ikm-category")?.textContent ?? "",
+    }));
+    check("ikm all-4 survey scores 100, category A", ikmAll4.score === 100 && ikmAll4.cat.startsWith("A"), `score=${ikmAll4.score} cat=${ikmAll4.cat}`);
+    await resetIkm();
+    await fillIkm(1);
+    await page.select("#ikm-in-surat", "keterangan");
+    await page.click("#ikm-submit");
+    await sleep(400);
+    const ikmAll1 = await page.evaluate(() => ({
+      score: Number(document.getElementById("ikm-score")?.dataset.score ?? 0),
+      cat: document.getElementById("ikm-category")?.textContent ?? "",
+    }));
+    check("ikm all-1 survey scores 25, category D", ikmAll1.score === 25 && ikmAll1.cat.startsWith("D"), `score=${ikmAll1.score} cat=${ikmAll1.cat}`);
+    // Link from IKM to Pengaduan
+    await page.click("#ikm-to-pengaduan");
+    await sleep(400);
+    const aduVisibleAfterLink = await page.$eval("#panel-pengaduan", (el) => !el.hidden);
+    check("ikm links to the pengaduan tab", aduVisibleAfterLink);
+
+    // 8. Pengaduan tab
+    const aduVisible = await page.$eval("#panel-pengaduan", (el) => !el.hidden);
+    check("pengaduan tab opens", aduVisible);
+    const aduNote = await page.$eval("#adu-demo-note", (el) => el.textContent);
+    check(
+      "pengaduan shows clear SAMPLE DATA label",
+      /contoh|sample/i.test(aduNote) && /bukan data asli|not real data/i.test(aduNote),
+      aduNote.slice(0, 80),
+    );
+    const aduStats = await page.evaluate(() => ({
+      baru: Number(document.getElementById("adu-stat-baru")?.textContent ?? 0),
+      diproses: Number(document.getElementById("adu-stat-diproses")?.textContent ?? 0),
+      selesai: Number(document.getElementById("adu-stat-selesai")?.textContent ?? 0),
+      items: document.querySelectorAll("#adu-list .aduan-item").length,
+    }));
+    check(
+      "pengaduan seeds 6 demo complaints (3 baru, 2 diproses, 1 selesai)",
+      aduStats.items === 6 && aduStats.baru === 3 && aduStats.diproses === 2 && aduStats.selesai === 1,
+      `items=${aduStats.items} baru=${aduStats.baru} diproses=${aduStats.diproses} selesai=${aduStats.selesai}`,
+    );
+    await page.click("#adu-submit");
+    await sleep(300);
+    const aduEmptyStatus = await page.$eval("#adu-form-status", (el) => el.textContent);
+    const aduCountAfterEmpty = await page.$eval("#adu-count", (el) => el.textContent);
+    check(
+      "pengaduan form rejects an empty submit",
+      /wajib|describe/i.test(aduEmptyStatus) && /6/.test(aduCountAfterEmpty),
+      `status=${aduEmptyStatus} count=${aduCountAfterEmpty}`,
+    );
+    await page.select("#adu-in-jenis", "Keterlambatan");
+    await page.select("#adu-in-surat", "pengantar");
+    await page.type("#adu-in-isi", "Surat pengantar saya tertunda tiga hari.");
+    await page.click("#adu-submit");
+    await sleep(400);
+    const aduAfterAdd = await page.evaluate(() => ({
+      baru: Number(document.getElementById("adu-stat-baru")?.textContent ?? 0),
+      items: document.querySelectorAll("#adu-list .aduan-item").length,
+      firstText: document.querySelector("#adu-list .aduan-item")?.textContent ?? "",
+    }));
+    check(
+      "pengaduan submit adds a complaint",
+      aduAfterAdd.items === 7 && aduAfterAdd.baru === 4 && /tertunda tiga hari/.test(aduAfterAdd.firstText),
+      `items=${aduAfterAdd.items} baru=${aduAfterAdd.baru}`,
+    );
+    await page.select("#adu-list .aduan-item:first-child .aduan-status", "selesai");
+    await sleep(400);
+    const aduAfterStatus = await page.evaluate(() => ({
+      baru: Number(document.getElementById("adu-stat-baru")?.textContent ?? 0),
+      selesai: Number(document.getElementById("adu-stat-selesai")?.textContent ?? 0),
+    }));
+    check(
+      "pengaduan status change updates the stats",
+      aduAfterStatus.baru === 3 && aduAfterStatus.selesai === 2,
+      `baru=${aduAfterStatus.baru} selesai=${aduAfterStatus.selesai}`,
+    );
+    await page.select("#adu-filter-status", "selesai");
+    await sleep(300);
+    const selesaiItems = await page.$$eval("#adu-list .aduan-item", (els) => els.length);
+    check("pengaduan status filter shows done complaints", selesaiItems === 2, `${selesaiItems} items`);
+    await page.select("#adu-filter-status", "baru");
+    await sleep(300);
+    const baruItems = await page.$$eval("#adu-list .aduan-item", (els) => els.length);
+    check("pengaduan status filter shows new complaints", baruItems === 3, `${baruItems} items`);
+    await page.select("#adu-filter-status", "");
+    await sleep(200);
+
+    // 9. Modern layout: no horizontal overflow at phone width; all 7 tabs work
+    await page.setViewport({ width: 390, height: 844 });
+    await sleep(400);
+    const overflow = await page.evaluate(() => {
+      const bad = [];
+      document.querySelectorAll("body *").forEach((el) => {
+        // Tables and the tab bar scroll horizontally by design — their
+        // off-screen children are not page overflow.
+        if (el.closest(".table-wrap") || el.closest(".tabs")) return;
+        const r = el.getBoundingClientRect();
+        if (r.right > window.innerWidth + 1 || r.left < -1) {
+          bad.push(`${el.tagName}#${el.id || ""} right=${Math.round(r.right)}`);
+        }
+      });
+      return {
+        docScroll: document.documentElement.scrollWidth,
+        inner: window.innerWidth,
+        bad: bad.slice(0, 5),
+      };
+    });
+    check(
+      "no horizontal overflow at phone width (390px)",
+      overflow.docScroll <= overflow.inner + 1 && overflow.bad.length === 0,
+      `scrollWidth=${overflow.docScroll} inner=${overflow.inner} bad=${overflow.bad.join(" | ")}`,
+    );
+    const tabs = ["letters", "summarize", "qa", "drafts", "kepegawaian", "ikm", "pengaduan"];
+    let tabsOk = true;
+    let tabsDetail = "";
+    for (const tab of tabs) {
+      await page.click(`[data-tab="${tab}"]`);
+      await sleep(250);
+      const visible = await page.$eval(`#panel-${tab}`, (el) => !el.hidden);
+      if (!visible) {
+        tabsOk = false;
+        tabsDetail = `tab ${tab} did not open`;
+        break;
+      }
+    }
+    check("all 7 tabs open at phone width", tabsOk, tabsDetail || "7/7 tabs");
+    await page.setViewport({ width: 1280, height: 900 });
+    await sleep(300);
+
+    // 10. No console errors / failed requests (excluding the VM tunnel noise)
     check("0 console errors (excluding VM tunnel noise)", errors.length === 0, errors.join(" | ").slice(0, 500));
     check("0 failed requests (excluding VM tunnel noise)", failedRequests.length === 0, failedRequests.join(" | ").slice(0, 500));
 
