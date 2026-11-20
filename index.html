@@ -1,0 +1,896 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0e7a4d" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1a13" media="(prefers-color-scheme: dark)" />
+    <meta
+      name="description"
+      content="DesaAI — offline-first AI clerk for Indonesian village offices. Drafts official letters, summarizes documents, and answers procedure questions with on-device Gemini Nano 4 + cloud Gemini fallback (Firebase AI Logic hybrid inference)."
+    />
+    <title>DesaAI — AI Clerk for Village Offices</title>
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <script>
+      // Apply the saved theme before first paint (no flash): stored choice
+      // wins, otherwise follow the device's color scheme.
+      try {
+        var desaaiTheme = localStorage.getItem("desaai-theme-v1");
+        if (!desaaiTheme) {
+          desaaiTheme =
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+        }
+        document.documentElement.dataset.theme = desaaiTheme;
+      } catch (e) {
+        /* storage unavailable — light theme by default */
+      }
+    </script>
+    <script type="module" crossorigin src="./assets/index-CnCwfxqO.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-uHjHd2m8.css">
+  </head>
+  <body>
+    <header class="hero">
+      <img
+        id="hero-photo"
+        class="hero-photo"
+        src="./kantor.jpg"
+        alt="Foto Kantor Kecamatan Simpangkatis"
+      />
+      <div class="hero-overlay" aria-hidden="true"></div>
+      <div class="hero-inner">
+        <div class="brand">
+          <img
+            id="brand-logo"
+            class="brand-logo"
+            src="./logo.png"
+            alt="Logo Kecamatan Simpangkatis"
+          />
+          <div>
+            <h1>DesaAI</h1>
+            <p class="tagline" data-i18n="tagline">
+              AI clerk for village &amp; subdistrict offices
+            </p>
+            <p class="office-line" data-i18n="officeLine">
+              Kecamatan Simpangkatis • Kabupaten Bangka Tengah
+            </p>
+          </div>
+        </div>
+        <div class="top-actions">
+          <span id="device-chip" class="chip chip-muted" title="On-device model status"
+            >On-device: checking…</span
+          >
+          <span id="firebase-chip" class="chip chip-muted" title="Firebase status"
+            >Firebase: checking…</span
+          >
+          <button id="theme-toggle" class="btn btn-ghost theme-toggle" type="button" aria-label="Dark mode">
+            <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          </button>
+          <button id="lang-toggle" class="btn btn-ghost" type="button">🇮🇩 Bahasa Indonesia</button>
+        </div>
+      </div>
+    </header>
+
+    <div id="config-banner" class="banner banner-warn" hidden>
+      <strong data-i18n="demoTitle">Demo mode — Firebase not configured yet.</strong>
+      <span data-i18n="demoText">
+        AI features need a Firebase project (free tier). Follow the setup steps in
+        README.md, then paste your web config into
+        <code>src/firebase-config.js</code>. The forms below still work — drafts are
+        saved locally in this browser until Firebase is connected.
+      </span>
+    </div>
+
+    <main>
+      <section class="quick-stats" id="quick-stats" aria-label="Ringkasan cepat">
+        <div class="quick-stat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+          <strong id="qs-letters">0</strong>
+          <span data-i18n="qsLetters">Letters saved</span>
+        </div>
+        <div class="quick-stat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <strong id="qs-ikm">–</strong>
+          <span data-i18n="qsIkm">IKM score</span>
+        </div>
+        <div class="quick-stat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+          <strong id="qs-aduan">0</strong>
+          <span data-i18n="qsAduan">Complaints resolved</span>
+        </div>
+      </section>
+
+      <nav class="tabs" role="tablist" aria-label="DesaAI features">
+        <button class="tab active" data-tab="home" role="tab" aria-selected="true" type="button">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+          <span data-i18n="tabHome">Home</span>
+        </button>
+        <button class="tab" data-tab="letters" role="tab" aria-selected="false" type="button">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+          <span data-i18n="tabLetters">Draft Letters</span>
+        </button>
+        <button class="tab" data-tab="summarize" role="tab" aria-selected="false" type="button">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
+          <span data-i18n="tabSummarize">Summarize</span>
+        </button>
+        <button class="tab" data-tab="qa" role="tab" aria-selected="false" type="button">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+          <span data-i18n="tabQa">Procedure Q&amp;A</span>
+        </button>
+        <button class="tab" data-tab="drafts" role="tab" aria-selected="false" type="button">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span data-i18n="tabDrafts">My Drafts</span>
+        </button>
+        <button class="tab" data-tab="kepegawaian" role="tab" aria-selected="false" type="button">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span data-i18n="tabKepegawaian">Personnel (SIAP AKAD)</span>
+        </button>
+        <button class="tab" data-tab="ikm" role="tab" aria-selected="false" type="button">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span data-i18n="tabIkm">Satisfaction (IKM)</span>
+        </button>
+        <button class="tab" data-tab="pengaduan" role="tab" aria-selected="false" type="button">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+          <span data-i18n="tabPengaduan">Complaints</span>
+        </button>
+      </nav>
+
+      <!-- ============ HOME / BERANDA (bento dashboard) ============ -->
+      <section id="panel-home" class="panel" role="tabpanel">
+        <h2 data-i18n="homeTitle">Office dashboard</h2>
+        <p class="hint" data-i18n="homeHint">
+          Today's snapshot of the office: letters, satisfaction, complaints and
+          terms of office — all from the data already in this browser.
+        </p>
+        <div class="bento">
+          <div class="bento-card bento-search">
+            <label class="field">
+              <span data-i18n="homeSearch">Search everything</span>
+              <input
+                id="home-search"
+                type="text"
+                data-i18n-ph="homeSearchPh"
+                placeholder="Search letters, officers, complaints…"
+              />
+            </label>
+            <div id="home-search-results" class="search-results" aria-live="polite"></div>
+          </div>
+
+          <div class="bento-card bento-ikm">
+            <p class="bento-label" data-i18n="homeIkm">IKM score</p>
+            <p class="bento-num"><strong id="home-ikm-score">–</strong></p>
+            <p>
+              <span id="home-ikm-cat" class="badge badge-cloud"></span>
+              <span id="home-ikm-count" class="bento-sub"></span>
+            </p>
+            <p class="bento-sub">
+              <span data-i18n="homeIkmLowest">Lowest element</span>:
+              <strong id="home-ikm-lowest">–</strong>
+            </p>
+            <div class="actions">
+              <button id="home-go-ikm" class="btn btn-primary" type="button">
+                <span data-i18n="homeGoIkm">Open the survey</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="bento-card bento-kpi">
+            <p class="bento-label" data-i18n="homeLettersToday">Letters today</p>
+            <p class="bento-num"><strong id="home-letters-today">0</strong></p>
+            <p class="bento-sub" data-i18n="homeLettersTodayHint">drafts saved today</p>
+            <div class="actions">
+              <button id="home-go-letters" class="btn" type="button">
+                <span data-i18n="homeGoLetters">Draft a letter</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="bento-card bento-kpi">
+            <p class="bento-label" data-i18n="homeAduanBaru">New complaints</p>
+            <p class="bento-num"><strong id="home-aduan-baru">0</strong></p>
+            <p class="bento-sub" data-i18n="homeAduanBaruHint">waiting for follow-up</p>
+            <ul id="home-aduan-list" class="notif-list"></ul>
+            <p id="home-aduan-empty" class="hint" hidden data-i18n="homeAduanEmpty">
+              All complaints resolved.
+            </p>
+            <div class="actions">
+              <button id="home-go-aduan" class="btn" type="button">
+                <span data-i18n="homeGoAduan">New complaint</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="bento-card bento-masa">
+            <p class="bento-label" data-i18n="homeMasaTitle">Terms of office — needs attention</p>
+            <p class="masa-counts">
+              <span><strong id="home-masa-akan">0</strong> <span data-i18n="homeMasaAkanHabis">Expiring ≤ 90 days</span></span>
+              <span><strong id="home-masa-habis">0</strong> <span data-i18n="homeMasaHabis">Expired</span></span>
+            </p>
+            <ul id="home-masa-list" class="notif-list"></ul>
+            <p id="home-masa-empty" class="hint" hidden data-i18n="homeMasaEmpty">
+              No terms expired or expiring soon.
+            </p>
+            <div class="actions">
+              <button id="home-go-keg" class="btn" type="button">
+                <span data-i18n="homeGoKeg">Personnel list</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="bento-card bento-month">
+            <p class="bento-label"><span data-i18n="homeMonthTitle">This month</span> — <span id="home-month-name"></span></p>
+            <p class="month-rows">
+              <span><strong id="home-month-letters">0</strong> <span data-i18n="homeMonthLetters">Letters saved</span></span>
+              <span><strong id="home-month-ikm">0</strong> <span data-i18n="homeMonthIkm">Survey answers</span></span>
+              <span><strong id="home-month-aduan">0</strong> <span data-i18n="homeMonthAduan">Complaints</span></span>
+            </p>
+          </div>
+
+          <div class="bento-card bento-trend">
+            <p class="bento-label" data-i18n="homeTrendTitle">IKM trend — score over time</p>
+            <p class="hint" data-i18n="homeTrendHint">Cumulative IKM score after each survey answer.</p>
+            <div id="home-ikm-trend" class="trend-chart"></div>
+            <p id="home-trend-empty" class="hint" hidden data-i18n="homeTrendEmpty">
+              Not enough answers yet for a trend.
+            </p>
+          </div>
+
+          <div class="bento-card bento-report">
+            <p class="bento-label" data-i18n="homeReportTitle">Monthly report</p>
+            <p class="hint" data-i18n="homeReportHint">
+              Recap of this month's letters, survey and complaints — printable for
+              the office file.
+            </p>
+            <div id="home-report-preview" class="report-preview"></div>
+            <div class="actions">
+              <button id="home-report-print" class="btn btn-primary" type="button">
+                <span data-i18n="homeReportPrint">Print report</span>
+              </button>
+            </div>
+            <div id="home-report-status" class="status" aria-live="polite"></div>
+          </div>
+        </div>
+        <!-- Print-only rendering of the monthly report (filled in by JS before window.print()). -->
+        <div id="report-print-area" class="print-only" aria-hidden="true">
+          <p class="print-head-office">Kecamatan Simpangkatis • Kabupaten Bangka Tengah</p>
+          <p class="print-head-title" id="report-print-title"></p>
+          <p class="print-head-date" id="report-print-date"></p>
+          <hr />
+          <div class="print-body" id="report-print-body"></div>
+        </div>
+      </section>
+
+      <!-- ============ LETTERS ============ -->
+      <section id="panel-letters" class="panel" role="tabpanel" hidden>
+        <h2 data-i18n="lettersTitle">Draft an official letter</h2>
+        <p class="hint" data-i18n="lettersHint">
+          Pick a template, fill in the fields, add a short instruction if you like.
+          Short drafts run on-device (private, no internet needed); longer ones fall
+          back to the cloud.
+        </p>
+        <div class="form-grid">
+          <label class="field">
+            <span data-i18n="templateLabel">Letter type</span>
+            <select id="letter-template"></select>
+          </label>
+          <div id="letter-fields" class="fields"></div>
+          <label class="field field-wide">
+            <span data-i18n="extraLabel">Extra instruction (optional, short)</span>
+            <input
+              id="letter-extra"
+              type="text"
+              maxlength="300"
+              data-i18n-ph="extraPh"
+              placeholder="e.g. formal tone, mention the musrenbang meeting on Friday"
+            />
+          </label>
+        </div>
+        <div class="actions">
+          <button id="letter-generate" class="btn btn-primary" type="button">
+            <span data-i18n="generate">Generate draft</span>
+          </button>
+          <button id="letter-autonumber" class="btn" type="button">
+            <span data-i18n="autoNumber">Auto number</span>
+          </button>
+          <button id="letter-clear" class="btn" type="button" data-i18n="clear">Clear</button>
+        </div>
+        <div id="letter-status" class="status" aria-live="polite"></div>
+        <div id="letter-output-wrap" class="output-wrap" hidden>
+          <div class="output-head">
+            <span id="letter-badge" class="badge"></span>
+            <span id="letter-reason" class="reason"></span>
+          </div>
+          <textarea
+            id="letter-output"
+            rows="16"
+            aria-label="Generated letter draft — editable"
+          ></textarea>
+          <div class="actions">
+            <button id="letter-copy" class="btn" type="button" data-i18n="copy">Copy</button>
+            <button id="letter-download" class="btn" type="button" data-i18n="download">
+              Download .txt
+            </button>
+            <button id="letter-print" class="btn" type="button" data-i18n="print">
+              Print
+            </button>
+            <button id="letter-save" class="btn" type="button" data-i18n="saveDraft">
+              Save draft
+            </button>
+          </div>
+        </div>
+        <!-- Print-only rendering of the letter (filled in by JS before window.print()). -->
+        <div id="letter-print-area" class="print-only" aria-hidden="true">
+          <p class="print-head-office">Kecamatan Simpangkatis • Kabupaten Bangka Tengah</p>
+          <p class="print-head-title" id="letter-print-title"></p>
+          <p class="print-head-date" id="letter-print-date"></p>
+          <hr />
+          <div class="print-body" id="letter-print-body"></div>
+        </div>
+      </section>
+
+      <!-- ============ SUMMARIZE ============ -->
+      <section id="panel-summarize" class="panel" role="tabpanel" hidden>
+        <h2 data-i18n="sumTitle">Summarize a document</h2>
+        <p class="hint" data-i18n="sumHint">
+          Paste a long document (minutes, regulation, report). Long documents are
+          always summarized in the cloud — on-device inference is limited to 9,216
+          input tokens.
+        </p>
+        <label class="field field-wide">
+          <span data-i18n="sumInputLabel">Document text</span>
+          <textarea
+            id="sum-input"
+            rows="10"
+            data-i18n-ph="sumPh"
+            placeholder="Paste the document text here…"
+          ></textarea>
+        </label>
+        <div class="form-grid">
+          <label class="field">
+            <span data-i18n="sumLengthLabel">Summary length</span>
+            <select id="sum-length">
+              <option value="short" data-i18n="sumShort">Short — key points only</option>
+              <option value="medium" selected data-i18n="sumMedium">
+                Medium — key points + details
+              </option>
+              <option value="detailed" data-i18n="sumDetailed">
+                Detailed — structured summary
+              </option>
+            </select>
+          </label>
+          <p class="field meta"><span id="sum-count">0</span> <span data-i18n="chars">characters</span></p>
+        </div>
+        <div class="actions">
+          <button id="sum-generate" class="btn btn-primary" type="button">
+            ✨ <span data-i18n="summarizeBtn">Summarize</span>
+          </button>
+          <button id="sum-clear" class="btn" type="button" data-i18n="clear">Clear</button>
+        </div>
+        <div id="sum-status" class="status" aria-live="polite"></div>
+        <div id="sum-output-wrap" class="output-wrap" hidden>
+          <div class="output-head">
+            <span id="sum-badge" class="badge"></span>
+            <span id="sum-reason" class="reason"></span>
+          </div>
+          <div id="sum-output" class="output-text" aria-live="polite"></div>
+          <div class="actions">
+            <button id="sum-copy" class="btn" type="button" data-i18n="copy">Copy</button>
+            <button id="sum-save" class="btn" type="button" data-i18n="saveDraft">
+              Save as draft
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Q&A ============ -->
+      <section id="panel-qa" class="panel" role="tabpanel" hidden>
+        <h2 data-i18n="qaTitle">Ask about village procedures</h2>
+        <p class="hint" data-i18n="qaHint">
+          Ask how to apply for KTP, KK, domisili, SKTM, birth certificates and more.
+          Answers are grounded in the built-in procedure guide — and the guide itself
+          works fully offline.
+        </p>
+        <label class="field field-wide">
+          <span data-i18n="qaLabel">Your question</span>
+          <input
+            id="qa-input"
+            type="text"
+            maxlength="300"
+            data-i18n-ph="qaPh"
+            placeholder="e.g. What do I need to apply for a KTP?"
+          />
+        </label>
+        <div class="actions">
+          <button id="qa-ask" class="btn btn-primary" type="button">
+            ✨ <span data-i18n="askBtn">Ask</span>
+          </button>
+        </div>
+        <div class="chip-row" id="qa-suggestions" aria-label="Example questions"></div>
+        <div id="qa-status" class="status" aria-live="polite"></div>
+        <div id="qa-output-wrap" class="output-wrap" hidden>
+          <div class="output-head">
+            <span id="qa-badge" class="badge"></span>
+            <span id="qa-reason" class="reason"></span>
+          </div>
+          <div id="qa-output" class="output-text" aria-live="polite"></div>
+          <p id="qa-sources" class="sources"></p>
+        </div>
+        <details class="kb">
+          <summary data-i18n="kbTitle">Built-in procedure guide (works offline)</summary>
+          <div id="kb-list" class="kb-list"></div>
+        </details>
+      </section>
+
+      <!-- ============ DRAFTS ============ -->
+      <section id="panel-drafts" class="panel" role="tabpanel" hidden>
+        <h2 data-i18n="draftsTitle">My drafts</h2>
+        <p class="hint" data-i18n="draftsHint">
+          Saved drafts sync to Firestore when Firebase is connected; otherwise they
+          stay in this browser (localStorage).
+        </p>
+        <div class="form-grid">
+          <label class="field field-wide">
+            <span data-i18n="draftsSearch">Search drafts</span>
+            <input
+              id="drafts-search"
+              type="text"
+              data-i18n-ph="draftsSearchPh"
+              placeholder="Search drafts by title or text…"
+            />
+          </label>
+        </div>
+        <div id="drafts-list" class="drafts-list"></div>
+        <p id="drafts-empty" class="hint" data-i18n="draftsEmpty">
+          No drafts yet. Generate a letter or summary and press “Save draft”.
+        </p>
+
+        <div class="backup-card">
+          <h3 class="subhead" data-i18n="backupTitle">Data backup</h3>
+          <p class="hint" data-i18n="backupHint">
+            Download all local data (letters, personnel, IKM, complaints,
+            checklists) as one JSON file — keep it as a backup or move it to
+            another device.
+          </p>
+          <div class="actions">
+            <button id="backup-export" class="btn" type="button">
+              <span data-i18n="backupExport">Download backup (JSON)</span>
+            </button>
+          </div>
+          <div id="drafts-status" class="status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <!-- ============ KEPEGAWAIAN (SIAP AKAD) ============ -->
+      <section id="panel-kepegawaian" class="panel" role="tabpanel" hidden>
+        <h2 data-i18n="kegTitle">Village personnel — SIAP AKAD (sample data)</h2>
+        <p class="hint" data-i18n="kegHint">
+          Personnel administration for village officers across 10 villages in
+          Simpangkatis subdistrict — adapted from Bos's SIAP AKAD.
+        </p>
+        <p id="keg-demo-note" class="banner banner-warn" data-i18n="kegDemoNote">
+          ⚠️ SAMPLE DATA — not real data. The 15 officer records below are examples
+          from SIAP AKAD (demo NIKs), shown to demonstrate the admin flow and
+          term-expiry notifications.
+        </p>
+
+        <div class="stats">
+          <div class="stat-card stat-blue">
+            <p class="stat-label" data-i18n="kegStatTotal">Total officers</p>
+            <h3 id="keg-stat-total">0</h3>
+          </div>
+          <div class="stat-card stat-green">
+            <p class="stat-label" data-i18n="kegStatDesa">Villages</p>
+            <h3 id="keg-stat-desa">10</h3>
+          </div>
+          <div class="stat-card stat-emerald">
+            <p class="stat-label" data-i18n="kegStatAktif">Active term</p>
+            <h3 id="keg-stat-aktif">0</h3>
+          </div>
+          <div class="stat-card stat-amber">
+            <p class="stat-label" data-i18n="kegStatAkanHabis">Expiring ≤ 90 days</p>
+            <h3 id="keg-stat-akanhabis">0</h3>
+          </div>
+          <div class="stat-card stat-rose">
+            <p class="stat-label" data-i18n="kegStatHabis">Term expired</p>
+            <h3 id="keg-stat-habis">0</h3>
+          </div>
+        </div>
+
+        <h3 class="subhead" data-i18n="kegUnitTitle">Summary per unit</h3>
+        <div class="unit-cards">
+          <div class="unit-card unit-kecamatan">
+            <h4 data-i18n="kegUnitKecamatan">Subdistrict Office</h4>
+            <p class="count">
+              <strong id="keg-unit-kec-total">0</strong>
+              <span data-i18n="kegRecords">records</span>
+            </p>
+            <p class="count">
+              <span data-i18n="kegStatusAktif">Active</span>:
+              <strong id="keg-unit-kec-aktif">0</strong> ·
+              <span data-i18n="kegStatusAkanHabis">Expiring soon</span>:
+              <strong id="keg-unit-kec-akanhabis">0</strong> ·
+              <span data-i18n="kegStatusHabis">Expired</span>:
+              <strong id="keg-unit-kec-habis">0</strong>
+            </p>
+          </div>
+          <div class="unit-card unit-desa">
+            <h4 data-i18n="kegUnitDesa">Village Officers</h4>
+            <p class="count">
+              <strong id="keg-unit-desa-total">0</strong>
+              <span data-i18n="kegRecords">records</span>
+            </p>
+            <p class="count">
+              <span data-i18n="kegStatusAktif">Active</span>:
+              <strong id="keg-unit-desa-aktif">0</strong> ·
+              <span data-i18n="kegStatusAkanHabis">Expiring soon</span>:
+              <strong id="keg-unit-desa-akanhabis">0</strong> ·
+              <span data-i18n="kegStatusHabis">Expired</span>:
+              <strong id="keg-unit-desa-habis">0</strong>
+            </p>
+          </div>
+        </div>
+
+        <h3 class="subhead">
+          <span data-i18n="kegNotifTitle">Personnel notifications — terms of office</span>
+          <span id="keg-notif-count" class="badge badge-cloud"></span>
+        </h3>
+        <ul id="keg-notif-list" class="notif-list"></ul>
+        <p id="keg-notif-empty" class="hint" hidden data-i18n="kegNotifEmpty">
+          No terms expired or expiring within 90 days.
+        </p>
+
+        <div class="actions">
+          <button id="keg-summarize" class="btn btn-primary" type="button">
+            <span data-i18n="kegSummarize">✨ Summarize personnel (AI)</span>
+          </button>
+        </div>
+        <div id="keg-sum-status" class="status" aria-live="polite"></div>
+        <div id="keg-sum-output-wrap" class="output-wrap" hidden>
+          <div class="output-head">
+            <span id="keg-sum-badge" class="badge"></span>
+            <span id="keg-sum-reason" class="reason"></span>
+          </div>
+          <div id="keg-sum-output" class="output-text" aria-live="polite"></div>
+        </div>
+
+        <h3 class="subhead" data-i18n="kegFormTitle">Add village officer</h3>
+        <form id="keg-form" class="form-grid">
+          <label class="field">
+            <span data-i18n="kegUnitCol">Unit</span>
+            <select id="keg-in-unit"></select>
+          </label>
+          <label class="field">
+            <span>Nama lengkap *</span>
+            <input id="keg-in-nama" type="text" placeholder="Contoh: Ahmad Sudirman" />
+          </label>
+          <label class="field">
+            <span>NIK</span>
+            <input id="keg-in-nik" type="text" maxlength="16" placeholder="16 digit NIK" />
+          </label>
+          <label class="field">
+            <span>Tempat lahir *</span>
+            <input id="keg-in-tempat" type="text" placeholder="Contoh: Pangkalpinang" />
+          </label>
+          <label class="field">
+            <span>Tanggal lahir *</span>
+            <input id="keg-in-tgl" type="date" />
+          </label>
+          <label class="field">
+            <span>Agama *</span>
+            <select id="keg-in-agama"></select>
+          </label>
+          <label class="field">
+            <span>Jabatan *</span>
+            <select id="keg-in-jabatan"></select>
+          </label>
+          <label class="field">
+            <span>Desa *</span>
+            <select id="keg-in-desa"></select>
+          </label>
+          <label class="field">
+            <span>No. HP / WhatsApp</span>
+            <input id="keg-in-hp" type="tel" placeholder="Contoh: 0812-3456-7890" />
+          </label>
+          <label class="field">
+            <span>Masa bhakti mulai *</span>
+            <input id="keg-in-mulai" type="date" />
+          </label>
+          <label class="field">
+            <span>Masa bhakti selesai *</span>
+            <input id="keg-in-selesai" type="date" />
+          </label>
+          <label class="field field-wide">
+            <span>Alamat lengkap</span>
+            <textarea id="keg-in-alamat" rows="2" placeholder="Alamat lengkap perangkat desa"></textarea>
+          </label>
+          <div class="actions field-wide">
+            <button id="keg-add" class="btn btn-primary" type="submit">
+              <span data-i18n="kegAdd">Save officer</span>
+            </button>
+          </div>
+        </form>
+        <div id="keg-form-status" class="status" aria-live="polite"></div>
+
+        <h3 class="subhead">Rekapan Data Perangkat Desa</h3>
+        <div class="form-grid">
+          <label class="field field-wide">
+            <span class="sr-only">Cari</span>
+            <input
+              id="keg-search"
+              type="text"
+              data-i18n-ph="kegSearchPh"
+              placeholder="Cari nama, jabatan, atau desa…"
+            />
+          </label>
+          <label class="field">
+            <span data-i18n="kegFilterDesa">All villages</span>
+            <select id="keg-filter-desa"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="kegFilterUnit">All units</span>
+            <select id="keg-filter-unit"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="kegFilterJabatan">All positions</span>
+            <select id="keg-filter-jabatan"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="kegFilterStatus">All statuses</span>
+            <select id="keg-filter-status"></select>
+          </label>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Nama</th>
+                <th data-i18n="kegUnitCol">Unit</th>
+                <th>Jabatan</th>
+                <th>Desa</th>
+                <th>TTL</th>
+                <th>Agama</th>
+                <th>No HP</th>
+                <th>Masa Bhakti</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="keg-table-body"></tbody>
+          </table>
+        </div>
+        <p id="keg-count" class="hint"></p>
+
+        <dialog id="keg-detail" class="detail-dialog">
+          <h3 id="keg-detail-title"></h3>
+          <dl id="keg-detail-body" class="detail-rows"></dl>
+          <form method="dialog" class="actions">
+            <button class="btn" type="submit" data-i18n="close">Close</button>
+          </form>
+        </dialog>
+
+        <h3 class="subhead" data-i18n="kegDesaTitle">Data per village</h3>
+        <div id="keg-desa-cards" class="desa-cards"></div>
+
+        <h3 class="subhead" data-i18n="kegLembagaTitle">Village institutions</h3>
+        <div id="keg-lembaga-list" class="lembaga-grid"></div>
+      </section>
+
+      <!-- ============ IKM (Kepuasan Masyarakat) ============ -->
+      <section id="panel-ikm" class="panel" role="tabpanel" hidden>
+        <h2 data-i18n="ikmTitle">Community Satisfaction Index (IKM) — letter services</h2>
+        <p class="hint" data-i18n="ikmHint">
+          Survey based on PermenPAN-RB No. 14/2017: 9 service elements, scale 1–4.
+        </p>
+        <p id="ikm-demo-note" class="banner banner-warn" data-i18n="ikmDemoNote">
+          ⚠️ SAMPLE DATA — not real data. The 12 survey answers below are examples
+          to demonstrate the dashboard.
+        </p>
+
+        <div class="ikm-dashboard">
+          <div class="ikm-score-card">
+            <p class="stat-label" data-i18n="ikmScoreLabel">IKM score</p>
+            <h3 id="ikm-score" data-score="0">–</h3>
+            <p>
+              <span id="ikm-category" class="badge badge-cloud"></span>
+              <span id="ikm-count" class="count"></span>
+            </p>
+          </div>
+          <div>
+            <h3 class="subhead" data-i18n="ikmPerElement">Average per element</h3>
+            <div id="ikm-bars" class="ikm-bars"></div>
+            <p class="hint">
+              <span data-i18n="ikmLowest">Lowest</span>:
+              <strong id="ikm-lowest">–</strong> ·
+              <span data-i18n="ikmHighest">Highest</span>:
+              <strong id="ikm-highest">–</strong>
+            </p>
+            <p class="hint ikm-scale-note" data-i18n="ikmScaleNote">
+              Scale 1–4 (4 = best). Green ≥ 3.5, amber 2.5–3.5, red below 2.5.
+            </p>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="ikm-share-survey" class="btn btn-primary" type="button">
+            <span data-i18n="ikmShareSurvey">Share survey</span>
+          </button>
+          <button id="ikm-share-results" class="btn" type="button">
+            <span data-i18n="ikmShareResults">Share results</span>
+          </button>
+          <button id="ikm-export" class="btn" type="button">
+            <span data-i18n="ikmExport">Download results (CSV)</span>
+          </button>
+        </div>
+        <div id="ikm-share-status" class="status" aria-live="polite"></div>
+        <div id="ikm-share-output-wrap" hidden>
+          <textarea id="ikm-share-output" readonly rows="6" aria-label="Share text"></textarea>
+        </div>
+
+        <div class="share-card">
+          <h3 class="subhead" data-i18n="ikmShareTitle">Share the survey</h3>
+          <p class="hint" data-i18n="ikmShareHint">
+            Share this link or QR code with residents — they can open the
+            survey right on their phone.
+          </p>
+          <label class="field field-wide">
+            <span data-i18n="ikmSurveyLink">Survey link</span>
+            <input id="ikm-survey-link" type="text" readonly />
+          </label>
+          <div class="qr-row">
+            <div id="ikm-qr" class="qr-box" role="img" aria-label="QR code survei IKM"></div>
+            <div class="qr-actions">
+              <button id="ikm-qr-copy" class="btn" type="button">
+                <span data-i18n="ikmCopyLink">Copy link</span>
+              </button>
+              <button id="ikm-qr-download" class="btn" type="button">
+                <span data-i18n="ikmDownloadQr">Download QR (PNG)</span>
+              </button>
+              <a id="ikm-qr-wa" class="btn" target="_blank" rel="noopener">
+                <span data-i18n="ikmShareWa">WhatsApp</span>
+              </a>
+              <p class="hint" data-i18n="ikmQrHint">
+                Scan the QR code with a phone camera to open the survey.
+                Print it and stick it at the service counter.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="subhead" data-i18n="ikmFormTitle">Fill in the satisfaction survey</h3>
+        <form id="ikm-form" class="form-grid">
+          <label class="field">
+            <span data-i18n="ikmName">Your name (optional — may stay anonymous)</span>
+            <input id="ikm-in-nama" type="text" placeholder="Contoh: Sari" />
+          </label>
+          <label class="field">
+            <span data-i18n="ikmLetterType">Letter service used</span>
+            <select id="ikm-in-surat"></select>
+          </label>
+          <div id="ikm-questions" class="field-wide"></div>
+          <label class="field field-wide">
+            <span data-i18n="ikmComment">Comments / suggestions (optional)</span>
+            <textarea id="ikm-in-komentar" rows="2" placeholder="Tulis saran Anda di sini…"></textarea>
+          </label>
+          <div class="actions field-wide">
+            <button id="ikm-submit" class="btn btn-primary" type="submit">
+              <span data-i18n="ikmSubmit">Submit survey</span>
+            </button>
+          </div>
+        </form>
+        <div id="ikm-form-status" class="status" aria-live="polite"></div>
+        <p class="hint">
+          <button id="ikm-to-pengaduan" class="btn-link" type="button" data-i18n="ikmToPengaduan">
+            Have a complaint? Submit it here →
+          </button>
+        </p>
+      </section>
+
+      <!-- ============ PENGADUAN ============ -->
+      <section id="panel-pengaduan" class="panel" role="tabpanel" hidden>
+        <h2 data-i18n="aduTitle">Complaints — letter services</h2>
+        <p class="hint" data-i18n="aduHint">
+          Report problems with letter services. Complaints can be anonymous.
+        </p>
+        <p id="adu-demo-note" class="banner banner-warn" data-i18n="aduDemoNote">
+          ⚠️ SAMPLE DATA — not real data. The 6 complaints below are examples
+          to demonstrate the workflow.
+        </p>
+
+        <div class="stats adu-stats">
+          <div class="stat-card stat-rose">
+            <p class="stat-label" data-i18n="aduStatusBaru">New</p>
+            <h3 id="adu-stat-baru">0</h3>
+          </div>
+          <div class="stat-card stat-amber">
+            <p class="stat-label" data-i18n="aduStatusDiproses">In progress</p>
+            <h3 id="adu-stat-diproses">0</h3>
+          </div>
+          <div class="stat-card stat-green">
+            <p class="stat-label" data-i18n="aduStatusSelesai">Done</p>
+            <h3 id="adu-stat-selesai">0</h3>
+          </div>
+        </div>
+
+        <h3 class="subhead" data-i18n="aduFormTitle">Submit a complaint</h3>
+        <form id="adu-form" class="form-grid">
+          <label class="field">
+            <span data-i18n="aduName">Your name (optional — may stay anonymous)</span>
+            <input id="adu-in-nama" type="text" placeholder="Contoh: Warga Katis" />
+          </label>
+          <label class="field">
+            <span data-i18n="aduJenis">Complaint type</span>
+            <select id="adu-in-jenis"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="aduLetterType">Related letter service</span>
+            <select id="adu-in-surat"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="aduKontak">Contact (optional — phone)</span>
+            <input id="adu-in-kontak" type="tel" placeholder="Contoh: 0812-3456-7890" />
+          </label>
+          <label class="field field-wide">
+            <span data-i18n="aduIsi">Complaint details</span>
+            <textarea
+              id="adu-in-isi"
+              rows="3"
+              data-i18n-ph="aduIsiPh"
+              placeholder="Describe the problem…"
+            ></textarea>
+          </label>
+          <div class="actions field-wide">
+            <button id="adu-submit" class="btn btn-primary" type="submit">
+              <span data-i18n="aduSubmit">Submit complaint</span>
+            </button>
+          </div>
+        </form>
+        <div id="adu-form-status" class="status" aria-live="polite"></div>
+
+        <h3 class="subhead" data-i18n="aduListTitle">Complaint list</h3>
+        <div class="form-grid">
+          <label class="field">
+            <span data-i18n="aduFilterStatus">All statuses</span>
+            <select id="adu-filter-status"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="aduFilterJenis">All types</span>
+            <select id="adu-filter-jenis"></select>
+          </label>
+        </div>
+        <div id="adu-list" class="drafts-list"></div>
+        <p id="adu-empty" class="hint" hidden data-i18n="aduEmpty">
+          No complaints with this status.
+        </p>
+        <p id="adu-count" class="hint"></p>
+        <div class="actions">
+          <button id="adu-export" class="btn" type="button">
+            <span data-i18n="aduExport">Export complaints (CSV)</span>
+          </button>
+        </div>
+        <div id="adu-export-status" class="status" aria-live="polite"></div>
+
+        <dialog id="adu-detail" class="detail-dialog">
+          <h3 id="adu-detail-title"></h3>
+          <dl id="adu-detail-body" class="detail-rows"></dl>
+          <p id="adu-detail-isi" class="detail-text"></p>
+          <form method="dialog" class="actions">
+            <button class="btn" type="submit" data-i18n="close">Close</button>
+          </form>
+        </dialog>
+      </section>
+    </main>
+
+    <footer>
+      <p data-i18n="footer">
+        DesaAI — built for #BuildHybridAI 2026. Hybrid inference: on-device Gemini
+        Nano 4 when available, cloud Gemini fallback. AI drafts must be reviewed by
+        a human officer before use.
+      </p>
+    </footer>
+
+  </body>
+</html>
