@@ -66,6 +66,12 @@ back to **cloud Gemini**. Every answer shows a visible routing badge
    respondent count. **Shareable**: "Bagikan Survei" (Web Share API,
    clipboard fallback, manual-copy fallback) sends the app link +
    invitation; "Bagikan Hasil" shares a text summary of the score.
+   The survey also has a **share card** with a deep link
+   (`…/desa-ai/#ikm`) and a **QR code** generated locally in the browser
+   (no network needed) — copy the link, download the QR as PNG to print
+   and stick at the service counter, or share it via WhatsApp. Every
+   tab has its own deep link too (`#surat`, `#ringkas`, `#tanya`,
+   `#draf`, `#kepegawaian`, `#ikm`, `#pengaduan`).
    Respondents may stay anonymous; the 12 seed answers are **SAMPLE
    DATA, clearly labelled**. Each saved letter in the archive has a
    "Beri penilaian" link that opens the IKM tab.
@@ -82,10 +88,12 @@ back to **cloud Gemini**. Every answer shows a visible routing badge
    Indonesian.
 
 The UI is modern and mobile-first: emerald/teal gradient header with the
-office identity (Kecamatan Simpangkatis • Kabupaten Bangka Tengah),
-sticky scrollable tab bar, large touch targets, soft-shadow cards, and
-clear color-coded status chips — while keeping every feature working
-exactly as before.
+office logo ("Heritage of Simpangkatis") and identity (Kecamatan
+Simpangkatis • Kabupaten Bangka Tengah), a live quick-stats strip
+(letters saved, IKM score, complaints resolved), a sticky scrollable
+tab bar where every tab has its own SVG icon + name, large touch
+targets, soft-shadow cards, and clear color-coded status chips — while
+keeping every feature working exactly as before.
 
 ## How hybrid inference works
 
@@ -155,10 +163,17 @@ exactly as before.
   share buttons, full-survey submit, exact endpoints all-4 → 100/A and
   all-1 → 25/D), tests the Pengaduan module (6 sample complaints,
   validation, submit, status change, status filter), checks the archive
-  "Beri penilaian" link, checks for **no horizontal overflow at 390 px
+  "Beri penilaian" link, checks the **deep links** (`#ikm` and
+  `#pengaduan` open their tab on load; switching tabs updates the hash),
+  checks the **header logo loads** and the **favicon is set**, checks
+  **all 7 tabs have an SVG icon + label**, checks the **IKM share card**
+  (survey link contains `#ikm`, QR code renders, WhatsApp link, copy
+  and download-QR buttons work), checks the **quick-stats strip**
+  matches the live data (1 letter, IKM = dashboard score, 2 resolved
+  complaints), checks for **no horizontal overflow at 390 px
   phone width**, and checks for **0 console errors / 0 failed requests**
   (excluding this VM's blocked tunnel to Google endpoints — see
-  `docs/VERIFICATION.md`). **78/78 checks pass (2026-11-20, run twice).**
+  `docs/VERIFICATION.md`). **92/92 checks pass (2026-11-20, run twice).**
 - On-device Gemini Nano was **not** verified live: the build VM's headless
   Chrome has no Prompt API / Gemini Nano, so the on-device chip reports
   "not supported here" and every AI call would take the cloud/fallback
@@ -179,8 +194,12 @@ exactly as before.
 
 ```
 index.html            — shell: header chips, 7 tabs, banner
+public/logo.png       — office logo ("Heritage of Simpangkatis"),
+                        black background made transparent
+public/favicon.png    — 64×64 favicon (same logo)
 src/main.ts           — app wiring (tabs, i18n, feature handlers,
-                        kepegawaian, IKM, pengaduan)
+                        kepegawaian, IKM, pengaduan, hash routing,
+                        quick-stats strip, QR share card)
 src/firebase.ts       — init: App, Auth (anonymous), Firestore,
                         Remote Config, App Check, AI (GoogleAIBackend)
 src/ai.ts             — hybrid model, routing decision, streaming
@@ -195,6 +214,9 @@ src/kepegawaian.ts    — SIAP AKAD module: 15 village + 8 subdistrict
 src/ikm.ts            — IKM survey (PermenPAN-RB 14/2017): 9 elements,
                         score = mean x 25, categories A-D, 12 sample
                         answers, share texts, localStorage + mirror
+src/qrcode.ts         — vendored QR generator (qrcode-generator 1.4.4,
+                        MIT, Kazuhiko Arase) — no npm dependency
+src/qr.ts             — QR helpers (SVG + PNG data URL) for the survey
 src/pengaduan.ts      — complaints: types, Baru/Diproses/Selesai
                         workflow, 6 sample complaints, localStorage +
                         mirror

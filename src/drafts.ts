@@ -45,6 +45,12 @@ function saveLocal(drafts: Draft[]): void {
   }
 }
 
+/** Count locally saved drafts (sync — used by the quick-stats strip). */
+export function countLocalDrafts(kind?: Draft["kind"]): number {
+  const all = loadLocal();
+  return kind ? all.filter((d) => d.kind === kind).length : all.length;
+}
+
 function firestoreReady(svc: FirebaseServices): svc is FirebaseServices & {
   db: Firestore;
   uid: string;

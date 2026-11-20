@@ -824,6 +824,124 @@ async function main() {
     await page.setViewport({ width: 1280, height: 900 });
     await sleep(300);
 
+    // 9b. Deep links, logo, tab icons, QR distribution, quick stats
+    // Fresh load with #ikm opens the IKM tab directly (no click needed)
+    await page.goto(`file://${join(DIST, "index.html")}#ikm`, {
+      waitUntil: "networkidle0",
+      timeout: 30000,
+    });
+    await sleep(1200);
+    const ikmFromHash = await page.$eval("#panel-ikm", (el) => !el.hidden);
+    const hashAfterIkm = await page.evaluate(() => window.location.hash);
+    check(
+      "deep link #ikm opens the IKM tab on load",
+      ikmFromHash && hashAfterIkm === "#ikm",
+      `visible=${ikmFromHash} hash=${hashAfterIkm}`,
+    );
+    // Clicking a tab updates the hash (so the URL is shareable per tab)
+    await page.click('[data-tab="pengaduan"]');
+    await sleep(300);
+    const hashAfterClick = await page.evaluate(() => window.location.hash);
+    check(
+      "switching tabs updates location.hash",
+      hashAfterClick === "#pengaduan",
+      `hash=${hashAfterClick}`,
+    );
+    // Fresh load with #pengaduan opens the Pengaduan tab
+    await page.goto(`file://${join(DIST, "index.html")}#pengaduan`, {
+      waitUntil: "networkidle0",
+      timeout: 30000,
+    });
+    await sleep(1200);
+    const aduFromHash = await page.$eval("#panel-pengaduan", (el) => !el.hidden);
+    check("deep link #pengaduan opens the Pengaduan tab on load", aduFromHash);
+    // Back to the IKM tab for the QR checks
+    await page.goto(`file://${join(DIST, "index.html")}#ikm`, {
+      waitUntil: "networkidle0",
+      timeout: 30000,
+    });
+    await sleep(1200);
+    // Logo + favicon (Bos's "Heritage of Simpangkatis" emblem)
+    const logoOk = await page.$eval("#brand-logo", (el) => el.naturalWidth > 0 && el.complete);
+    check("header logo loads (naturalWidth > 0)", logoOk);
+    const faviconHref = await page.$eval(
+      'link[rel="icon"]',
+      (el) => el.getAttribute("href") ?? "",
+    );
+    check("favicon link is set", /favicon\.png/.test(faviconHref), faviconHref);
+    // Every tab has an inline SVG icon + a label (no emoji tabs anymore)
+    const tabIcons = await page.$$eval(".tab", (els) =>
+      els.map((b) => ({
+        hasSvg: !!b.querySelector("svg.tab-icon"),
+        label: (b.querySelector("span")?.textContent ?? "").trim(),
+      })),
+    );
+    check(
+      "all 7 tabs have an SVG icon + label",
+      tabIcons.length === 7 && tabIcons.every((t) => t.hasSvg && t.label.length > 0),
+      tabIcons.map((t) => `${t.label}:${t.hasSvg ? "svg" : "NO-SVG"}`).join(" | "),
+    );
+    // Survey distribution: link + QR code (generated locally, offline)
+    const surveyLink = await page.$eval("#ikm-survey-link", (el) => el.value);
+    check(
+      "survey link is shown and deep-links to #ikm",
+      surveyLink.includes("#ikm"),
+      surveyLink,
+    );
+    const qrOk = await page.$eval("#ikm-qr", (el) => {
+      const svg = el.querySelector("svg");
+      return {
+        hasSvg: !!svg,
+        hasModules: !!svg?.querySelector("path"),
+        ready: el.dataset.qrReady === "1",
+      };
+    });
+    check(
+      "QR code renders in the IKM share card",
+      qrOk.hasSvg && qrOk.hasModules && qrOk.ready,
+      JSON.stringify(qrOk),
+    );
+    const waHref = await page.$eval("#ikm-qr-wa", (el) => el.getAttribute("href") ?? "");
+    check(
+      "WhatsApp share link points to wa.me with the survey link",
+      waHref.startsWith("https://wa.me/?text=") && /%23ikm/.test(waHref),
+      waHref.slice(0, 80),
+    );
+    const qrBtns = await page.$$eval("#ikm-qr-copy, #ikm-qr-download", (els) => els.map((e) => e.id));
+    check("QR copy + download buttons exist", qrBtns.length === 2, qrBtns.join(","));
+    await page.click("#ikm-qr-copy");
+    await sleep(300);
+    const copyStatus = await page.$eval("#ikm-share-status", (el) => el.textContent);
+    const copyOutVisible = await page.$eval("#ikm-share-output-wrap", (el) => !el.hidden);
+    check(
+      "QR copy button copies the survey link or shows it for manual copy",
+      /disalin|salin|copied/i.test(copyStatus) || copyOutVisible,
+      `status=${copyStatus} manualBox=${copyOutVisible}`,
+    );
+    await page.click("#ikm-qr-download");
+    await sleep(300);
+    const dlStatus = await page.$eval("#ikm-share-status", (el) => el.textContent);
+    check("QR download button reports the download", /diunduh|downloaded/i.test(dlStatus), dlStatus);
+    // Quick-stats strip reflects live data (1 letter draft seeded,
+    // IKM all-1s score 25.00, 2 complaints resolved)
+    const qs = await page.evaluate(() => ({
+      letters: document.getElementById("qs-letters")?.textContent ?? "",
+      ikm: document.getElementById("qs-ikm")?.textContent ?? "",
+      aduan: document.getElementById("qs-aduan")?.textContent ?? "",
+      dashIkm: document.getElementById("ikm-score")?.textContent ?? "",
+      items: document.querySelectorAll("#quick-stats .quick-stat").length,
+    }));
+    check(
+      "quick-stats strip shows 3 live stats",
+      qs.items === 3,
+      `items=${qs.items}`,
+    );
+    check(
+      "quick-stats match live data (1 letter, IKM = dashboard, 2 resolved)",
+      qs.letters === "1" && qs.ikm === qs.dashIkm && qs.aduan === "2",
+      `letters=${qs.letters} ikm=${qs.ikm} dash=${qs.dashIkm} aduan=${qs.aduan}`,
+    );
+
     // 10. No console errors / failed requests (excluding the VM tunnel noise)
     check("0 console errors (excluding VM tunnel noise)", errors.length === 0, errors.join(" | ").slice(0, 500));
     check("0 failed requests (excluding VM tunnel noise)", failedRequests.length === 0, failedRequests.join(" | ").slice(0, 500));

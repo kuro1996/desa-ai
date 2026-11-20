@@ -191,6 +191,30 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   ikmCopied: { en: "Link copied to clipboard — share it with the community.", id: "Tautan disalin ke clipboard — sebarkan ke masyarakat." },
   ikmCopyManual: { en: "Copy the text below manually.", id: "Salin teks di bawah ini secara manual." },
   ikmToPengaduan: { en: "Have a complaint? Submit it here →", id: "Punya keluhan? Sampaikan pengaduan →" },
+  // Survey distribution: deep link + QR code
+  ikmShareTitle: { en: "Share the survey", id: "Sebarkan survei" },
+  ikmShareHint: {
+    en: "Share this link or QR code with residents — they can open the survey right on their phone.",
+    id: "Bagikan tautan atau kode QR ini ke warga — mereka bisa langsung membuka survei di HP.",
+  },
+  ikmSurveyLink: { en: "Survey link", id: "Tautan survei" },
+  ikmCopyLink: { en: "Copy link", id: "Salin tautan" },
+  ikmDownloadQr: { en: "Download QR (PNG)", id: "Unduh QR (PNG)" },
+  ikmShareWa: { en: "WhatsApp", id: "WhatsApp" },
+  ikmQrHint: {
+    en: "Scan the QR code with a phone camera to open the survey. Print it and stick it at the service counter.",
+    id: "Pindai kode QR dengan kamera HP untuk membuka survei. Cetak dan tempel di loket pelayanan.",
+  },
+  ikmLinkCopied: { en: "Survey link copied.", id: "Tautan survei disalin." },
+  ikmQrDownloaded: { en: "QR code downloaded.", id: "Kode QR diunduh." },
+  ikmQrFailed: {
+    en: "QR code could not be generated — the link above still works.",
+    id: "Kode QR gagal dibuat — tautan di atas tetap bisa dipakai.",
+  },
+  // Quick-stats strip (live counts from existing data)
+  qsLetters: { en: "Letters saved", id: "Surat tersimpan" },
+  qsIkm: { en: "IKM score", id: "Skor IKM" },
+  qsAduan: { en: "Complaints resolved", id: "Pengaduan selesai" },
   ikmScale1: { en: "1 — Very dissatisfied", id: "1 — Sangat Tidak Puas" },
   ikmScale2: { en: "2 — Dissatisfied", id: "2 — Tidak Puas" },
   ikmScale3: { en: "3 — Satisfied", id: "3 — Puas" },

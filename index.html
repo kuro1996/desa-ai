@@ -8,12 +8,18 @@
       content="DesaAI — offline-first AI clerk for Indonesian village offices. Drafts official letters, summarizes documents, and answers procedure questions with on-device Gemini Nano 4 + cloud Gemini fallback (Firebase AI Logic hybrid inference)."
     />
     <title>DesaAI — AI Clerk for Village Offices</title>
+    <link rel="icon" type="image/png" href="./favicon.png" />
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
     <header class="topbar">
       <div class="brand">
-        <span class="brand-mark" aria-hidden="true">🏛️</span>
+        <img
+          id="brand-logo"
+          class="brand-logo"
+          src="./logo.png"
+          alt="Logo Kecamatan Simpangkatis"
+        />
         <div>
           <h1>DesaAI</h1>
           <p class="tagline" data-i18n="tagline">
@@ -46,27 +52,52 @@
     </div>
 
     <main>
+      <section class="quick-stats" id="quick-stats" aria-label="Ringkasan cepat">
+        <div class="quick-stat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+          <strong id="qs-letters">0</strong>
+          <span data-i18n="qsLetters">Letters saved</span>
+        </div>
+        <div class="quick-stat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <strong id="qs-ikm">–</strong>
+          <span data-i18n="qsIkm">IKM score</span>
+        </div>
+        <div class="quick-stat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+          <strong id="qs-aduan">0</strong>
+          <span data-i18n="qsAduan">Complaints resolved</span>
+        </div>
+      </section>
+
       <nav class="tabs" role="tablist" aria-label="DesaAI features">
         <button class="tab active" data-tab="letters" role="tab" aria-selected="true" type="button">
-          ✉️ <span data-i18n="tabLetters">Draft Letters</span>
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+          <span data-i18n="tabLetters">Draft Letters</span>
         </button>
         <button class="tab" data-tab="summarize" role="tab" aria-selected="false" type="button">
-          📄 <span data-i18n="tabSummarize">Summarize</span>
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
+          <span data-i18n="tabSummarize">Summarize</span>
         </button>
         <button class="tab" data-tab="qa" role="tab" aria-selected="false" type="button">
-          ❓ <span data-i18n="tabQa">Procedure Q&amp;A</span>
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+          <span data-i18n="tabQa">Procedure Q&amp;A</span>
         </button>
         <button class="tab" data-tab="drafts" role="tab" aria-selected="false" type="button">
-          🗂️ <span data-i18n="tabDrafts">My Drafts</span>
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span data-i18n="tabDrafts">My Drafts</span>
         </button>
         <button class="tab" data-tab="kepegawaian" role="tab" aria-selected="false" type="button">
-          👥 <span data-i18n="tabKepegawaian">Personnel (SIAP AKAD)</span>
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span data-i18n="tabKepegawaian">Personnel (SIAP AKAD)</span>
         </button>
         <button class="tab" data-tab="ikm" role="tab" aria-selected="false" type="button">
-          ⭐ <span data-i18n="tabIkm">Satisfaction (IKM)</span>
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span data-i18n="tabIkm">Satisfaction (IKM)</span>
         </button>
         <button class="tab" data-tab="pengaduan" role="tab" aria-selected="false" type="button">
-          📢 <span data-i18n="tabPengaduan">Complaints</span>
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+          <span data-i18n="tabPengaduan">Complaints</span>
         </button>
       </nav>
 
@@ -484,6 +515,36 @@
         <div id="ikm-share-status" class="status" aria-live="polite"></div>
         <div id="ikm-share-output-wrap" hidden>
           <textarea id="ikm-share-output" readonly rows="6" aria-label="Share text"></textarea>
+        </div>
+
+        <div class="share-card">
+          <h3 class="subhead" data-i18n="ikmShareTitle">Share the survey</h3>
+          <p class="hint" data-i18n="ikmShareHint">
+            Share this link or QR code with residents — they can open the
+            survey right on their phone.
+          </p>
+          <label class="field field-wide">
+            <span data-i18n="ikmSurveyLink">Survey link</span>
+            <input id="ikm-survey-link" type="text" readonly />
+          </label>
+          <div class="qr-row">
+            <div id="ikm-qr" class="qr-box" role="img" aria-label="QR code survei IKM"></div>
+            <div class="qr-actions">
+              <button id="ikm-qr-copy" class="btn" type="button">
+                <span data-i18n="ikmCopyLink">Copy link</span>
+              </button>
+              <button id="ikm-qr-download" class="btn" type="button">
+                <span data-i18n="ikmDownloadQr">Download QR (PNG)</span>
+              </button>
+              <a id="ikm-qr-wa" class="btn" target="_blank" rel="noopener">
+                <span data-i18n="ikmShareWa">WhatsApp</span>
+              </a>
+              <p class="hint" data-i18n="ikmQrHint">
+                Scan the QR code with a phone camera to open the survey.
+                Print it and stick it at the service counter.
+              </p>
+            </div>
+          </div>
         </div>
 
         <h3 class="subhead" data-i18n="ikmFormTitle">Fill in the satisfaction survey</h3>

@@ -6,7 +6,7 @@ import {
   warmUpDeviceModel,
   type OnDeviceState,
 } from "./ai";
-import { deleteDraft, listDrafts, saveDraft, type Draft } from "./drafts";
+import { countLocalDrafts, deleteDraft, listDrafts, saveDraft, type Draft } from "./drafts";
 import { initFirebase, type FirebaseServices } from "./firebase";
 import { t, type Lang } from "./i18n";
 import {
@@ -53,6 +53,7 @@ import {
   type AduanStatus,
 } from "./pengaduan";
 import { buildLetterPrompt, TEMPLATES, type LetterTemplate } from "./templates";
+import { makeQr } from "./qr";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
   const el = document.getElementById(id);
@@ -91,27 +92,72 @@ function applyLang(): void {
   void refreshDrafts();
 }
 
-// ---------- tabs ----------
+// ---------- tabs + deep links (hash routing) ----------
+
+// Short, shareable hashes per tab — e.g. .../desa-ai/#ikm opens the IKM
+// survey directly. The survey link shared with residents is app URL + #ikm.
+const TAB_HASHES: Record<string, string> = {
+  surat: "letters",
+  ringkas: "summarize",
+  tanya: "qa",
+  draf: "drafts",
+  kepegawaian: "kepegawaian",
+  ikm: "ikm",
+  pengaduan: "pengaduan",
+};
+const HASH_BY_TAB: Record<string, string> = Object.fromEntries(
+  Object.entries(TAB_HASHES).map(([h, tab]) => [tab, h]),
+);
+
+/** Survey deep link: current app URL (no hash) + #ikm. */
+function surveyLink(): string {
+  return `${window.location.href.split("#")[0]}#ikm`;
+}
+
+function activateTab(tab: string, updateHash = true): void {
+  document.querySelectorAll(".tab").forEach((b) => {
+    const isActive = (b as HTMLButtonElement).dataset.tab === tab;
+    b.classList.toggle("active", isActive);
+    b.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  document.querySelectorAll<HTMLElement>(".panel").forEach((p) => {
+    p.hidden = p.id !== `panel-${tab}`;
+  });
+  if (tab === "drafts") void refreshDrafts();
+  if (tab === "kepegawaian") renderKepegawaian();
+  if (tab === "ikm") renderIkm();
+  if (tab === "pengaduan") renderPengaduan();
+  if (updateHash) {
+    history.replaceState(null, "", `#${HASH_BY_TAB[tab] ?? tab}`);
+  }
+}
+
+function tabFromHash(): string | null {
+  return TAB_HASHES[window.location.hash.slice(1)] ?? null;
+}
 
 function initTabs(): void {
   document.querySelectorAll<HTMLButtonElement>(".tab").forEach((btn) => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach((b) => {
-        b.classList.remove("active");
-        b.setAttribute("aria-selected", "false");
-      });
-      btn.classList.add("active");
-      btn.setAttribute("aria-selected", "true");
       const tab = btn.dataset.tab;
-      document.querySelectorAll<HTMLElement>(".panel").forEach((p) => {
-        p.hidden = p.id !== `panel-${tab}`;
-      });
-      if (tab === "drafts") void refreshDrafts();
-      if (tab === "kepegawaian") renderKepegawaian();
-      if (tab === "ikm") renderIkm();
-      if (tab === "pengaduan") renderPengaduan();
+      if (tab) activateTab(tab);
     });
   });
+  window.addEventListener("hashchange", () => {
+    const tab = tabFromHash();
+    if (tab) activateTab(tab, false);
+  });
+}
+
+// ---------- quick-stats strip (live counts from existing data) ----------
+
+function renderQuickStats(): void {
+  $("qs-letters").textContent = String(countLocalDrafts("letter"));
+  const ikmStats = computeIkm(loadIkm());
+  $("qs-ikm").textContent =
+    ikmStats.count === 0 ? "–" : ikmFmt(ikmStats.overall);
+  const aduStats = computeAduanStats(loadAduan());
+  $("qs-aduan").textContent = String(aduStats.selesai);
 }
 
 // ---------- status chips ----------
@@ -723,6 +769,7 @@ async function refreshDrafts(): Promise<void> {
   };
   renderGroup(t("kegArchiveLetters", lang), drafts.filter((d) => d.kind === "letter"));
   renderGroup(t("kegArchiveSummaries", lang), drafts.filter((d) => d.kind !== "letter"));
+  renderQuickStats();
 }
 
 function openDraft(d: Draft): void {
@@ -942,6 +989,7 @@ function renderKepegawaian(): void {
     card.appendChild(p);
     lemWrap.appendChild(card);
   }
+  renderQuickStats();
 }
 
 function kegSetLetterField(key: string, value: string): void {
@@ -1240,7 +1288,22 @@ function renderIkm(): void {
     suratSel.appendChild(opt);
   }
   suratSel.value = prevSurat;
+  // Share section: survey deep link + QR code (generated locally, offline).
+  const link = surveyLink();
+  ($("ikm-survey-link") as HTMLInputElement).value = link;
+  const qrBox = $("ikm-qr");
+  const qr = makeQr(link);
+  if (qr) {
+    qrBox.innerHTML = qr.svg;
+    qrBox.dataset.qrReady = "1";
+  } else {
+    qrBox.innerHTML = "";
+    qrBox.dataset.qrReady = "";
+  }
+  const wa = $("ikm-qr-wa") as HTMLAnchorElement;
+  wa.href = `https://wa.me/?text=${encodeURIComponent(ikmShareSurveyText(link))}`;
   buildIkmQuestions();
+  renderQuickStats();
 }
 
 function buildIkmQuestions(): void {
@@ -1345,11 +1408,38 @@ function initIkm(): void {
     setStatus($("ikm-form-status"), t("ikmSaved", lang));
   });
   $("ikm-share-survey").addEventListener("click", () => {
-    void ikmShare(ikmShareSurveyText(window.location.href.split("#")[0]));
+    void ikmShare(ikmShareSurveyText(surveyLink()));
   });
   $("ikm-share-results").addEventListener("click", () => {
     const stats = computeIkm(ikmItems);
-    void ikmShare(ikmShareResultsText(stats, window.location.href.split("#")[0]));
+    void ikmShare(ikmShareResultsText(stats, surveyLink()));
+  });
+  $("ikm-qr-copy").addEventListener("click", async () => {
+    const link = ($("ikm-survey-link") as HTMLInputElement).value;
+    const ok = await copyText(link);
+    if (ok) {
+      setStatus($("ikm-share-status"), t("ikmLinkCopied", lang));
+      return;
+    }
+    const out = $("ikm-share-output") as HTMLTextAreaElement;
+    out.value = link;
+    $("ikm-share-output-wrap").hidden = false;
+    setStatus($("ikm-share-status"), t("ikmCopyManual", lang), true);
+  });
+  $("ikm-qr-download").addEventListener("click", () => {
+    const link = ($("ikm-survey-link") as HTMLInputElement).value;
+    const qr = makeQr(link);
+    if (!qr) {
+      setStatus($("ikm-share-status"), t("ikmQrFailed", lang), true);
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = qr.dataUrl(8);
+    a.download = "qr-survei-ikm.png";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setStatus($("ikm-share-status"), t("ikmQrDownloaded", lang));
   });
   $("ikm-to-pengaduan").addEventListener("click", () => {
     document.querySelector<HTMLButtonElement>('[data-tab="pengaduan"]')?.click();
@@ -1470,6 +1560,7 @@ function renderPengaduan(): void {
     suratSel.appendChild(opt);
   }
   suratSel.value = prevSurat;
+  renderQuickStats();
 }
 
 function initPengaduan(): void {
@@ -1527,6 +1618,11 @@ async function boot(): Promise<void> {
   initKepegawaian();
   initIkm();
   initPengaduan();
+  renderQuickStats();
+
+  // Deep link: open the tab named by location.hash (e.g. #ikm for the survey).
+  const initialTab = tabFromHash();
+  if (initialTab) activateTab(initialTab, false);
 
   $("lang-toggle").addEventListener("click", () => {
     lang = lang === "en" ? "id" : "en";
