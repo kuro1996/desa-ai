@@ -120,7 +120,176 @@ async function main() {
     const fbChip = await page.$eval("#firebase-chip", (el) => el.textContent);
     check("firebase chip reports a status", fbChip.trim().length > 0, fbChip);
 
+    // 1b. Home dashboard (bento) — Paket 5: default tab, live numbers
+    const homeActive = await page.$eval('[data-tab="home"]', (el) => el.classList.contains("active"));
+    const homeVisible = await page.$eval("#panel-home", (el) => !el.hidden);
+    check("home dashboard is the default tab", homeActive && homeVisible, `active=${homeActive} visible=${homeVisible}`);
+    const bento = await page.evaluate(() => ({
+      ikm: document.getElementById("home-ikm-score")?.textContent ?? "",
+      dashIkm: document.getElementById("ikm-score")?.textContent ?? "",
+      cat: document.getElementById("home-ikm-cat")?.textContent ?? "",
+      lettersToday: document.getElementById("home-letters-today")?.textContent ?? "",
+      aduanBaru: document.getElementById("home-aduan-baru")?.textContent ?? "",
+      monthIkm: document.getElementById("home-month-ikm")?.textContent ?? "",
+      monthAduan: document.getElementById("home-month-aduan")?.textContent ?? "",
+      monthLetters: document.getElementById("home-month-letters")?.textContent ?? "",
+      monthName: document.getElementById("home-month-name")?.textContent ?? "",
+      cards: document.querySelectorAll("#panel-home .bento-card").length,
+    }));
+    const monthName = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+    check(
+      "bento shows 8 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
+      bento.cards === 8 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
+        bento.lettersToday === "0" && bento.aduanBaru === "3" &&
+        bento.monthIkm === "12" && bento.monthAduan === "6" && bento.monthLetters === "0" &&
+        bento.monthName === monthName,
+      `cards=${bento.cards} ikm=${bento.ikm} cat=${bento.cat} lettersToday=${bento.lettersToday} aduanBaru=${bento.aduanBaru} month=${bento.monthName} ${bento.monthIkm}/${bento.monthAduan}/${bento.monthLetters}`,
+    );
+    // Bento masa-bhakti counts match the kepegawaian tab's live stats.
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(400);
+    const kegStats = await page.evaluate(() => ({
+      akan: document.getElementById("keg-stat-akanhabis")?.textContent ?? "",
+      habis: document.getElementById("keg-stat-habis")?.textContent ?? "",
+    }));
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    const masa = await page.evaluate(() => ({
+      akan: document.getElementById("home-masa-akan")?.textContent ?? "",
+      habis: document.getElementById("home-masa-habis")?.textContent ?? "",
+      items: document.querySelectorAll("#home-masa-list li").length,
+    }));
+    check(
+      "bento masa-bhakti counts match kepegawaian stats",
+      masa.akan === kegStats.akan && masa.habis === kegStats.habis && masa.items > 0,
+      `bento ${masa.akan}/${masa.habis} vs keg ${kegStats.akan}/${kegStats.habis} items=${masa.items}`,
+    );
+    // IKM trend chart: SVG line with one point per answer, last point = score.
+    const trend = await page.evaluate(() => {
+      const svg = document.querySelector("#home-ikm-trend svg");
+      const circles = [...document.querySelectorAll("#home-ikm-trend circle")];
+      const last = circles[circles.length - 1];
+      return {
+        hasSvg: !!svg,
+        hasLine: !!document.querySelector("#home-ikm-trend polyline"),
+        points: circles.length,
+        lastScore: last ? Number(last.dataset.score ?? 0) : 0,
+        dashScore: Number(document.getElementById("ikm-score")?.dataset.score ?? 0),
+      };
+    });
+    check(
+      "IKM trend chart renders with one point per answer",
+      trend.hasSvg && trend.hasLine && trend.points === 12 &&
+        Math.abs(trend.lastScore - trend.dashScore) < 0.01,
+      `points=${trend.points} last=${trend.lastScore} dash=${trend.dashScore}`,
+    );
+    // Global search: officer found, complaint group found, empty state works.
+    await page.type("#home-search", "Ahmad");
+    await sleep(300);
+    const searchAhmad = await page.$eval("#home-search-results", (el) => el.textContent);
+    check(
+      "global search finds an officer across modules",
+      /Ahmad Fauzi/.test(searchAhmad) && /Kepegawaian|Personnel/.test(searchAhmad),
+      searchAhmad.slice(0, 100),
+    );
+    await page.evaluate(() => {
+      document.querySelector("#home-search-results .search-result")?.click();
+    });
+    await sleep(400);
+    const searchNav = await page.evaluate(() => ({
+      kegActive: document.querySelector('[data-tab="kepegawaian"]')?.classList.contains("active"),
+      dialogOpen: document.getElementById("keg-detail").open,
+      title: document.getElementById("keg-detail-title")?.textContent ?? "",
+    }));
+    check(
+      "global search result opens the officer detail",
+      searchNav.kegActive && searchNav.dialogOpen && /Ahmad Fauzi/.test(searchNav.title),
+      `${searchNav.title} dialog=${searchNav.dialogOpen}`,
+    );
+    await page.evaluate(() => document.getElementById("keg-detail")?.close());
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    await page.$eval("#home-search", (el) => { el.value = ""; });
+    await page.type("#home-search", "Keterlambatan");
+    await sleep(300);
+    const searchAdu = await page.$eval("#home-search-results", (el) => el.textContent);
+    check(
+      "global search finds complaints by type",
+      /Keterlambatan/.test(searchAdu) && /Pengaduan|Complaints/.test(searchAdu),
+      searchAdu.slice(0, 100),
+    );
+    await page.$eval("#home-search", (el) => { el.value = ""; });
+    await page.type("#home-search", "zzzznotfound");
+    await sleep(300);
+    const searchEmpty = await page.$eval("#home-search-results", (el) => el.textContent);
+    check(
+      "global search shows an empty state for no match",
+      /Tidak ada hasil|No results/.test(searchEmpty),
+      searchEmpty.slice(0, 60),
+    );
+    await page.$eval("#home-search", (el) => { el.value = ""; });
+    await page.evaluate(() =>
+      document.getElementById("home-search")?.dispatchEvent(new Event("input", { bubbles: true })),
+    );
+    await sleep(200);
+    // Quick action: "Open the survey" jumps to the IKM tab.
+    await page.click("#home-go-ikm");
+    await sleep(300);
+    const ikmActive = await page.$eval('[data-tab="ikm"]', (el) => el.classList.contains("active"));
+    check("bento quick action opens the IKM tab", ikmActive);
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    // Monthly report: print fills the report area and calls window.print().
+    await page.evaluate(() => {
+      window.print = () => {
+        window.__reportPrinted = true;
+      };
+    });
+    await page.click("#home-report-print");
+    await sleep(300);
+    const reportPrint = await page.evaluate(() => ({
+      printed: window.__reportPrinted === true,
+      body: document.getElementById("report-print-body")?.textContent ?? "",
+      title: document.getElementById("report-print-title")?.textContent ?? "",
+      target: document.body.dataset.printTarget ?? "",
+      status: document.getElementById("home-report-status")?.textContent ?? "",
+    }));
+    check(
+      "monthly report print fills the report area and calls window.print()",
+      reportPrint.printed && /Laporan Bulanan/.test(reportPrint.title) &&
+        /IKM/.test(reportPrint.body) && reportPrint.target === "report",
+      `printed=${reportPrint.printed} title=${reportPrint.title} target=${reportPrint.target}`,
+    );
+    // Dark mode: toggles, persists across reload, toggles back to light.
+    await page.click("#theme-toggle");
+    await sleep(300);
+    const themeDark = await page.$eval("html", (el) => el.dataset.theme);
+    const storedDark = await page.evaluate(() => localStorage.getItem("desaai-theme-v1"));
+    check(
+      "dark mode toggles on and is saved",
+      themeDark === "dark" && storedDark === "dark",
+      `theme=${themeDark} stored=${storedDark}`,
+    );
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await sleep(1200);
+    const themeAfterReload = await page.$eval("html", (el) => el.dataset.theme);
+    check("dark mode persists across reload", themeAfterReload === "dark", `theme=${themeAfterReload}`);
+    await page.click("#theme-toggle");
+    await sleep(300);
+    const themeLight = await page.$eval("html", (el) => el.dataset.theme);
+    check("dark mode toggles back to light", themeLight === "light", `theme=${themeLight}`);
+    // Deep link #beranda opens the home tab.
+    await page.goto(`file://${join(DIST, "index.html")}#beranda`, {
+      waitUntil: "networkidle0",
+      timeout: 30000,
+    });
+    await sleep(1200);
+    const berandaActive = await page.$eval('[data-tab="home"]', (el) => el.classList.contains("active"));
+    check("deep link #beranda opens the home tab", berandaActive);
+
     // 2. Letters tab: fill form, generate (no live AI in this VM → config/AI message, no crash)
+    await page.click('[data-tab="letters"]');
+    await sleep(200);
     await page.select("#letter-template", "undangan");
     await sleep(200);
     const fieldCount = await page.$$eval("#letter-fields input, #letter-fields textarea", (els) => els.length);
@@ -946,7 +1115,7 @@ async function main() {
       overflow.docScroll <= overflow.inner + 1 && overflow.bad.length === 0,
       `scrollWidth=${overflow.docScroll} inner=${overflow.inner} bad=${overflow.bad.join(" | ")}`,
     );
-    const tabs = ["letters", "summarize", "qa", "drafts", "kepegawaian", "ikm", "pengaduan"];
+    const tabs = ["home", "letters", "summarize", "qa", "drafts", "kepegawaian", "ikm", "pengaduan"];
     let tabsOk = true;
     let tabsDetail = "";
     for (const tab of tabs) {
@@ -959,7 +1128,7 @@ async function main() {
         break;
       }
     }
-    check("all 7 tabs open at phone width", tabsOk, tabsDetail || "7/7 tabs");
+    check("all 8 tabs open at phone width", tabsOk, tabsDetail || "8/8 tabs");
     const heroPhoneH = await page.$eval(".hero", (el) => el.getBoundingClientRect().height);
     check(
       "hero is slim on phones (180–280px)",
@@ -1045,8 +1214,8 @@ async function main() {
       })),
     );
     check(
-      "all 7 tabs have an SVG icon + label",
-      tabIcons.length === 7 && tabIcons.every((t) => t.hasSvg && t.label.length > 0),
+      "all 8 tabs have an SVG icon + label",
+      tabIcons.length === 8 && tabIcons.every((t) => t.hasSvg && t.label.length > 0),
       tabIcons.map((t) => `${t.label}:${t.hasSvg ? "svg" : "NO-SVG"}`).join(" | "),
     );
     // Survey distribution: link + QR code (generated locally, offline)

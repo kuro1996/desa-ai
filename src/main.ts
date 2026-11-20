@@ -6,7 +6,7 @@ import {
   warmUpDeviceModel,
   type OnDeviceState,
 } from "./ai";
-import { countLocalDrafts, deleteDraft, listDrafts, saveDraft, type Draft } from "./drafts";
+import { countLocalDrafts, deleteDraft, listDrafts, listLocalDrafts, saveDraft, type Draft } from "./drafts";
 import { initFirebase, type FirebaseServices } from "./firebase";
 import { t, type Lang } from "./i18n";
 import {
@@ -82,6 +82,7 @@ function applyLang(): void {
   });
   $("lang-toggle").textContent =
     lang === "en" ? "🇮🇩 Bahasa Indonesia" : "🇬🇧 English";
+  updateThemeButton();
   renderTemplateSelect();
   renderLetterFields();
   renderKbList();
@@ -89,7 +90,36 @@ function applyLang(): void {
   renderKepegawaian();
   renderIkm();
   renderPengaduan();
+  renderHome();
   void refreshDrafts();
+}
+
+// ---------- theme (dark mode) ----------
+
+const THEME_KEY = "desaai-theme-v1";
+
+function currentTheme(): "light" | "dark" {
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+}
+
+function updateThemeButton(): void {
+  const btn = document.getElementById("theme-toggle");
+  if (btn) {
+    btn.setAttribute(
+      "aria-label",
+      t(currentTheme() === "dark" ? "themeLight" : "themeDark", lang),
+    );
+  }
+}
+
+function applyTheme(theme: "light" | "dark"): void {
+  document.documentElement.dataset.theme = theme;
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch {
+    // Storage unavailable — the theme still applies for this session.
+  }
+  updateThemeButton();
 }
 
 // ---------- tabs + deep links (hash routing) ----------
@@ -97,6 +127,7 @@ function applyLang(): void {
 // Short, shareable hashes per tab — e.g. .../desa-ai/#ikm opens the IKM
 // survey directly. The survey link shared with residents is app URL + #ikm.
 const TAB_HASHES: Record<string, string> = {
+  beranda: "home",
   surat: "letters",
   ringkas: "summarize",
   tanya: "qa",
@@ -124,6 +155,7 @@ function activateTab(tab: string, updateHash = true): void {
     p.hidden = p.id !== `panel-${tab}`;
   });
   if (tab === "drafts") void refreshDrafts();
+  if (tab === "home") renderHome();
   if (tab === "kepegawaian") renderKepegawaian();
   if (tab === "ikm") renderIkm();
   if (tab === "pengaduan") renderPengaduan();
@@ -162,6 +194,375 @@ function renderQuickStats(): void {
     ikmStats.count === 0 ? "–" : ikmFmt(ikmStats.overall);
   const aduStats = computeAduanStats(loadAduan());
   $("qs-aduan").textContent = String(aduStats.selesai);
+}
+
+// ---------- home dashboard (bento) + global search + monthly report ----------
+
+function sameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function inMonth(ts: number, now = new Date()): boolean {
+  const d = new Date(ts);
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+}
+
+function monthNameId(d = new Date()): string {
+  return d.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+}
+
+/** Cumulative IKM score after each answer (answers sorted by date). */
+function ikmTrendPoints(
+  items: IkmResponse[],
+): Array<{ date: string; score: number; count: number }> {
+  const sorted = [...items].sort((a, b) => a.createdAt - b.createdAt);
+  return sorted.map((r, i) => ({
+    date: new Date(r.createdAt).toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "short",
+    }),
+    score: computeIkm(sorted.slice(0, i + 1)).overall,
+    count: i + 1,
+  }));
+}
+
+function renderTrend(): void {
+  const wrap = $("home-ikm-trend");
+  const pts = ikmTrendPoints(loadIkm());
+  $("home-trend-empty").hidden = pts.length >= 2;
+  if (pts.length < 2) {
+    wrap.innerHTML = "";
+    return;
+  }
+  // Hand-rolled SVG line chart (no dependency): score 25–100 on the Y axis.
+  const W = 600;
+  const H = 180;
+  const L = 40;
+  const R = 10;
+  const T = 14;
+  const B = 26;
+  const y = (s: number): number => T + (1 - (s - 25) / 75) * (H - T - B);
+  const x = (i: number): number => L + (i / (pts.length - 1)) * (W - L - R);
+  const grid = [25, 50, 75, 100]
+    .map(
+      (v) =>
+        `<line x1="${L}" y1="${y(v)}" x2="${W - R}" y2="${y(v)}" class="trend-grid"/>` +
+        `<text x="${L - 6}" y="${y(v) + 4}" class="trend-axis" text-anchor="end">${v}</text>`,
+    )
+    .join("");
+  const line = pts
+    .map((p, i) => `${x(i).toFixed(1)},${y(p.score).toFixed(1)}`)
+    .join(" ");
+  const circles = pts
+    .map(
+      (p, i) =>
+        `<circle cx="${x(i).toFixed(1)}" cy="${y(p.score).toFixed(1)}" r="4" ` +
+        `data-score="${p.score.toFixed(2)}" data-date="${p.date}">` +
+        `<title>${p.date}: ${ikmFmt(p.score)} (${p.count})</title></circle>`,
+    )
+    .join("");
+  wrap.innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Tren IKM" ` +
+    `preserveAspectRatio="none" style="width:100%;height:auto;display:block">` +
+    `${grid}<polyline points="${line}" class="trend-line"/>${circles}` +
+    `<text x="${L}" y="${H - 6}" class="trend-axis">${pts[0].date}</text>` +
+    `<text x="${W - R}" y="${H - 6}" class="trend-axis" text-anchor="end">${pts[pts.length - 1].date}</text>` +
+    `</svg>`;
+}
+
+interface MonthlyReport {
+  monthLabel: string;
+  letters: number;
+  ikmCount: number;
+  ikmScore: number;
+  ikmCat: string;
+  aduTotal: number;
+  aduBaru: number;
+  aduDiproses: number;
+  aduSelesai: number;
+  kegTotal: number;
+  kegAktif: number;
+  kegAkan: number;
+  kegHabis: number;
+}
+
+function monthlyReportData(now = new Date()): MonthlyReport {
+  const letters = listLocalDrafts().filter(
+    (d) => d.kind === "letter" && inMonth(d.createdAt, now),
+  ).length;
+  const ikmMonth = loadIkm().filter((r) => inMonth(r.createdAt, now));
+  const ikmStats = computeIkm(ikmMonth);
+  const aduMonth = loadAduan().filter((a) => inMonth(a.createdAt, now));
+  const aduStats = computeAduanStats(aduMonth);
+  const keg = computeStats(loadPerangkat(), now);
+  return {
+    monthLabel: monthNameId(now),
+    letters,
+    ikmCount: ikmMonth.length,
+    ikmScore: ikmStats.overall,
+    ikmCat: ikmStats.category,
+    aduTotal: aduMonth.length,
+    aduBaru: aduStats.baru,
+    aduDiproses: aduStats.diproses,
+    aduSelesai: aduStats.selesai,
+    kegTotal: keg.total,
+    kegAktif: keg.aktif,
+    kegAkan: keg.akanHabis,
+    kegHabis: keg.habis,
+  };
+}
+
+function renderReportPreview(): void {
+  const d = monthlyReportData();
+  const preview = $("home-report-preview");
+  preview.innerHTML = "";
+  const rows: Array<[string, string]> = [
+    [t("homeMonthLetters", lang), String(d.letters)],
+    [
+      t("homeMonthIkm", lang),
+      `${d.ikmCount} — IKM ${d.ikmCount === 0 ? "–" : ikmFmt(d.ikmScore)} (${d.ikmCat})`,
+    ],
+    [
+      t("homeMonthAduan", lang),
+      `${d.aduTotal} (${t("aduStatusBaru", lang)} ${d.aduBaru} · ${t("aduStatusDiproses", lang)} ${d.aduDiproses} · ${t("aduStatusSelesai", lang)} ${d.aduSelesai})`,
+    ],
+    [
+      t("kegTitle", lang).split("—")[0].trim(),
+      `${d.kegTotal} — ${t("kegStatusAktif", lang)} ${d.kegAktif} · ${t("kegStatusAkanHabis", lang)} ${d.kegAkan} · ${t("kegStatusHabis", lang)} ${d.kegHabis}`,
+    ],
+  ];
+  for (const [k, v] of rows) {
+    const p = document.createElement("p");
+    p.className = "report-row";
+    const strong = document.createElement("strong");
+    strong.textContent = k;
+    const span = document.createElement("span");
+    span.textContent = v;
+    p.appendChild(strong);
+    p.appendChild(document.createTextNode(": "));
+    p.appendChild(span);
+    preview.appendChild(p);
+  }
+}
+
+function printMonthlyReport(): void {
+  const d = monthlyReportData();
+  $("report-print-title").textContent = `Laporan Bulanan — ${d.monthLabel}`;
+  $("report-print-date").textContent = new Date().toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  $("report-print-body").textContent = [
+    `Surat tersimpan bulan ini: ${d.letters}`,
+    `IKM: skor ${d.ikmCount === 0 ? "–" : ikmFmt(d.ikmScore)} (kategori ${d.ikmCat}), ${d.ikmCount} responden`,
+    `Pengaduan bulan ini: ${d.aduTotal} (Baru ${d.aduBaru}, Diproses ${d.aduDiproses}, Selesai ${d.aduSelesai})`,
+    `Kepegawaian: ${d.kegTotal} pegawai — aktif ${d.kegAktif}, akan habis ${d.kegAkan}, habis ${d.kegHabis}`,
+    "",
+    "Data contoh ditandai pada masing-masing modul (bukan data asli).",
+  ].join("\n");
+  document.body.dataset.printTarget = "report";
+  window.print();
+  setStatus($("home-report-status"), t("homeReportPrinted", lang));
+}
+
+let homeSearchQuery = "";
+
+function renderHomeSearch(): void {
+  const wrap = $("home-search-results");
+  const q = homeSearchQuery.trim().toLowerCase();
+  wrap.innerHTML = "";
+  if (!q) return;
+  const groups: Array<{
+    key: string;
+    items: Array<{ label: string; sub: string; go: () => void }>;
+  }> = [
+    {
+      key: "homeSearchLetters",
+      items: listLocalDrafts()
+        .filter(
+          (d) =>
+            d.title.toLowerCase().includes(q) ||
+            d.content.toLowerCase().includes(q),
+        )
+        .slice(0, 5)
+        .map((d) => ({
+          label: d.title,
+          sub: d.content.slice(0, 80),
+          go: () => openDraft(d),
+        })),
+    },
+    {
+      key: "homeSearchKeg",
+      items: loadPerangkat()
+        .filter(
+          (p) =>
+            p.nama.toLowerCase().includes(q) ||
+            p.jabatan.toLowerCase().includes(q) ||
+            p.desa.toLowerCase().includes(q),
+        )
+        .slice(0, 5)
+        .map((p) => ({
+          label: p.nama,
+          sub: `${p.jabatan} • ${p.desa}`,
+          go: () => {
+            activateTab("kepegawaian");
+            kegShowDetail(p);
+          },
+        })),
+    },
+    {
+      key: "homeSearchAduan",
+      items: loadAduan()
+        .filter(
+          (a) =>
+            a.isi.toLowerCase().includes(q) ||
+            a.jenis.toLowerCase().includes(q) ||
+            a.nama.toLowerCase().includes(q),
+        )
+        .slice(0, 5)
+        .map((a) => ({
+          label: a.nama || t("ikmAnon", lang),
+          sub: `${a.jenis} — ${a.isi.slice(0, 80)}`,
+          go: () => {
+            activateTab("pengaduan");
+            aduShowDetail(a);
+          },
+        })),
+    },
+  ];
+  const total = groups.reduce((n, g) => n + g.items.length, 0);
+  if (total === 0) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = t("homeSearchEmpty", lang);
+    wrap.appendChild(p);
+    return;
+  }
+  for (const g of groups) {
+    if (g.items.length === 0) continue;
+    const h = document.createElement("h4");
+    h.className = "search-group";
+    h.textContent = `${t(g.key, lang)} (${g.items.length})`;
+    wrap.appendChild(h);
+    for (const item of g.items) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "search-result";
+      const strong = document.createElement("strong");
+      strong.textContent = item.label;
+      const span = document.createElement("span");
+      span.textContent = item.sub;
+      b.appendChild(strong);
+      b.appendChild(span);
+      b.addEventListener("click", item.go);
+      wrap.appendChild(b);
+    }
+  }
+}
+
+function renderHome(): void {
+  const now = new Date();
+  // IKM card (same numbers as the IKM dashboard).
+  const ikmStats = computeIkm(loadIkm());
+  $("home-ikm-score").textContent =
+    ikmStats.count === 0 ? "–" : ikmFmt(ikmStats.overall);
+  const catEl = $("home-ikm-cat");
+  catEl.textContent =
+    ikmStats.count === 0
+      ? ""
+      : `${ikmStats.category} — ${t(`ikmCat${ikmStats.category}`, lang)}`;
+  catEl.className = `badge ${
+    ikmStats.category === "A"
+      ? "badge-device"
+      : ikmStats.category === "B"
+        ? "badge-cloud"
+        : "badge-unknown"
+  }`;
+  $("home-ikm-count").textContent = `${ikmStats.count} ${t("ikmRespondents", lang)}`;
+  $("home-ikm-lowest").textContent =
+    ikmStats.count === 0
+      ? "–"
+      : `${
+          lang === "id"
+            ? IKM_ELEMENTS[ikmStats.minIdx].labelId
+            : IKM_ELEMENTS[ikmStats.minIdx].labelEn
+        } (${ikmFmt(ikmStats.perElement[ikmStats.minIdx])})`;
+  // Letters saved today.
+  const drafts = listLocalDrafts();
+  $("home-letters-today").textContent = String(
+    drafts.filter((d) => d.kind === "letter" && sameDay(new Date(d.createdAt), now))
+      .length,
+  );
+  // New complaints.
+  $("home-aduan-baru").textContent = String(
+    computeAduanStats(loadAduan()).baru,
+  );
+  // Terms of office needing attention (expired first, then expiring soon).
+  const notifs = computeNotifications(loadPerangkat(), now);
+  $("home-masa-akan").textContent = String(
+    notifs.filter((n) => n.kind === "akan-habis").length,
+  );
+  $("home-masa-habis").textContent = String(
+    notifs.filter((n) => n.kind === "habis").length,
+  );
+  const masaList = $("home-masa-list");
+  masaList.innerHTML = "";
+  $("home-masa-empty").hidden = notifs.length > 0;
+  for (const n of notifs.slice(0, 3)) {
+    const li = document.createElement("li");
+    li.className = `notif-item ${n.kind === "habis" ? "notif-habis" : ""}`;
+    const strong = document.createElement("strong");
+    strong.textContent = `${n.perangkat.nama} — ${n.perangkat.jabatan}, ${n.perangkat.desa}`;
+    li.appendChild(strong);
+    const detail = document.createElement("span");
+    detail.textContent =
+      n.kind === "habis"
+        ? `${t("kegNotifHabis", lang)} ${-n.days} ${t("kegNotifDaysAgo", lang)} (${formatDateId(n.perangkat.masaSelesai)})`
+        : `${t("kegNotifAkanHabis", lang)} ${n.days} ${t("kegNotifDays", lang)} (${formatDateId(n.perangkat.masaSelesai)})`;
+    li.appendChild(detail);
+    masaList.appendChild(li);
+  }
+  // This month.
+  $("home-month-name").textContent = monthNameId(now);
+  $("home-month-letters").textContent = String(
+    drafts.filter((d) => d.kind === "letter" && inMonth(d.createdAt, now)).length,
+  );
+  $("home-month-ikm").textContent = String(
+    loadIkm().filter((r) => inMonth(r.createdAt, now)).length,
+  );
+  $("home-month-aduan").textContent = String(
+    loadAduan().filter((a) => inMonth(a.createdAt, now)).length,
+  );
+  renderTrend();
+  renderReportPreview();
+  renderHomeSearch();
+  renderQuickStats();
+}
+
+function initHome(): void {
+  renderHome();
+  ($("home-search") as HTMLInputElement).addEventListener("input", (ev) => {
+    homeSearchQuery = (ev.target as HTMLInputElement).value;
+    renderHomeSearch();
+  });
+  $("home-go-letters").addEventListener("click", () =>
+    document.querySelector<HTMLButtonElement>('[data-tab="letters"]')?.click(),
+  );
+  $("home-go-ikm").addEventListener("click", () =>
+    document.querySelector<HTMLButtonElement>('[data-tab="ikm"]')?.click(),
+  );
+  $("home-go-aduan").addEventListener("click", () =>
+    document.querySelector<HTMLButtonElement>('[data-tab="pengaduan"]')?.click(),
+  );
+  $("home-go-keg").addEventListener("click", () =>
+    document.querySelector<HTMLButtonElement>('[data-tab="kepegawaian"]')?.click(),
+  );
+  $("home-report-print").addEventListener("click", printMonthlyReport);
 }
 
 // ---------- status chips ----------
@@ -452,6 +853,8 @@ function initLetters(): void {
       year: "numeric",
     });
     $("letter-print-body").textContent = text;
+    // Which print area the @media print stylesheet shows.
+    document.body.dataset.printTarget = "letter";
     window.print();
   });
   $("letter-save").addEventListener("click", async () => {
@@ -1806,6 +2209,7 @@ function initPengaduan(): void {
 
 async function boot(): Promise<void> {
   initTabs();
+  initHome();
   initLetters();
   initSummarizer();
   initQa();
@@ -1822,6 +2226,17 @@ async function boot(): Promise<void> {
   $("lang-toggle").addEventListener("click", () => {
     lang = lang === "en" ? "id" : "en";
     applyLang();
+  });
+
+  // Dark mode toggle (theme applied pre-paint by the <head> script).
+  updateThemeButton();
+  $("theme-toggle").addEventListener("click", () => {
+    applyTheme(currentTheme() === "dark" ? "light" : "dark");
+  });
+
+  // Clear the print target after printing so the next print picks its own.
+  window.addEventListener("afterprint", () => {
+    delete document.body.dataset.printTarget;
   });
 
   // Firebase init (skipped silently in demo mode — no network calls).

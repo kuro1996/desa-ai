@@ -77,8 +77,8 @@ back to **cloud Gemini**. Every answer shows a visible routing badge
    (`…/desa-ai/#ikm`) and a **QR code** generated locally in the browser
    (no network needed) — copy the link, download the QR as PNG to print
    and stick at the service counter, or share it via WhatsApp. Every
-   tab has its own deep link too (`#surat`, `#ringkas`, `#tanya`,
-   `#draf`, `#kepegawaian`, `#ikm`, `#pengaduan`).
+   tab has its own deep link too (`#beranda`, `#surat`, `#ringkas`,
+   `#tanya`, `#draf`, `#kepegawaian`, `#ikm`, `#pengaduan`).
    Respondents may stay anonymous; the 12 seed answers are **SAMPLE
    DATA, clearly labelled**. Each saved letter in the archive has a
    "Beri penilaian" link that opens the IKM tab.
@@ -94,6 +94,22 @@ back to **cloud Gemini**. Every answer shows a visible routing badge
 8. **Bilingual UI** — English default (required by the rules) with an
    Indonesian toggle. Letters and procedure answers are always in formal
    Indonesian.
+9. **Beranda (Home dashboard)** — the default tab: a **bento grid**
+   (modular cards of different sizes, the dominant dashboard pattern in
+   2026) with today's snapshot — big IKM score card, letters saved
+   today, new complaints, terms of office needing attention (expired +
+   expiring ≤ 90 days, top 3 listed), this month's totals, a
+   **hand-rolled SVG IKM trend chart** (cumulative score after each
+   answer), and a **printable monthly report** (letters + IKM +
+   complaints + personnel snapshot for the running month). A **global
+   search** box finds letters/drafts, officers, and complaints from one
+   place and jumps straight to the record (officer/complaint detail
+   dialog, or the draft itself). A **dark mode** toggle in the header
+   switches to a properly designed dark theme (own color tokens, saved
+   in localStorage, applied before first paint, follows the device
+   scheme when nothing is saved yet). Every tab has its own deep link
+   too (`#beranda`, `#surat`, `#ringkas`, `#tanya`, `#draf`,
+   `#kepegawaian`, `#ikm`, `#pengaduan`).
 
 The UI is modern and mobile-first: a **photo hero header** — the
 Kecamatan Simpangkatis office building as the backdrop, with a dark
@@ -102,11 +118,25 @@ Simpangkatis"), the DesaAI name, and the office identity (Kecamatan
 Simpangkatis • Kabupaten Bangka Tengah) stay readable; slim on phones
 (~210 px) and taller on desktop (~280 px). Below it, a live
 quick-stats strip (letters saved, IKM score, complaints resolved), a
-sticky scrollable tab bar where every tab has its own SVG icon + name,
-gentle panel transitions (disabled when the user prefers reduced
-motion), quiet white stat cards with one colored accent each, large
-touch targets, and clear color-coded status chips — while keeping every
-feature working exactly as before.
+sticky scrollable tab bar with a **subtle glass effect** (translucent +
+blurred) where every tab has its own SVG icon + name, gentle panel
+transitions (disabled when the user prefers reduced motion), quiet white
+stat cards with one colored accent each, large touch targets, and clear
+color-coded status chips — while keeping every feature working exactly
+as before.
+
+Design references (patterns only, no brands copied — chosen because they
+fit a professional government office app: clean, calm, readable):
+- **Bento grid** — modular dashboard cards (Apple-popularised, now the
+  dominant dashboard layout in 2026; see Midrocket "UI Design Trends
+  for 2026" and Arcenik "10 UI Design Trends Dominating 2026").
+- **Dark mode as a designed system** — own color tokens per theme, not a
+  simple inversion (2026 admin-dashboard standard; see Brucira "Top UI
+  Design Trends: Glassmorphism, Dark Mode, Bento Grids and More").
+- **Subtle glassmorphism ("glass 2.0")** — translucent layers with blur
+  for depth without noise, used only on the sticky tab bar.
+- **Fluid typography (clamp) + one big KPI number per card** — the 2026
+  admin-dashboard idiom ("fewer, bigger numbers").
 
 ## How hybrid inference works
 

@@ -51,6 +51,11 @@ export function countLocalDrafts(kind?: Draft["kind"]): number {
   return kind ? all.filter((d) => d.kind === kind).length : all.length;
 }
 
+/** All locally saved drafts (sync — used by the home dashboard + search). */
+export function listLocalDrafts(): Draft[] {
+  return loadLocal();
+}
+
 function firestoreReady(svc: FirebaseServices): svc is FirebaseServices & {
   db: Firestore;
   uid: string;
