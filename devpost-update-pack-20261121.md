@@ -72,6 +72,12 @@ green on every build.
   (default) dibuat di Jakarta (asia-southeast2) dengan aturan terkunci
   per pengguna** — cermin Firestore kini aktif. Tes headless 130 → 137
   cek, semua hijau.
+- **Paket 8 (21 Nov sore):** sinkronisasi Firestore otomatis saat aplikasi
+  dibuka (IKM + pengaduan + kepegawaian) — data lokal yang tersimpan saat
+  Auth belum aktif terunggah sendiri saat reload. **Auth Anonymous
+  dinyalakan 21 Nov 17:57 WIB** (sebelumnya belum pernah disetup — itulah
+  penyebab survei pertama Bos tidak masuk database). Tes headless 137 cek,
+  semua hijau.
 
 ## 3. Checklist sebelum Bos tekan submit
 
