@@ -2557,6 +2557,14 @@ async function boot(): Promise<void> {
       onDeviceMaxChars: 12000,
     };
   }
+  // Paket 8 — sync local data to Firestore on load, so answers saved
+  // while Firebase/Auth was unavailable upload once the backend is ready.
+  // Best-effort only: each sync guards on svc ready and never throws.
+  if (svc.status === "ready") {
+    void syncIkmToFirestore(svc, loadIkm());
+    void syncAduanToFirestore(svc, loadAduan());
+    void syncPerangkatToFirestore(svc, loadPerangkat());
+  }
   setFirebaseChip();
   $("config-banner").hidden = svc.status === "ready";
 
