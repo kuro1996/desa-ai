@@ -28,8 +28,8 @@
         /* storage unavailable — light theme by default */
       }
     </script>
-    <script type="module" crossorigin src="./assets/index-BXIvfOJc.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-uHjHd2m8.css">
+    <script type="module" crossorigin src="./assets/index-DwJZU6ds.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-uIO-OOWd.css">
   </head>
   <body>
     <header class="hero">
@@ -70,6 +70,8 @@
             <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
           </button>
           <button id="lang-toggle" class="btn btn-ghost" type="button">🇮🇩 Bahasa Indonesia</button>
+          <button id="mode-toggle" class="btn btn-ghost" type="button"><span id="mode-toggle-label">Mode Warga</span></button>
+          <button id="palette-open" class="btn btn-ghost" type="button" aria-label="Command palette" title="Ctrl+K">⌘K</button>
         </div>
       </div>
     </header>
@@ -159,6 +161,24 @@
             <div id="home-search-results" class="search-results" aria-live="polite"></div>
           </div>
 
+          <div id="home-warga-card" class="bento-card bento-warga" hidden>
+            <p class="bento-label" data-i18n="wargaCardTitle">Layanan warga</p>
+            <p class="hint" data-i18n="wargaCardHint">
+              Untuk warga: tiga hal yang bisa dilakukan di sini, tanpa login.
+            </p>
+            <div class="actions actions-col">
+              <button id="warga-go-ikm" class="btn btn-primary" type="button">
+                <span data-i18n="wargaGoIkm">Isi survei kepuasan</span>
+              </button>
+              <button id="warga-go-aduan" class="btn" type="button">
+                <span data-i18n="wargaGoAduan">Buat pengaduan</span>
+              </button>
+              <button id="warga-go-qa" class="btn" type="button">
+                <span data-i18n="wargaGoQa">Tanya prosedur</span>
+              </button>
+            </div>
+          </div>
+
           <div class="bento-card bento-ikm">
             <p class="bento-label" data-i18n="homeIkm">IKM score</p>
             <p class="bento-num"><strong id="home-ikm-score">–</strong></p>
@@ -235,6 +255,17 @@
             <div id="home-ikm-trend" class="trend-chart"></div>
             <p id="home-trend-empty" class="hint" hidden data-i18n="homeTrendEmpty">
               Not enough answers yet for a trend.
+            </p>
+          </div>
+
+          <div class="bento-card bento-chart">
+            <p class="bento-label" data-i18n="aduanChartTitle">Pengaduan per jenis</p>
+            <p class="hint" data-i18n="aduanChartHint">
+              Semua pengaduan di browser ini, dikelompokkan per jenis.
+            </p>
+            <div id="home-aduan-chart" class="chart-bars"></div>
+            <p id="home-aduan-chart-empty" class="hint" hidden data-i18n="aduanChartEmpty">
+              Belum ada pengaduan.
             </p>
           </div>
 
@@ -891,6 +922,20 @@
         a human officer before use.
       </p>
     </footer>
+
+    <!-- Command palette (Ctrl+K) — jump to any menu or action. -->
+    <dialog id="palette" class="palette" aria-label="Command palette">
+      <p class="palette-title" data-i18n="paletteTitle">Lompat ke…</p>
+      <input
+        id="palette-input"
+        type="text"
+        data-i18n-ph="palettePh"
+        placeholder="Ketik menu atau aksi…"
+        autocomplete="off"
+      />
+      <ul id="palette-list" class="palette-list" role="listbox" aria-label="Commands"></ul>
+      <p class="palette-hint" data-i18n="paletteHint">↑↓ untuk memilih • Enter untuk membuka • Esc untuk menutup</p>
+    </dialog>
 
   </body>
 </html>
