@@ -7,7 +7,7 @@ import {
   type OnDeviceState,
 } from "./ai";
 import { countLocalDrafts, deleteDraft, listDrafts, listLocalDrafts, saveDraft, type Draft } from "./drafts";
-import { initFirebase, type FirebaseServices } from "./firebase";
+import { getLastFirestoreSync, initFirebase, type FirebaseServices } from "./firebase";
 import { t, type Lang } from "./i18n";
 import {
   computeIkm,
@@ -853,7 +853,12 @@ function setFirebaseChip(): void {
     chip.textContent = t("firebaseDemo", lang);
     chip.className = "chip chip-warn";
   } else if (svc.status === "ready") {
-    chip.textContent = t("firebaseReady", lang);
+    // Paket 9 — sync status: show the last successful Firestore write.
+    const last = getLastFirestoreSync();
+    const syncText = last
+      ? `${t("firebaseSynced", lang)} ${last.toLocaleTimeString(lang === "id" ? "id-ID" : "en-GB", { hour: "2-digit", minute: "2-digit" })}`
+      : t("firebaseNotSynced", lang);
+    chip.textContent = `${t("firebaseReady", lang)} · ${syncText}`;
     chip.className = "chip chip-ok";
   } else {
     chip.textContent = `${t("firebaseError", lang)}: ${svc.error ?? ""}`;
@@ -1890,7 +1895,7 @@ function initKepegawaian(): void {
       if (!window.confirm(`${t("delete", lang)} ${p.nama}?`)) return;
       kegItems = kegItems.filter((x) => x.id !== p.id);
       savePerangkat(kegItems);
-      if (svc) void syncPerangkatToFirestore(svc, kegItems);
+      if (svc) void syncPerangkatToFirestore(svc, kegItems).then(() => setFirebaseChip());
       renderKepegawaian();
       setStatus($("keg-form-status"), t("kegDeleted", lang));
     }
@@ -1942,7 +1947,7 @@ function initKepegawaian(): void {
     };
     kegItems = [...kegItems, np];
     savePerangkat(kegItems);
-    if (svc) void syncPerangkatToFirestore(svc, kegItems);
+    if (svc) void syncPerangkatToFirestore(svc, kegItems).then(() => setFirebaseChip());
     ($("keg-form") as HTMLFormElement).reset();
     // reset() clears the unit select too — restore the desa default.
     ($("keg-in-unit") as HTMLSelectElement).value = "desa";
@@ -2190,7 +2195,7 @@ function initIkm(): void {
     };
     ikmItems = [...ikmItems, resp];
     saveIkm(ikmItems);
-    if (svc) void syncIkmToFirestore(svc, ikmItems);
+    if (svc) void syncIkmToFirestore(svc, ikmItems).then(() => setFirebaseChip());
     ($("ikm-form") as HTMLFormElement).reset();
     renderIkm();
     setStatus($("ikm-form-status"), t("ikmSaved", lang));
@@ -2471,7 +2476,7 @@ function initPengaduan(): void {
       a.id === sel.dataset.id ? { ...a, status: next } : a,
     );
     saveAduan(aduItems);
-    if (svc) void syncAduanToFirestore(svc, aduItems);
+    if (svc) void syncAduanToFirestore(svc, aduItems).then(() => setFirebaseChip());
     renderPengaduan();
     setStatus($("adu-form-status"), t("aduStatusChanged", lang));
   });
@@ -2496,7 +2501,7 @@ function initPengaduan(): void {
     };
     aduItems = [...aduItems, aduan];
     saveAduan(aduItems);
-    if (svc) void syncAduanToFirestore(svc, aduItems);
+    if (svc) void syncAduanToFirestore(svc, aduItems).then(() => setFirebaseChip());
     ($("adu-form") as HTMLFormElement).reset();
     renderPengaduan();
     setStatus($("adu-form-status"), t("aduSaved", lang));
@@ -2561,9 +2566,11 @@ async function boot(): Promise<void> {
   // while Firebase/Auth was unavailable upload once the backend is ready.
   // Best-effort only: each sync guards on svc ready and never throws.
   if (svc.status === "ready") {
-    void syncIkmToFirestore(svc, loadIkm());
-    void syncAduanToFirestore(svc, loadAduan());
-    void syncPerangkatToFirestore(svc, loadPerangkat());
+    void Promise.allSettled([
+      syncIkmToFirestore(svc, loadIkm()),
+      syncAduanToFirestore(svc, loadAduan()),
+      syncPerangkatToFirestore(svc, loadPerangkat()),
+    ]).then(() => setFirebaseChip());
   }
   setFirebaseChip();
   $("config-banner").hidden = svc.status === "ready";

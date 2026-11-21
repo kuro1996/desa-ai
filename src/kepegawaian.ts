@@ -7,6 +7,7 @@
 // memblokir UI). Tidak ada login dan tidak ada kredensial di modul ini.
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import type { FirebaseServices } from "./firebase";
+import { markFirestoreSync } from "./firebase";
 
 export interface Perangkat {
   id: string;
@@ -403,6 +404,7 @@ export async function syncPerangkatToFirestore(
       updatedAt: serverTimestamp(),
       demo: isDemoData(),
     });
+    markFirestoreSync();
   } catch (e) {
     console.warn("DesaAI: Firestore kepegawaian sync failed (local data kept).", e);
   }

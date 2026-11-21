@@ -119,6 +119,9 @@ async function main() {
     check("on-device chip reports status", /On-device:/.test(deviceChip), deviceChip);
     const fbChip = await page.$eval("#firebase-chip", (el) => el.textContent);
     check("firebase chip reports a status", fbChip.trim().length > 0, fbChip);
+    // Paket 9 — no false sync timestamp when Firebase is unreachable here.
+    const lastSync = await page.evaluate(() => localStorage.getItem("desaai-last-sync-v1"));
+    check("no sync timestamp recorded without a Firestore write", lastSync === null, String(lastSync));
 
     // 1b. Home dashboard (bento) — Paket 5: default tab, live numbers
     const homeActive = await page.$eval('[data-tab="home"]', (el) => el.classList.contains("active"));

@@ -9,6 +9,7 @@
 // No login, no credentials in this module.
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import type { FirebaseServices } from "./firebase";
+import { markFirestoreSync } from "./firebase";
 
 export interface IkmElement {
   id: string;
@@ -226,6 +227,7 @@ export async function syncIkmToFirestore(
       updatedAt: serverTimestamp(),
       demo: isIkmDemoData(),
     });
+    markFirestoreSync();
   } catch (e) {
     console.warn("DesaAI: Firestore IKM sync failed (local data kept).", e);
   }

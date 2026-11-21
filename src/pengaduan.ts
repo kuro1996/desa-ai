@@ -6,6 +6,7 @@
 // No login, no credentials in this module.
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import type { FirebaseServices } from "./firebase";
+import { markFirestoreSync } from "./firebase";
 
 export type AduanStatus = "baru" | "diproses" | "selesai";
 
@@ -210,6 +211,7 @@ export async function syncAduanToFirestore(
       updatedAt: serverTimestamp(),
       demo: isAduanDemoData(),
     });
+    markFirestoreSync();
   } catch (e) {
     console.warn("DesaAI: Firestore pengaduan sync failed (local data kept).", e);
   }

@@ -40,6 +40,29 @@ export interface FirebaseServices {
 export const DEFAULT_CLOUD_MODEL = "gemini-3.8-flash";
 export const DEFAULT_ON_DEVICE_MAX_CHARS = 12000;
 
+const LAST_SYNC_KEY = "desaai-last-sync-v1";
+
+/** Record a successful Firestore mirror write (for the sync-status chip). */
+export function markFirestoreSync(): void {
+  try {
+    localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+  } catch {
+    // Storage unavailable — the chip just stays silent.
+  }
+}
+
+/** Last successful Firestore mirror write, or null when never synced. */
+export function getLastFirestoreSync(): Date | null {
+  try {
+    const raw = localStorage.getItem(LAST_SYNC_KEY);
+    if (!raw) return null;
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d;
+  } catch {
+    return null;
+  }
+}
+
 /** True when the config still holds the placeholder values. */
 export function isConfigured(): boolean {
   return Object.values(firebaseConfig).every(

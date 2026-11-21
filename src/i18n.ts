@@ -400,6 +400,8 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   deviceUnavailable: { en: "On-device: unavailable", id: "Perangkat: tidak tersedia" },
   deviceUnsupported: { en: "On-device: not supported here", id: "Perangkat: tidak didukung di sini" },
   firebaseReady: { en: "Firebase: connected", id: "Firebase: terhubung" },
+  firebaseSynced: { en: "Synced", id: "Tersinkron" },
+  firebaseNotSynced: { en: "Not synced yet", id: "Belum tersinkron" },
   firebaseDemo: { en: "Firebase: demo mode", id: "Firebase: mode demo" },
   firebaseError: { en: "Firebase: error", id: "Firebase: error" },
 };
