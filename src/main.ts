@@ -83,6 +83,7 @@ function applyLang(): void {
   $("lang-toggle").textContent =
     lang === "en" ? "🇮🇩 Bahasa Indonesia" : "🇬🇧 English";
   updateThemeButton();
+  updateModeButton();
   renderTemplateSelect();
   renderLetterFields();
   renderKbList();
@@ -182,6 +183,214 @@ function initTabs(): void {
   window.addEventListener("hashchange", () => {
     const tab = tabFromHash();
     if (tab) activateTab(tab, false);
+  });
+}
+
+// ---------- command palette (Ctrl+K) — Paket 7 ----------
+
+interface PaletteCmd {
+  id: string;
+  label: () => string;
+  run: () => void;
+}
+
+function paletteCommands(): PaletteCmd[] {
+  const cmds: PaletteCmd[] = [];
+  // One entry per tab — label read live from the tab button so it follows
+  // the active language without a second string table.
+  document.querySelectorAll<HTMLButtonElement>(".tab").forEach((btn) => {
+    const tabId = btn.dataset.tab;
+    if (!tabId) return;
+    cmds.push({
+      id: `tab-${tabId}`,
+      label: () => btn.textContent?.trim() ?? tabId,
+      run: () => activateTab(tabId),
+    });
+  });
+  cmds.push(
+    { id: "cmd-new-letter", label: () => t("cmdNewLetter", lang), run: () => activateTab("letters") },
+    { id: "cmd-new-aduan", label: () => t("cmdNewAduan", lang), run: () => activateTab("pengaduan") },
+    { id: "cmd-fill-ikm", label: () => t("cmdFillIkm", lang), run: () => activateTab("ikm") },
+    { id: "cmd-print-report", label: () => t("cmdPrintReport", lang), run: () => printMonthlyReport() },
+    {
+      id: "cmd-theme",
+      label: () => t("cmdTheme", lang),
+      run: () => applyTheme(currentTheme() === "dark" ? "light" : "dark"),
+    },
+    {
+      id: "cmd-lang",
+      label: () => t("cmdLang", lang),
+      run: () => {
+        lang = lang === "en" ? "id" : "en";
+        applyLang();
+      },
+    },
+  );
+  return cmds;
+}
+
+let paletteSelected = 0;
+let paletteVisible: PaletteCmd[] = [];
+
+function renderPaletteList(): void {
+  const list = $("palette-list");
+  list.innerHTML = "";
+  const q = ($("palette-input") as HTMLInputElement).value.trim().toLowerCase();
+  paletteVisible = paletteCommands().filter((c) =>
+    q === "" ? true : c.label().toLowerCase().includes(q),
+  );
+  if (paletteVisible.length === 0) {
+    const li = document.createElement("li");
+    li.className = "palette-empty";
+    li.textContent = t("paletteEmpty", lang);
+    list.appendChild(li);
+    paletteSelected = -1;
+    return;
+  }
+  if (paletteSelected < 0 || paletteSelected >= paletteVisible.length) {
+    paletteSelected = 0;
+  }
+  paletteVisible.forEach((c, i) => {
+    const li = document.createElement("li");
+    li.className = `palette-item${i === paletteSelected ? " selected" : ""}`;
+    li.setAttribute("role", "option");
+    li.setAttribute("aria-selected", i === paletteSelected ? "true" : "false");
+    li.textContent = c.label();
+    li.addEventListener("click", () => {
+      paletteSelected = i;
+      runPaletteCmd(c);
+    });
+    list.appendChild(li);
+  });
+}
+
+function runPaletteCmd(cmd: PaletteCmd): void {
+  ($("palette") as HTMLDialogElement).close();
+  cmd.run();
+}
+
+function openPalette(): void {
+  paletteSelected = 0;
+  ($("palette-input") as HTMLInputElement).value = "";
+  renderPaletteList();
+  const dlg = $("palette") as HTMLDialogElement;
+  if (!dlg.open) dlg.showModal();
+  ($("palette-input") as HTMLInputElement).focus();
+}
+
+function initPalette(): void {
+  $("palette-open").addEventListener("click", openPalette);
+  document.addEventListener("keydown", (ev) => {
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "k") {
+      ev.preventDefault();
+      openPalette();
+    }
+  });
+  const dlg = $("palette") as HTMLDialogElement;
+  dlg.addEventListener("click", (ev) => {
+    if (ev.target === dlg) dlg.close();
+  });
+  $("palette-input").addEventListener("input", () => {
+    paletteSelected = 0;
+    renderPaletteList();
+  });
+  $("palette-input").addEventListener("keydown", (ev) => {
+    if (ev.key === "ArrowDown") {
+      ev.preventDefault();
+      paletteSelected = Math.min(paletteSelected + 1, paletteVisible.length - 1);
+      renderPaletteList();
+    } else if (ev.key === "ArrowUp") {
+      ev.preventDefault();
+      paletteSelected = Math.max(paletteSelected - 1, 0);
+      renderPaletteList();
+    } else if (ev.key === "Enter") {
+      ev.preventDefault();
+      const cmd = paletteVisible[paletteSelected];
+      if (cmd) runPaletteCmd(cmd);
+    }
+  });
+}
+
+// ---------- citizen mode (Mode Warga) — Paket 7 ----------
+
+const MODE_KEY = "desaai-mode-v1";
+type AppMode = "petugas" | "warga";
+let appMode: AppMode = "petugas";
+
+// Officer-only tabs — hidden from the nav while in citizen mode.
+const OFFICER_TABS = ["letters", "summarize", "drafts", "kepegawaian"];
+
+function updateModeButton(): void {
+  $("mode-toggle-label").textContent = t(
+    appMode === "warga" ? "modePetugas" : "modeWarga",
+    lang,
+  );
+}
+
+function applyMode(mode: AppMode): void {
+  appMode = mode;
+  document.body.classList.toggle("mode-warga", mode === "warga");
+  $("home-warga-card").hidden = mode !== "warga";
+  updateModeButton();
+  try {
+    localStorage.setItem(MODE_KEY, mode);
+  } catch {
+    // Storage unavailable — the mode still applies for this session.
+  }
+  if (mode === "warga") {
+    const active = document.querySelector<HTMLButtonElement>(".tab.active");
+    const tab = active?.dataset.tab ?? "home";
+    if (OFFICER_TABS.includes(tab)) activateTab("home");
+  }
+}
+
+function initMode(): void {
+  let saved: AppMode = "petugas";
+  try {
+    const raw = localStorage.getItem(MODE_KEY);
+    if (raw === "warga" || raw === "petugas") saved = raw;
+  } catch {
+    // Storage unavailable — officer mode by default.
+  }
+  applyMode(saved);
+  $("mode-toggle").addEventListener("click", () =>
+    applyMode(appMode === "warga" ? "petugas" : "warga"),
+  );
+  $("warga-go-ikm").addEventListener("click", () => activateTab("ikm"));
+  $("warga-go-aduan").addEventListener("click", () => activateTab("pengaduan"));
+  $("warga-go-qa").addEventListener("click", () => activateTab("qa"));
+}
+
+// ---------- complaints-by-type chart (home) — Paket 7 ----------
+
+function renderAduanChart(): void {
+  const wrap = $("home-aduan-chart");
+  const items = loadAduan();
+  $("home-aduan-chart-empty").hidden = items.length > 0;
+  wrap.innerHTML = "";
+  if (items.length === 0) return;
+  const counts = ADUAN_JENIS.map((j) => items.filter((a) => a.jenis === j).length);
+  const max = Math.max(1, ...counts);
+  ADUAN_JENIS.forEach((j, i) => {
+    const row = document.createElement("div");
+    row.className = "chart-row";
+    const label = document.createElement("span");
+    label.className = "chart-label";
+    label.textContent = t(`aduJenis${i + 1}`, lang);
+    const track = document.createElement("div");
+    track.className = "chart-track";
+    const fill = document.createElement("div");
+    fill.className = "chart-fill";
+    fill.style.width = `${Math.round((counts[i] / max) * 100)}%`;
+    track.appendChild(fill);
+    const value = document.createElement("span");
+    value.className = "chart-value";
+    value.dataset.count = String(counts[i]);
+    value.textContent = String(counts[i]);
+    row.appendChild(label);
+    row.appendChild(track);
+    row.appendChild(value);
+    wrap.appendChild(row);
   });
 }
 
@@ -588,6 +797,7 @@ function renderHome(): void {
     loadAduan().filter((a) => inMonth(a.createdAt, now)).length,
   );
   renderTrend();
+  renderAduanChart();
   renderReportPreview();
   renderHomeSearch();
   renderQuickStats();
@@ -2305,6 +2515,8 @@ async function boot(): Promise<void> {
   initKepegawaian();
   initIkm();
   initPengaduan();
+  initPalette();
+  initMode();
   renderQuickStats();
 
   // Deep link: open the tab named by location.hash (e.g. #ikm for the survey).

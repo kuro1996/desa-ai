@@ -1757,3 +1757,109 @@ html[data-theme="dark"] .ikm-radios label:has(input:checked) {
   fill: var(--muted);
   font-size: 11px;
 }
+
+/* ---------- Paket 7: command palette, citizen mode, complaints chart ---------- */
+
+/* Command palette — modal dialog, centered near the top. */
+.palette {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  width: min(560px, 92vw);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+}
+.palette::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+.palette-title {
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+.palette input {
+  width: 100%;
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+}
+.palette-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  max-height: 320px;
+  overflow: auto;
+}
+.palette-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.palette-item.selected {
+  background: var(--green-dark);
+  color: #fff;
+}
+.palette-empty {
+  padding: 10px 12px;
+  color: var(--muted);
+}
+.palette-hint {
+  margin: 12px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Citizen mode — officer tabs leave the nav; the resident card takes over. */
+body.mode-warga .tab[data-tab="letters"],
+body.mode-warga .tab[data-tab="summarize"],
+body.mode-warga .tab[data-tab="drafts"],
+body.mode-warga .tab[data-tab="kepegawaian"] {
+  display: none;
+}
+.actions-col {
+  flex-direction: column;
+  align-items: stretch;
+}
+.actions-col .btn {
+  width: 100%;
+  justify-content: center;
+}
+.bento-warga {
+  border: 2px solid var(--green);
+}
+
+/* Complaints-by-type bars — same visual language as the IKM bars. */
+.chart-bars {
+  display: grid;
+  gap: 8px;
+}
+.chart-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) 1fr 32px;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.86rem;
+}
+.chart-label {
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+.chart-track {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--green-soft);
+  overflow: hidden;
+}
+.chart-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--green), var(--teal));
+}
+.chart-value {
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

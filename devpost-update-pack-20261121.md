@@ -65,6 +65,13 @@ green on every build.
   lama menunggu), ekspor CSV pengaduan, template SKTM baru, seksi "Perlu
   perhatian" di laporan bulanan cetak, theme-color mobile. Tes headless
   125 → 130 cek, semua hijau.
+- **Paket 7 (21 Nov sore):** command palette (Ctrl+K) — lompat ke menu/aksi
+  apa pun dari keyboard; **Mode Warga** — tampilan sederhana untuk warga
+  (hanya Survei IKM, Pengaduan, Tanya Prosedur; menu petugas disembunyikan);
+  grafik batang pengaduan per jenis di Beranda; **database Firestore
+  (default) dibuat di Jakarta (asia-southeast2) dengan aturan terkunci
+  per pengguna** — cermin Firestore kini aktif. Tes headless 130 → 137
+  cek, semua hijau.
 
 ## 3. Checklist sebelum Bos tekan submit
 
@@ -78,5 +85,9 @@ green on every build.
 - Cloud generation masih belum terbukti dari VM (endpoint Google tidak
   terjangkau dari VM) — butuh tes tombol Generate dari HP Bos.
 - Jawaban survei IKM tersimpan di localStorage responden (mirror Firestore
-  best-effort) — tidak auto-sync ke dashboard kantor.
+  best-effort) — tidak auto-sync ke dashboard kantor. **Update 21 Nov sore:
+  database Firestore (default) sudah dibuat di Jakarta + aturan terkunci
+  per pengguna diterbitkan, jadi cermin Firestore kini BISA jalan — perlu
+  tes tulis dari HP Bos (kirim satu pengaduan/survei, cek muncul di
+  console Firestore).**
 - Sprint 2 quota Firebase: jendela s.d. **24 Nov 15:00 WIB**.

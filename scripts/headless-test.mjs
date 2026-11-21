@@ -138,8 +138,8 @@ async function main() {
     }));
     const monthName = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
     check(
-      "bento shows 8 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
-      bento.cards === 8 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
+      "bento shows 10 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
+      bento.cards === 10 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
         bento.lettersToday === "0" && bento.aduanBaru === "3" &&
         bento.monthIkm === "12" && bento.monthAduan === "6" && bento.monthLetters === "0" &&
         bento.monthName === monthName,
@@ -1318,6 +1318,79 @@ async function main() {
       "quick-stats match live data (1 letter, IKM = dashboard, 2 resolved)",
       qs.letters === "1" && qs.ikm === qs.dashIkm && qs.aduan === "2",
       `letters=${qs.letters} ikm=${qs.ikm} dash=${qs.dashIkm} aduan=${qs.aduan}`,
+    );
+
+    // 9b. Paket 7 — command palette, citizen mode, complaints chart
+    await page.click('[data-tab="home"]');
+    await sleep(200);
+    await page.keyboard.down("Control");
+    await page.keyboard.press("k");
+    await page.keyboard.up("Control");
+    await sleep(300);
+    check(
+      "command palette opens with Ctrl+K",
+      await page.$eval("#palette", (el) => el.open),
+    );
+    await page.type("#palette-input", "letter");
+    await sleep(200);
+    const paletteItems = await page.$$eval("#palette-list .palette-item", (els) =>
+      els.map((e) => e.textContent ?? ""),
+    );
+    check(
+      "palette filters commands by keyword",
+      paletteItems.length >= 1 && paletteItems.every((s) => /letter/i.test(s)),
+      paletteItems.join(" | ").slice(0, 120),
+    );
+    await page.keyboard.press("Enter");
+    await sleep(300);
+    check(
+      "palette Enter opens the matching tab and closes",
+      (await page.$eval('[data-tab="letters"]', (el) => el.classList.contains("active"))) &&
+        (await page.$eval("#palette", (el) => !el.open)),
+    );
+    await page.click('[data-tab="home"]');
+    await page.click("#mode-toggle");
+    await sleep(200);
+    const warga = await page.evaluate(() => ({
+      bodyWarga: document.body.classList.contains("mode-warga"),
+      lettersHidden:
+        getComputedStyle(document.querySelector('[data-tab="letters"]')).display === "none",
+      cardVisible: !document.getElementById("home-warga-card").hidden,
+    }));
+    check(
+      "citizen mode hides officer tabs and shows resident card",
+      warga.bodyWarga && warga.lettersHidden && warga.cardVisible,
+      JSON.stringify(warga),
+    );
+    await page.click("#warga-go-ikm");
+    await sleep(200);
+    check(
+      "resident card opens the IKM survey",
+      await page.$eval('[data-tab="ikm"]', (el) => el.classList.contains("active")),
+    );
+    await page.click("#mode-toggle");
+    await sleep(200);
+    check(
+      "mode toggle returns to officer mode",
+      await page.evaluate(
+        () =>
+          !document.body.classList.contains("mode-warga") &&
+          getComputedStyle(document.querySelector('[data-tab="letters"]')).display !== "none",
+      ),
+    );
+    await page.click('[data-tab="home"]');
+    await sleep(200);
+    const chart = await page.$$eval("#home-aduan-chart .chart-row", (rows) => ({
+      n: rows.length,
+      sum: rows.reduce(
+        (s, r) => s + Number(r.querySelector(".chart-value")?.textContent ?? 0),
+        0,
+      ),
+    }));
+    check(
+      "complaints-by-type chart shows 5 rows with a positive total",
+      chart.n === 5 && chart.sum > 0,
+      `rows=${chart.n} sum=${chart.sum}`,
     );
 
     // 10. No console errors / failed requests (excluding the VM tunnel noise)
