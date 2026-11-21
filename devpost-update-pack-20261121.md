@@ -50,7 +50,7 @@ by a human officer before use.
 
 **Tech:** Vite + TypeScript, Firebase AI Logic (Gemini Nano 4 on-device +
 Gemini cloud fallback), Firestore mirror (best-effort), localStorage-first
-so the office keeps working offline. 130 automated headless-Chrome checks
+so the office keeps working offline. 138 automated headless-Chrome checks
 green on every build.
 
 ## 2. Yang baru sejak submit (untuk kolom "What's new" / pembaruan deskripsi)
@@ -99,7 +99,7 @@ green on every build.
 - Jawaban survei IKM tersimpan di localStorage responden (mirror Firestore
   best-effort) — tidak auto-sync ke dashboard kantor. **Update 21 Nov sore:
   database Firestore (default) sudah dibuat di Jakarta + aturan terkunci
-  per pengguna diterbitkan, jadi cermin Firestore kini BISA jalan — perlu
-  tes tulis dari HP Bos (kirim satu pengaduan/survei, cek muncul di
-  console Firestore).**
+  per pengguna diterbitkan + Auth Anonymous dinyalakan, dan TULISAN SUDAH
+  TERVERIFIKASI 21 Nov 18:27 WIB — jawaban Bos ada di
+  users/{uid}/ikm/rekap (14 item, updatedAt 18:26:08 WIB).**
 - Sprint 2 quota Firebase: jendela s.d. **24 Nov 15:00 WIB**.
