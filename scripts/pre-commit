@@ -1,0 +1,4 @@
+#!/bin/sh
+# Pre-commit hook DesaAI — cegah secret bocor ke repo (insiden 2026-11-20).
+# Dipasang dari scripts/pre-commit; jalankan: cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+node scripts/check-no-secrets.mjs || exit 1
