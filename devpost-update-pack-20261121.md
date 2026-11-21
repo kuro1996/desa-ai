@@ -78,6 +78,12 @@ green on every build.
   dinyalakan 21 Nov 17:57 WIB** (sebelumnya belum pernah disetup — itulah
   penyebab survei pertama Bos tidak masuk database). Tes headless 137 cek,
   semua hijau.
+- **Paket 9 (21 Nov sore):** indikator status sinkronisasi di header —
+  chip Firebase menampilkan jam sinkron terakhir ("Firebase: terhubung ·
+  Tersinkron 18:26") atau "Belum tersinkron". **Tulisan pertama Bos
+  TERVERIFIKASI masuk Firestore 21 Nov 18:27 WIB** (users/{uid}/ikm/rekap:
+  14 item — 12 demo + 2 jawaban Bos; updatedAt 18:26:08 WIB). Tes
+  headless 138 cek, semua hijau.
 
 ## 3. Checklist sebelum Bos tekan submit
 
