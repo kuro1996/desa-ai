@@ -429,6 +429,57 @@ export function filterPerangkat(
   });
 }
 
+// ---------- Paket 23 — Pengurutan Daftar Pegawai ----------
+// Sort keys the staff table header offers: name, position, village, and
+// the SK end date (masaSelesai — the Masa Bhakti column shows the whole
+// term, but the sort is by its end date, so "nearest first" means the SK
+// that expires soonest). Text sorts are case-insensitive (Indonesian
+// locale); the sort is stable, so equal keys keep the stored order.
+export type KegSortKey = "nama" | "jabatan" | "desa" | "masaSelesai";
+export type KegSortDir = "asc" | "desc";
+
+function sortText(a: string, b: string): number {
+  return (a ?? "").localeCompare(b ?? "", "id", { sensitivity: "base" });
+}
+
+function endDateMs(dateStr: string): number {
+  if (!dateStr) return Number.NaN;
+  const ms = new Date(`${dateStr}T00:00:00`).getTime();
+  return Number.isNaN(ms) ? Number.NaN : ms;
+}
+
+/** Sort a staff list for display. A record without a usable SK end date
+ *  always sorts LAST when sorting by date, in either direction — the
+ *  missing date is never guessed and never promoted to the top. */
+export function sortPerangkat(
+  items: Perangkat[],
+  key: KegSortKey,
+  dir: KegSortDir,
+): Perangkat[] {
+  const indexed = items.map((p, i) => ({ p, i }));
+  indexed.sort((x, y) => {
+    if (key === "masaSelesai") {
+      const dx = endDateMs(x.p.masaSelesai);
+      const dy = endDateMs(y.p.masaSelesai);
+      const xMissing = Number.isNaN(dx);
+      const yMissing = Number.isNaN(dy);
+      if (xMissing && yMissing) return x.i - y.i;
+      if (xMissing) return 1; // missing date always last
+      if (yMissing) return -1;
+      const c = dx - dy;
+      return c !== 0 ? (dir === "desc" ? -c : c) : x.i - y.i;
+    }
+    const c =
+      key === "nama"
+        ? sortText(x.p.nama, y.p.nama)
+        : key === "jabatan"
+          ? sortText(x.p.jabatan, y.p.jabatan)
+          : sortText(x.p.desa, y.p.desa);
+    return c !== 0 ? (dir === "desc" ? -c : c) : x.i - y.i;
+  });
+  return indexed.map((e) => e.p);
+}
+
 export function formatDateId(dateStr: string): string {
   if (!dateStr) return "-";
   const d = new Date(`${dateStr}T00:00:00`);

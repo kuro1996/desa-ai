@@ -69,7 +69,10 @@ import {
   loadPerangkat,
   masaStatus,
   savePerangkat,
+  sortPerangkat,
   syncPerangkatToFirestore,
+  type KegSortDir,
+  type KegSortKey,
   type MasaStatus,
   type Perangkat,
 } from "./kepegawaian";
@@ -2523,6 +2526,14 @@ function initDrafts(): void {
 
 let kegItems: Perangkat[] = [];
 
+// Paket 23 — Pengurutan Daftar Pegawai: the active table sort. Clicking a
+// column header sorts ascending, a second click reverses it, a third click
+// clears the sort (back to the stored order). Sorting only reorders the
+// rows on screen — it never changes which records the search/filters
+// select, so the Paket 21 statistics stay exactly as filtered.
+let kegSortKey: KegSortKey | null = null;
+let kegSortDir: KegSortDir = "asc";
+
 function kegFillSelect(
   el: HTMLSelectElement,
   values: string[],
@@ -2635,9 +2646,13 @@ function renderKepegawaian(): void {
   }
   statusSel.value = prevStatus;
   const filtered = filterPerangkat(items, search, desaF, jabF, prevStatus, unitF);
+  // Paket 23 — Pengurutan Daftar Pegawai: sort the rows already selected
+  // by the search/filters (never reset the search); the statistics below
+  // are computed from `filtered`, so sorting cannot change their numbers.
+  const sorted = kegSortKey ? sortPerangkat(filtered, kegSortKey, kegSortDir) : filtered;
   const tbody = $("keg-table-body");
   tbody.innerHTML = "";
-  filtered.forEach((p, i) => {
+  sorted.forEach((p, i) => {
     const tr = document.createElement("tr");
     const pill = kegStatusPill(p);
     const cells: HTMLElement[] = [];
@@ -2746,6 +2761,19 @@ function renderKepegawaian(): void {
   // Paket 22 — an empty search result says so explicitly instead of
   // leaving a bare empty table.
   $("keg-no-result").hidden = filtered.length > 0;
+
+  // Paket 23 — column sort indicators: a small arrow on the active
+  // column header shows which column is sorted and in which direction;
+  // the other headers show no arrow.
+  for (const th of document.querySelectorAll<HTMLTableCellElement>(
+    "#keg-table th[data-sort-key]",
+  )) {
+    const key = th.dataset.sortKey as KegSortKey;
+    const arrow = th.querySelector<HTMLElement>(".sort-arrow");
+    if (arrow) arrow.textContent = kegSortKey === key ? (kegSortDir === "asc" ? "▲" : "▼") : "";
+    if (kegSortKey === key) th.setAttribute("aria-sort", kegSortDir === "asc" ? "ascending" : "descending");
+    else th.removeAttribute("aria-sort");
+  }
 
   // Desa cards
   const desaWrap = $("keg-desa-cards");
@@ -2930,6 +2958,34 @@ function initKepegawaian(): void {
   $("keg-filter-unit").addEventListener("change", renderKepegawaian);
   $("keg-filter-jabatan").addEventListener("change", renderKepegawaian);
   $("keg-filter-status").addEventListener("change", renderKepegawaian);
+
+  // Paket 23 — sortable column headers: click (or Enter/Space on the
+  // focused header) cycles asc -> desc -> cleared (stored order).
+  const toggleKegSort = (key: KegSortKey): void => {
+    if (kegSortKey === key) {
+      if (kegSortDir === "asc") kegSortDir = "desc";
+      else {
+        kegSortKey = null;
+        kegSortDir = "asc";
+      }
+    } else {
+      kegSortKey = key;
+      kegSortDir = "asc";
+    }
+    renderKepegawaian();
+  };
+  for (const th of document.querySelectorAll<HTMLTableCellElement>(
+    "#keg-table th[data-sort-key]",
+  )) {
+    const key = th.dataset.sortKey as KegSortKey;
+    th.addEventListener("click", () => toggleKegSort(key));
+    th.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        toggleKegSort(key);
+      }
+    });
+  }
 
   $("keg-table-body").addEventListener("click", (ev) => {
     const btn = (ev.target as HTMLElement).closest("button[data-action]") as

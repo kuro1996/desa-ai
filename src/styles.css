@@ -856,6 +856,27 @@ footer {
   font-size: 0.82rem;
 }
 
+/* Paket 23 — sortable staff-table headers: pointer + arrow indicator. */
+.data-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.data-table th.sortable:hover {
+  text-decoration: underline;
+}
+
+.data-table th.sortable:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+}
+
+.sort-arrow {
+  font-size: 0.75em;
+  margin-left: 2px;
+}
+
 .data-table tbody tr:hover {
   background: #f0f7f1;
 }

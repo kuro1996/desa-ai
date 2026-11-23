@@ -1733,6 +1733,189 @@ async function main() {
       `rows=${p22Cleared.rows} statTotal=${p22Cleared.statTotal} noteHidden=${p22Cleared.noteHidden}`,
     );
 
+    // Paket 23 — Pengurutan Daftar Pegawai: click a column header to sort
+    // (1st click asc, 2nd desc, 3rd clears back to stored order). 24
+    // records here: 23 demo + "Tes Tambah" (Staf Desa, Terak, SK ends
+    // 2027-12-31). Name cells carry a demo badge, so read the first text
+    // node only.
+    const kegRowName = (idx) =>
+      page.evaluate(
+        (i) => {
+          const rows = document.querySelectorAll("#keg-table-body tr");
+          const cell = rows[i]?.querySelector("td:nth-child(2)");
+          return cell ? cell.childNodes[0].textContent.trim() : "";
+        },
+        idx,
+      );
+    const kegFirstName = () => kegRowName(0);
+    const kegLastName = () =>
+      page.evaluate(() => {
+        const rows = document.querySelectorAll("#keg-table-body tr");
+        const cell = rows[rows.length - 1]?.querySelector("td:nth-child(2)");
+        return cell ? cell.childNodes[0].textContent.trim() : "";
+      });
+    const kegSortArrow = (key) =>
+      page.$eval(`#keg-table th[data-sort-key="${key}"] .sort-arrow`, (el) => el.textContent);
+    const clickKegSort = async (key) => {
+      await page.click(`#keg-table th[data-sort-key="${key}"]`);
+      await sleep(200);
+    };
+    await clickKegSort("nama");
+    check(
+      "kepegawaian sort by name ascending",
+      (await kegFirstName()) === "Agus Setiawan" && (await kegSortArrow("nama")) === "▲",
+      `first=${await kegFirstName()} arrow=${await kegSortArrow("nama")}`,
+    );
+    await clickKegSort("nama");
+    check(
+      "kepegawaian sort by name descending",
+      (await kegFirstName()) === "Tes Tambah" && (await kegSortArrow("nama")) === "▼",
+      `first=${await kegFirstName()} arrow=${await kegSortArrow("nama")}`,
+    );
+    await clickKegSort("nama");
+    check(
+      "kepegawaian third click on a header clears the sort",
+      (await kegFirstName()) === "Ahmad Fauzi" && (await kegSortArrow("nama")) === "",
+      `first=${await kegFirstName()} arrow=${await kegSortArrow("nama")}`,
+    );
+    await clickKegSort("jabatan");
+    check(
+      "kepegawaian sort by position ascending",
+      (await kegFirstName()) === "Indah Permata",
+      `first=${await kegFirstName()} (BPD)`,
+    );
+    await clickKegSort("jabatan");
+    check(
+      "kepegawaian sort by position descending",
+      (await kegFirstName()) === "Fajar Pratama",
+      `first=${await kegFirstName()} (Staf Desa)`,
+    );
+    await clickKegSort("desa");
+    check(
+      "kepegawaian sort by village ascending",
+      (await kegFirstName()) === "Indah Permata",
+      `first=${await kegFirstName()} (Beruas)`,
+    );
+    await clickKegSort("desa");
+    check(
+      "kepegawaian sort by village descending",
+      (await kegFirstName()) === "Gita Maharani",
+      `first=${await kegFirstName()} (Teru)`,
+    );
+    await clickKegSort("masaSelesai");
+    check(
+      "kepegawaian sort by SK end date ascending (nearest first)",
+      (await kegFirstName()) === "Hadi Wijaya",
+      `first=${await kegFirstName()} (2026-06-30)`,
+    );
+    await clickKegSort("masaSelesai");
+    check(
+      "kepegawaian sort by SK end date descending (farthest first)",
+      (await kegFirstName()) === "Ahmad Fauzi",
+      `first=${await kegFirstName()} (2027-12-31)`,
+    );
+    // Sort + search together: sorting applies to the filtered rows, and
+    // the statistics still describe the same filtered set.
+    await setKegSearch("kepala desa");
+    await clickKegSort("nama");
+    const p23Filtered = await kegSearchState();
+    check(
+      "kepegawaian sort works together with search",
+      p23Filtered.rows === 5 &&
+        p23Filtered.statTotal === "5" &&
+        (await kegFirstName()) === "Ahmad Fauzi",
+      `rows=${p23Filtered.rows} statTotal=${p23Filtered.statTotal} first=${await kegFirstName()}`,
+    );
+    await setKegSearch("");
+    const p23Cleared = await kegSearchState();
+    check(
+      "kepegawaian clearing the search keeps the active sort",
+      p23Cleared.rows === 24 &&
+        p23Cleared.statTotal === "24" &&
+        (await kegFirstName()) === "Agus Setiawan",
+      `rows=${p23Cleared.rows} first=${await kegFirstName()} (name asc still active)`,
+    );
+    // A record without an SK end date sorts LAST in both directions.
+    // (The add form requires an end date, so blank it in storage, reload,
+    // and restore it afterwards — "Tes Tambah" is deleted later anyway.)
+    await page.evaluate(() => {
+      const raw = localStorage.getItem("desaai-perangkat-v1");
+      const items = JSON.parse(raw);
+      items.find((p) => p.nama === "Tes Tambah").masaSelesai = "";
+      localStorage.setItem("desaai-perangkat-v1", JSON.stringify(items));
+    });
+    await page.reload({ waitUntil: "load" });
+    await sleep(500);
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(300);
+    await clickKegSort("masaSelesai");
+    check(
+      "kepegawaian record without SK date sorts last (ascending)",
+      (await kegFirstName()) === "Hadi Wijaya" && (await kegLastName()) === "Tes Tambah",
+      `first=${await kegFirstName()} last=${await kegLastName()}`,
+    );
+    await clickKegSort("masaSelesai");
+    check(
+      "kepegawaian record without SK date sorts last (descending)",
+      (await kegLastName()) === "Tes Tambah",
+      `last=${await kegLastName()}`,
+    );
+    await page.evaluate(() => {
+      const raw = localStorage.getItem("desaai-perangkat-v1");
+      const items = JSON.parse(raw);
+      items.find((p) => p.nama === "Tes Tambah").masaSelesai = "2027-12-31";
+      localStorage.setItem("desaai-perangkat-v1", JSON.stringify(items));
+    });
+    await page.reload({ waitUntil: "load" });
+    await sleep(500);
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(300);
+    const p23Restored = await kegSearchState();
+    check(
+      "kepegawaian state restored after the missing-date check",
+      p23Restored.rows === 24 && p23Restored.statTotal === "24" && (await kegFirstName()) === "Ahmad Fauzi",
+      `rows=${p23Restored.rows} first=${await kegFirstName()}`,
+    );
+    // Sorting is local: it works offline, and the whole tab (headers
+    // included) is hidden in Mode Warga like the rest of Kepegawaian.
+    await page.setOfflineMode(true);
+    await clickKegSort("nama");
+    const p23OfflineFirst = await kegFirstName();
+    await page.setOfflineMode(false);
+    check(
+      "kepegawaian sort works offline",
+      p23OfflineFirst === "Agus Setiawan",
+      `first=${p23OfflineFirst}`,
+    );
+    await page.click("#mode-toggle");
+    await sleep(200);
+    const p23Warga = await page.evaluate(
+      () =>
+        document.body.classList.contains("mode-warga") &&
+        document.getElementById("keg-table")?.offsetParent === null,
+    );
+    await page.click("#mode-toggle");
+    await sleep(200);
+    const p23WargaBack = await page.evaluate(
+      () => !document.body.classList.contains("mode-warga"),
+    );
+    check(
+      "kepegawaian sort headers hidden in Mode Warga",
+      p23Warga && p23WargaBack,
+      `hidden=${p23Warga}`,
+    );
+    // Leave the table in its stored order so the checks below (which
+    // assume the first row is Ahmad Fauzi) see the default view.
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(300);
+    await clickKegSort("nama");
+    await clickKegSort("nama");
+    check(
+      "kepegawaian sort cleared before the next checks",
+      (await kegFirstName()) === "Ahmad Fauzi" && (await kegSortArrow("nama")) === "",
+      `first=${await kegFirstName()}`,
+    );
+
     // Village filter: Katis has 3 demo records
     await page.select("#keg-filter-desa", "Katis");
     await sleep(300);
