@@ -19,6 +19,11 @@ re-verified again 2026-11-21 ~00:05 WIB after Paket 5: home dashboard
 dark mode as a designed theme, subtle glass tab bar, and fluid
 typography — design references: bento grid, dark mode, glassmorphism
 2.0 (patterns only, no brands copied).
+Re-verified again 2026-11-23 after Paket 11 (Buku Agenda Surat, 152
+checks) and Paket 12 (PWA offline: manifest + service worker,
+network-first shell, cache-first hashed assets, online/offline chip,
+agenda joins the Firestore mirror; headless 158 checks + a new
+16-check PWA harness — see the Paket 12 row below).
 
 ## What was verified live
 
@@ -39,6 +44,7 @@ typography — design references: bento grid, dark mode, glassmorphism
 | Home dashboard — bento grid, global search, IKM trend, monthly report (Paket 5) | ✅ Beranda is the default tab (deep link `#beranda` opens it too); bento shows 8 cards with live numbers verified against the data — IKM 90,28 = dashboard score (category A), 0 letters today, 3 new complaints, 12 IKM answers + 6 complaints in November 2026; masa-bhakti counts (4 akan habis / 3 habis) match the kepegawaian tab stats; IKM trend chart is a hand-rolled SVG with 12 points (one per answer), last point = overall score 90.28; global search finds an officer ("Ahmad" → Ahmad Fauzi, Personnel group) and clicking the result opens the officer detail dialog, finds complaints by type ("Keterlambatan" → Complaints group), and shows an empty state for no match; quick action "Open the survey" jumps to the IKM tab; monthly report print fills the report area (title "Laporan Bulanan — November 2026", IKM + personnel lines) and calls `window.print()` with `body[data-print-target="report"]` |
 | Dark mode + 2026 design refresh (Paket 5) | ✅ theme toggle in the header switches to a dark theme with its own color tokens (verified by computed styles: body rgb(15,26,19), panel/tab/input/bento rgb(24,36,32), light text rgb(232,240,234), hero title stays white); choice saved to localStorage (`desaai-theme-v1`) and applied before first paint, persists across reload, toggles back to light; QR box stays white in dark mode so the code still scans; sticky tab bar is translucent + blurred (glass 2.0); headings use fluid type (clamp); all 8 tabs have an inline SVG icon + label and open at 390 px phone width (8/8) with no horizontal overflow |
 | Modern design / mobile | ✅ no horizontal overflow at 390 px phone width (scrollWidth 390); all 8 tabs clickable at phone width; modern emerald/teal + amber design (photo hero header with office identity, rounded white cards, soft shadows, 44 px touch targets, colored status chips) — no function changed |
+| PWA offline (Paket 12) | ✅ manifest.webmanifest (standalone, `./` scope, 192 + 512 + maskable icons generated from the office logo, sizes verified against the real PNGs) + public/sw.js shipped in dist; `npm run test:pwa` (new Node vm harness driving the worker with stubbed CacheStorage/fetch) **16/16 passed**: install precaches exactly the 7 shell files (index.html NOT precached), navigation online serves the network shell and caches it, navigation offline serves the cached shell, a new deploy's shell (v2) wins over cached v1 (network-first — no stale shell), hashed JS/CSS + images served from cache offline with no second fetch, cross-origin Firebase/Google API requests are never intercepted or cached, activate deletes old caches and claims clients, offline navigation with an empty cache fails closed. Headless suite 152 → **158 checks** (6 new: manifest linked, net chip Online + ok style, bundle registers `./sw.js`, manifest fields, dist ships sw.js + manifest + 3 icons) — **157/158 on the final run; the 1 failure is the pre-existing flaky "kepegawaian summary renders an offline recap without AI" check, proven flaky on the pre-Paket-12 baseline too (151/152, same check failing)** |
 | Console errors / failed requests | ✅ **0 console errors, 0 failed requests** (excluding this VM's blocked tunnel to Google endpoints — see environment notes) |
 
 ## What was NOT verified live (honest status)
@@ -84,6 +90,19 @@ typography — design references: bento grid, dark mode, glassmorphism
   notifications; they are not real personnel data. The 8 subdistrict-office
   records use generic example names (e.g. Budi Prasetyo, Siti Rahmawati)
   and are NOT the real office holders — never present them as such.
+- **Service-worker registration on a real browser was NOT verified from
+  this VM (Paket 12).** The worker logic itself is proven by
+  `npm run test:pwa` (16/16, vm harness), but a live register + offline
+  reload needs an http(s) origin: file:// cannot host a worker, and
+  this VM's Chrome blocks every http://127.0.0.1 / localhost navigation
+  with Local Network Access checks — all `--disable-features` flag
+  variants were tried 2026-11-23 and still block, and the VM's only
+  other interface IP (198.19.0.2) is unreachable from the shell itself.
+  **Live proof must come from Bos's phone or a real browser on the
+  live site** (steps in `~/workspace/buildhybridai/uji-cloud-hp-20261123.md`:
+  chip Online, Add to Home Screen, airplane-mode reload, offline agenda
+  entry, re-sync on reconnect). Do NOT claim the PWA works live until
+  that check passes.
 - **IKM Web Share was NOT verified live.** Headless Chrome has no
   `navigator.share`, so the test verifies the clipboard fallback ("Link
   copied to clipboard") and the manual-copy box path, not the native

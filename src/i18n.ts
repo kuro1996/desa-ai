@@ -459,6 +459,8 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   firebaseNotSynced: { en: "Not synced yet", id: "Belum tersinkron" },
   firebaseDemo: { en: "Firebase: demo mode", id: "Firebase: mode demo" },
   firebaseError: { en: "Firebase: error", id: "Firebase: error" },
+  netOnline: { en: "Online", id: "Online" },
+  netOffline: { en: "Offline — saved locally", id: "Offline — tersimpan lokal" },
 };
 
 export function t(key: string, lang: Lang): string {

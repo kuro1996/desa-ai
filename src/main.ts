@@ -8,6 +8,7 @@ import {
   isAgendaDemoRecord,
   loadAgenda,
   saveAgenda,
+  syncAgendaToFirestore,
   type AgendaArah,
   type AgendaEntry,
   type AgendaStatus,
@@ -104,6 +105,7 @@ function applyLang(): void {
   renderIkm();
   renderPengaduan();
   renderHome();
+  setNetChip();
   void refreshDrafts();
 }
 
@@ -1047,6 +1049,33 @@ function setFirebaseChip(): void {
     chip.textContent = `${t("firebaseError", lang)}: ${svc.error ?? ""}`;
     chip.className = "chip chip-warn";
   }
+}
+
+// Paket 12 — network status chip (next to the Firestore sync chip).
+// Offline is not an error state: local data keeps working and syncs back
+// when the network returns (see the "online" listener in boot()).
+function setNetChip(): void {
+  const chip = $("net-chip");
+  if (navigator.onLine) {
+    chip.textContent = t("netOnline", lang);
+    chip.className = "chip chip-ok";
+  } else {
+    chip.textContent = t("netOffline", lang);
+    chip.className = "chip chip-warn";
+  }
+}
+
+// Paket 12 — one place that mirrors every local module to Firestore
+// (best-effort, never throws). Used on boot and when the network comes
+// back, so entries written while offline upload on reconnect.
+function syncAllToFirestore(): void {
+  if (!svc || svc.status !== "ready") return;
+  void Promise.allSettled([
+    syncIkmToFirestore(svc, loadIkm()),
+    syncAduanToFirestore(svc, loadAduan()),
+    syncPerangkatToFirestore(svc, loadPerangkat()),
+    syncAgendaToFirestore(svc, loadAgenda()),
+  ]).then(() => setFirebaseChip());
 }
 
 // ---------- routing badge ----------
@@ -2930,6 +2959,24 @@ async function boot(): Promise<void> {
     delete document.body.dataset.printTarget;
   });
 
+  // Paket 12 — PWA: network chip + service worker + re-sync on reconnect.
+  // The worker only registers on http(s) origins (file:// cannot host one;
+  // the app still works there without it) and never throws if it fails.
+  setNetChip();
+  window.addEventListener("online", () => {
+    setNetChip();
+    syncAllToFirestore();
+  });
+  window.addEventListener("offline", () => setNetChip());
+  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+    navigator.serviceWorker.register("./sw.js").catch((e) => {
+      console.warn(
+        "DesaAI: service worker registration failed (offline mode unavailable).",
+        e,
+      );
+    });
+  }
+
   // Firebase init (skipped silently in demo mode — no network calls).
   try {
     svc = await initFirebase();
@@ -2951,13 +2998,9 @@ async function boot(): Promise<void> {
   // Paket 8 — sync local data to Firestore on load, so answers saved
   // while Firebase/Auth was unavailable upload once the backend is ready.
   // Best-effort only: each sync guards on svc ready and never throws.
-  if (svc.status === "ready") {
-    void Promise.allSettled([
-      syncIkmToFirestore(svc, loadIkm()),
-      syncAduanToFirestore(svc, loadAduan()),
-      syncPerangkatToFirestore(svc, loadPerangkat()),
-    ]).then(() => setFirebaseChip());
-  }
+  // (Paket 12: the same sync re-runs on the "online" event below, so
+  // entries written while offline upload when the network returns.)
+  syncAllToFirestore();
   setFirebaseChip();
   $("config-banner").hidden = svc.status === "ready";
 

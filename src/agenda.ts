@@ -5,6 +5,9 @@
 // Baru -> Diproses -> Selesai follow-up status.
 // Stored locally (localStorage) — same local-first rule as My Drafts.
 // No login, no credentials in this module.
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import type { FirebaseServices } from "./firebase";
+import { markFirestoreSync } from "./firebase";
 
 export type AgendaArah = "masuk" | "keluar";
 export type AgendaStatus = "baru" | "diproses" | "selesai";
@@ -223,4 +226,24 @@ export function isAgendaDemoData(): boolean {
 
 export function isAgendaDemoRecord(e: AgendaEntry): boolean {
   return e.id.startsWith("ags-demo-");
+}
+
+// Paket 12 — mirror the local register to Firestore (best-effort, never
+// blocks the UI). Same pattern as syncIkmToFirestore: local data is the
+// source of truth, the cloud copy just follows when the network is back.
+export async function syncAgendaToFirestore(
+  svc: FirebaseServices,
+  items: AgendaEntry[],
+): Promise<void> {
+  if (svc.status !== "ready" || !svc.db || !svc.uid) return;
+  try {
+    await setDoc(doc(svc.db, "users", svc.uid, "agenda", "rekap"), {
+      items,
+      updatedAt: serverTimestamp(),
+      demo: isAgendaDemoData(),
+    });
+    markFirestoreSync();
+  } catch (e) {
+    console.warn("DesaAI: Firestore agenda sync failed (local data kept).", e);
+  }
 }

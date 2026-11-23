@@ -11,6 +11,12 @@
     />
     <title>DesaAI — AI Clerk for Village Offices</title>
     <link rel="icon" type="image/png" href="./favicon.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="DesaAI" />
+    <link rel="apple-touch-icon" href="./icon-192.png" />
     <script>
       // Apply the saved theme before first paint (no flash): stored choice
       // wins, otherwise follow the device's color scheme.
@@ -63,6 +69,9 @@
           >
           <span id="firebase-chip" class="chip chip-muted" title="Firebase status"
             >Firebase: checking…</span
+          >
+          <span id="net-chip" class="chip chip-ok" title="Network status"
+            >Online</span
           >
           <button id="theme-toggle" class="btn btn-ghost theme-toggle" type="button" aria-label="Dark mode">
             <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>

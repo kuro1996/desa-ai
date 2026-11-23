@@ -102,6 +102,18 @@ green on every build.
   Bonus: ringkasan kepegawaian kini **fail-soft** — bila AI gagal,
   rekap offline tetap tampil, bukan panel kosong (memperbaiki cek
   headless yang flaky). Tes headless 142 → **152 cek, semua hijau**.
+- **Paket 12 (23 Nov siang): PWA offline (offline-first)** — aplikasi
+  kini bisa diinstal (Add to Home Screen) dan dibuka tanpa internet:
+  manifest + service worker; shell (index.html) selalu diambil dari
+  jaringan saat online (network-first) sehingga build baru tidak pernah
+  basi, aset ber-hash di-cache; semua tab yang datanya lokal (surat,
+  pegawai, IKM, pengaduan, agenda) tetap bisa dibuka + dibaca offline;
+  entri baru tersimpan lokal dan terunggah otomatis ke Firestore saat
+  online kembali (agenda kini ikut tersinkron); chip Online/Offline di
+  header, di samping chip sinkronisasi Firestore. Tes: headless
+  152 → **158 cek**, harness PWA baru **16/16 cek** (logika service
+  worker diuji: shell segar setelah deploy, aset ter-cache offline,
+  API Firebase tidak pernah di-cache).
 
 ## 3. Checklist sebelum Bos tekan submit
 
@@ -121,3 +133,10 @@ green on every build.
   TERVERIFIKASI 21 Nov 18:27 WIB — jawaban Bos ada di
   users/{uid}/ikm/rekap (14 item, updatedAt 18:26:08 WIB).**
 - Sprint 2 quota Firebase: jendela s.d. **24 Nov 15:00 WIB**.
+- Paket 12: 1 cek headless flaky bawaan ("kepegawaian summary renders an
+  offline recap without AI") — gagal 3 dari 4 run 23 Nov, TERBUKTI gagal
+  juga di kode pra-Paket 12 (baseline 151/152). Bukan akibat PWA; jangan
+  klaim 158/158 sebelum cek itu diperbaiki. Registrasi service worker
+  live BELUM terbukti dari VM (Chrome headless di VM tidak bisa mencapai
+  origin HTTP apa pun) — bukti live: buka situs di HP Bos, cek chip
+  Online + "Add to Home Screen" muncul (lihat uji-cloud-hp-20261123.md).

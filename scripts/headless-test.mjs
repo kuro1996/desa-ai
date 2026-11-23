@@ -123,6 +123,43 @@ async function main() {
     const lastSync = await page.evaluate(() => localStorage.getItem("desaai-last-sync-v1"));
     check("no sync timestamp recorded without a Firestore write", lastSync === null, String(lastSync));
 
+    // 1a. Paket 12 — PWA shell: manifest linked, net chip online, worker
+    // registration compiled into the bundle. (Live worker behavior —
+    // register / offline reload / fresh shell — is covered by pwa-test.mjs:
+    // file:// cannot host a service worker, and this VM's Chrome blocks
+    // http://127.0.0.1 with Local Network Access checks, so no HTTP origin
+    // is reachable from headless Chrome here. The live site is the real
+    // proof — see docs/VERIFICATION.md.)
+    const manifestHref = await page.$eval('link[rel="manifest"]', (el) => el.getAttribute("href") ?? "");
+    check("manifest linked in index.html", manifestHref.endsWith("manifest.webmanifest"), manifestHref);
+    const netChip = await page.evaluate(() => ({
+      text: document.getElementById("net-chip")?.textContent ?? "",
+      ok: document.getElementById("net-chip")?.classList.contains("chip-ok") ?? false,
+    }));
+    check("net chip shows Online while the network is up", netChip.text === "Online", netChip.text);
+    check("net chip uses the ok style while online", netChip.ok, netChip.text);
+    const bundleJs = readdirSync(join(DIST, "assets")).find((f) => f.endsWith(".js")) ?? "";
+    const bundleSrc = readFileSync(join(DIST, "assets", bundleJs), "utf8");
+    check(
+      "bundle registers the service worker (./sw.js, http(s) only)",
+      bundleSrc.includes("serviceWorker") && bundleSrc.includes("./sw.js"),
+      bundleJs,
+    );
+    const manifest = JSON.parse(readFileSync(join(DIST, "manifest.webmanifest"), "utf8"));
+    check(
+      "dist manifest is a standalone PWA manifest (./ scope, 192 + 512 + maskable icons)",
+      manifest.display === "standalone" && manifest.start_url === "./" && manifest.scope === "./" &&
+        Array.isArray(manifest.icons) && manifest.icons.some((i) => i.sizes === "192x192") &&
+        manifest.icons.some((i) => i.sizes === "512x512" && !i.purpose) &&
+        manifest.icons.some((i) => i.purpose === "maskable"),
+      `display=${manifest.display} start=${manifest.start_url} icons=${manifest.icons.length}`,
+    );
+    check(
+      "dist ships sw.js + manifest + 3 PWA icons",
+      ["sw.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-512-maskable.png"]
+        .every((f) => existsSync(join(DIST, f))),
+    );
+
     // 1b. Home dashboard (bento) — Paket 5: default tab, live numbers
     const homeActive = await page.$eval('[data-tab="home"]', (el) => el.classList.contains("active"));
     const homeVisible = await page.$eval("#panel-home", (el) => !el.hidden);

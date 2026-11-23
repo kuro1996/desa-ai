@@ -17,6 +17,7 @@
     "dev": "vite",
     "preview": "vite preview --port 4173 --strictPort",
     "test:headless": "node scripts/headless-test.mjs",
+    "test:pwa": "node scripts/pwa-test.mjs",
     "check:secrets": "node scripts/check-no-secrets.mjs"
   },
   "type": "module",
