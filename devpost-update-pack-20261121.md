@@ -224,7 +224,22 @@ so the office keeps working offline. 199 automated checks on every build
   muncul kali ini); commit main 7622952, deploy gh-pages 0d896db,
   terverifikasi live. Lingkungan VM sempat rusak 12:32–14:04 WIB,
   sudah pulih.
-  Jangan tulis angka 233 di Devpost sebelum tes penuh itu hijau.**
+- **Paket 21 (23 Nov sore): Statistik Pegawai** — kartu "Statistik
+  Pegawai" baru di tab Kepegawaian, tepat di atas daftar pegawai:
+  total pegawai, rincian per jabatan (16 kelompok pada data contoh —
+  terbanyak Kepala Desa, 5), rincian per desa (11 kelompok — terbanyak
+  Kantor Kecamatan, 8), dan masa berlaku SK (masih berlaku 20, sudah
+  habis 3 pada data contoh per 23 Nov 2026). Semua dihitung dari data
+  pegawai yang sudah ada — tanpa nama, jabatan, desa, atau tanggal
+  karangan; pegawai tanpa jabatan/desa masuk "Tidak diketahui" dan
+  pegawai tanpa tanggal habis SK masuk "Tanpa tanggal SK" (keduanya
+  tidak pernah ditebak). Total kartu selalu sama dengan jumlah baris
+  daftar pegawai. 100% lokal, bekerja offline; ikut tersembunyi di
+  Mode Warga bersama tab Kepegawaian yang memang khusus petugas.
+  **Status (23 Nov ~14:35 WIB): LIVE — tes penuh hijau 242/242
+  (headless 226/226 + PWA 16/16, 0 gagal; flaky bawaan tidak muncul
+  kali ini); commit main 950dd66, deploy gh-pages c966ab2,
+  terverifikasi live.**
 
 ## 3. Checklist sebelum Bos tekan submit
 
