@@ -330,6 +330,27 @@ export function computeNotifications(items: Perangkat[], now = new Date()): Noti
   return list;
 }
 
+// ---------- Paket 20 — Pengingat Masa Berlaku SK ----------
+// Tighter 30-day window for the SK-expiry reminder (the 90-day window
+// above stays as the general masa-bhakti notification). The SK's validity
+// is the appointment term already stored per record (masaSelesai) — no
+// date is ever invented here; a record without masaSelesai is skipped.
+export const SK_SOON_DAYS = 30;
+
+/** SK reminders: expired first (most overdue first), then expiring within 30 days (nearest first). */
+export function computeSkReminders(items: Perangkat[], now = new Date()): NotifItem[] {
+  const list: NotifItem[] = [];
+  for (const p of items) {
+    if (!p.masaSelesai) continue;
+    const d = daysUntilEnd(p, now);
+    if (Number.isNaN(d)) continue;
+    if (d < 0) list.push({ perangkat: p, kind: "habis", days: d });
+    else if (d <= SK_SOON_DAYS) list.push({ perangkat: p, kind: "akan-habis", days: d });
+  }
+  list.sort((a, b) => a.days - b.days);
+  return list;
+}
+
 export function filterPerangkat(
   items: Perangkat[],
   search: string,

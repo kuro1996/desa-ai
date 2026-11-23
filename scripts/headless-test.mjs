@@ -226,19 +226,59 @@ async function main() {
         emptyHidden: document.getElementById("home-followup-empty").hidden,
       }));
     const followup = await readFollowup();
+    // Paket 20: expired / soon-expiring SKs join the card — the expected
+    // count is computed from localStorage + today's date (robust across
+    // months, as SKs keep expiring).
+    const nSk = await page.evaluate(() => {
+      const items = JSON.parse(localStorage.getItem("desaai-perangkat-v1") ?? "[]");
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      let n = 0;
+      let firstName = "";
+      let firstDate = "";
+      for (const p of items) {
+        if (!p.masaSelesai) continue;
+        const end = new Date(`${p.masaSelesai}T00:00:00`);
+        const d = Math.round((end.getTime() - today.getTime()) / 86400000);
+        if (d < 0 || d <= 30) {
+          n += 1;
+          if (d < 0 && (!firstDate || p.masaSelesai < firstDate)) {
+            firstDate = p.masaSelesai;
+            firstName = p.nama;
+          }
+        }
+      }
+      return { n, firstName };
+    });
+    const followupTotal = 7 + nSk.n;
     check(
-      "follow-up card lists 7 open items, oldest first (Biaya tidak sesuai, 14 Nov)",
-      followup.count === "7" &&
+      "follow-up card lists 7 open items + SK reminders, most urgent first",
+      followup.count === String(followupTotal) &&
         /5 complaints/.test(followup.summary) &&
         /2 register items/.test(followup.summary) &&
-        followup.items.length === 7 &&
-        /Biaya tidak sesuai/.test(followup.items[0]) &&
-        /Permohonan rekomendasi bantuan sosial/.test(followup.items[6]) &&
+        new RegExp(`${nSk.n} staff SK`).test(followup.summary) &&
+        followup.items.length === followupTotal &&
+        new RegExp(nSk.firstName).test(followup.items[0]) &&
+        /Permohonan rekomendasi bantuan sosial/.test(followup.items[followupTotal - 1]) &&
         followup.emptyHidden,
-      `count=${followup.count} summary=${followup.summary} first=${followup.items[0]?.slice(0, 50)} last=${followup.items[6]?.slice(0, 50)}`,
+      `count=${followup.count} summary=${followup.summary} first=${followup.items[0]?.slice(0, 50)} last=${followup.items[followupTotal - 1]?.slice(0, 50)}`,
     );
-    // Tap the first item (a complaint) -> complaints tab opens.
+    // Tap the first item (an expired SK) -> kepegawaian tab opens.
     await page.click("#home-followup-list li");
+    await sleep(300);
+    check(
+      "tapping a follow-up SK item opens the kepegawaian tab",
+      await page.$eval('[data-tab="kepegawaian"]', (el) => el.classList.contains("active")),
+    );
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    // Tap a complaint item -> complaints tab opens.
+    await page.evaluate(() => {
+      const li = [...document.querySelectorAll("#home-followup-list li")].find((el) =>
+        (el.textContent ?? "").includes("Biaya tidak sesuai"),
+      );
+      li?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
     await sleep(300);
     check(
       "tapping a follow-up complaint opens the complaints tab",
@@ -277,14 +317,17 @@ async function main() {
     await sleep(400);
     check(
       "incoming letter without disposition is flagged once (not duplicated)",
-      followupDisp.count === "7" &&
+      followupDisp.count === String(followupTotal) &&
         /1 not yet dispositioned/.test(followupDisp.summary) &&
         followupDisp.items.filter((t) => /not yet dispositioned/.test(t)).length === 1,
       `count=${followupDisp.count} summary=${followupDisp.summary}`,
     );
     // Empty state: everything resolved -> positive message, badge 0.
+    // (Paket 20: SK reminders must be cleared too — push every term end
+    // far into the future, then restore.)
     const seedAduRaw = await page.evaluate(() => localStorage.getItem("desaai-pengaduan-v1"));
     const seedAgsRaw2 = await page.evaluate(() => localStorage.getItem("desaai-agenda-v1"));
+    const seedKegRaw = await page.evaluate(() => localStorage.getItem("desaai-perangkat-v1"));
     await page.evaluate(() => {
       const adu = JSON.parse(localStorage.getItem("desaai-pengaduan-v1") ?? "[]");
       adu.forEach((a) => (a.status = "selesai"));
@@ -292,16 +335,20 @@ async function main() {
       const ags = JSON.parse(localStorage.getItem("desaai-agenda-v1") ?? "[]");
       ags.forEach((e) => (e.status = "selesai"));
       localStorage.setItem("desaai-agenda-v1", JSON.stringify(ags));
+      const keg = JSON.parse(localStorage.getItem("desaai-perangkat-v1") ?? "[]");
+      keg.forEach((p) => (p.masaSelesai = "2099-12-31"));
+      localStorage.setItem("desaai-perangkat-v1", JSON.stringify(keg));
     });
     await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
     await sleep(400);
     const followupEmpty = await readFollowup();
     await page.evaluate(
-      ({ adu, ags }) => {
+      ({ adu, ags, keg }) => {
         if (adu) localStorage.setItem("desaai-pengaduan-v1", adu);
         if (ags) localStorage.setItem("desaai-agenda-v1", ags);
+        if (keg) localStorage.setItem("desaai-perangkat-v1", keg);
       },
-      { adu: seedAduRaw, ags: seedAgsRaw2 },
+      { adu: seedAduRaw, ags: seedAgsRaw2, keg: seedKegRaw },
     );
     await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
     await sleep(400);
@@ -311,7 +358,7 @@ async function main() {
       followupEmpty.count === "0" &&
         followupEmpty.items.length === 0 &&
         !followupEmpty.emptyHidden &&
-        followupRestored.count === "7",
+        followupRestored.count === String(followupTotal),
       `empty count=${followupEmpty.count} items=${followupEmpty.items.length} restored=${followupRestored.count}`,
     );
     // Offline: the card still renders from local data (no reload — the
@@ -325,7 +372,7 @@ async function main() {
     await page.setOfflineMode(false);
     check(
       "follow-up card renders offline (local data only)",
-      followupOffline.count === "7" && followupOffline.items.length === 7,
+      followupOffline.count === String(followupTotal) && followupOffline.items.length === followupTotal,
       `count=${followupOffline.count} items=${followupOffline.items.length}`,
     );
     // Paket 10 — Briefing Pagi: date, summary counts, focus list, copy, nav.
@@ -1293,6 +1340,133 @@ async function main() {
         kegCounts.notifItems > 0,
       `badge=${kegCounts.notifCount} items=${kegCounts.notifItems} expected=${kegCounts.calcHabis + kegCounts.calcAkanHabis}`,
     );
+    // Paket 20 — Pengingat Masa Berlaku SK (30-day window, most urgent
+    // first). Expected values computed from localStorage + today's date.
+    const readSk = () =>
+      page.evaluate(() => ({
+        count: document.getElementById("keg-sk-count")?.textContent ?? "",
+        items: [...document.querySelectorAll("#keg-sk-list li")].map(
+          (li) => li.textContent ?? "",
+        ),
+        emptyHidden: document.getElementById("keg-sk-empty").hidden,
+      }));
+    const skExpected = await page.evaluate(() => {
+      const items = JSON.parse(localStorage.getItem("desaai-perangkat-v1") ?? "[]");
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const list = [];
+      for (const p of items) {
+        if (!p.masaSelesai) continue;
+        const end = new Date(`${p.masaSelesai}T00:00:00`);
+        const d = Math.round((end.getTime() - today.getTime()) / 86400000);
+        if (d < 0 || d <= 30) list.push({ nama: p.nama, days: d });
+      }
+      list.sort((a, b) => a.days - b.days);
+      return list;
+    });
+    const sk = await readSk();
+    check(
+      "SK reminder lists expired + expiring ≤30 days, most urgent first",
+      sk.count === String(skExpected.length) &&
+        sk.items.length === skExpected.length &&
+        skExpected.length > 0 &&
+        sk.items[0].includes(skExpected[0].nama) &&
+        sk.emptyHidden,
+      `count=${sk.count} expected=${skExpected.length} first=${sk.items[0]?.slice(0, 60)}`,
+    );
+    // Days math: the first item's day count matches the stored end date.
+    const firstDays = skExpected[0].days;
+    check(
+      "SK reminder day count matches the stored end date",
+      firstDays < 0
+        ? new RegExp(`SK expired ${-firstDays} days ago`).test(sk.items[0])
+        : new RegExp(`SK expires in ${firstDays} days`).test(sk.items[0]),
+      `first=${sk.items[0]?.slice(0, 80)}`,
+    );
+    // Manipulation: a record moved to +10 days appears as expiring soon;
+    // a record with no end date is skipped (never guessed).
+    const seedKegRaw20 = await page.evaluate(() => localStorage.getItem("desaai-perangkat-v1"));
+    const skManip = await page.evaluate(() => {
+      const items = JSON.parse(localStorage.getItem("desaai-perangkat-v1") ?? "[]");
+      const today = new Date();
+      const in10 = new Date(today.getTime() + 10 * 86400000).toISOString().slice(0, 10);
+      const far = items.find((p) => p.masaSelesai === "2027-12-31");
+      const inList = items.find((p) => p.masaSelesai === "2026-06-30");
+      if (far) far.masaSelesai = in10;
+      if (inList) inList.masaSelesai = "";
+      localStorage.setItem("desaai-perangkat-v1", JSON.stringify(items));
+      return { farName: far?.nama ?? "", inName: inList?.nama ?? "" };
+    });
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(400);
+    const skManipRead = await readSk();
+    check(
+      "SK reminder picks up a +10-day record and skips a record without an end date",
+      skManipRead.count === String(skExpected.length) &&
+        skManipRead.items.some(
+          (t) => t.includes(skManip.farName) && /SK expires in 10 days/.test(t),
+        ) &&
+        !skManipRead.items.some((t) => t.includes(skManip.inName)),
+      `count=${skManipRead.count} far=${skManip.farName} skipped=${skManip.inName}`,
+    );
+    // Empty state: nothing expiring soon -> positive message, badge 0.
+    await page.evaluate(() => {
+      const items = JSON.parse(localStorage.getItem("desaai-perangkat-v1") ?? "[]");
+      items.forEach((p) => (p.masaSelesai = "2099-12-31"));
+      localStorage.setItem("desaai-perangkat-v1", JSON.stringify(items));
+    });
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(400);
+    const skEmpty = await readSk();
+    await page.evaluate((raw) => {
+      if (raw) localStorage.setItem("desaai-perangkat-v1", raw);
+    }, seedKegRaw20);
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(400);
+    check(
+      "SK reminder shows the all-clear message when nothing expires soon",
+      skEmpty.count === "0" && skEmpty.items.length === 0 && !skEmpty.emptyHidden,
+      `count=${skEmpty.count} items=${skEmpty.items.length}`,
+    );
+    // Offline: the reminder still renders from local data.
+    await page.setOfflineMode(true);
+    await page.click('[data-tab="home"]');
+    await sleep(200);
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(300);
+    const skOffline = await readSk();
+    await page.setOfflineMode(false);
+    check(
+      "SK reminder renders offline (local data only)",
+      skOffline.count === String(skExpected.length) &&
+        skOffline.items.length === skExpected.length,
+      `count=${skOffline.count} items=${skOffline.items.length}`,
+    );
+    // Mode Warga: the kepegawaian tab (officer-only) is hidden.
+    await page.click("#mode-toggle");
+    await sleep(200);
+    const skWargaHidden = await page.evaluate(
+      () =>
+        document.body.classList.contains("mode-warga") &&
+        getComputedStyle(document.querySelector('[data-tab="kepegawaian"]')).display ===
+          "none",
+    );
+    await page.click("#mode-toggle");
+    await sleep(200);
+    const skWargaBack = await page.evaluate(
+      () => !document.body.classList.contains("mode-warga"),
+    );
+    check(
+      "SK reminder hidden in Mode Warga (kepegawaian is officer-only)",
+      skWargaHidden && skWargaBack,
+    );
+    // Warga mode switches the active tab to Home — return to Kepegawaian
+    // so the form tests below can click #keg-add.
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(300);
     // Desa cards: 10 cards; lembaga: 6 cards
     const desaCards = await page.$$eval("#keg-desa-cards .desa-card", (els) => els.length);
     check("kepegawaian renders 10 village cards", desaCards === 10, `${desaCards} cards`);

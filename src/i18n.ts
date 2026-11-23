@@ -105,13 +105,15 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   // Paket 16 — "Perlu Ditindaklanjuti" (needs follow-up)
   homeFollowupTitle: { en: "Needs follow-up", id: "Perlu Ditindaklanjuti" },
   homeFollowupHint: {
-    en: "Open complaints and mail-register items, oldest first — tap an item to open it.",
-    id: "Pengaduan dan agenda yang belum selesai, dari yang terlama — ketuk item untuk membukanya.",
+    en: "Open complaints, mail-register items, and expiring staff decrees (SK), oldest first — tap an item to open it.",
+    id: "Pengaduan, agenda, dan SK pegawai yang belum selesai, dari yang terlama — ketuk item untuk membukanya.",
   },
   homeFollowupEmpty: { en: "All followed up ✓", id: "Semua sudah ditindaklanjuti ✓" },
   homeFollowupAduan: { en: "complaints", id: "pengaduan" },
   homeFollowupAgenda: { en: "register items", id: "agenda" },
   homeFollowupNoDisposisi: { en: "not yet dispositioned", id: "belum didisposisi" },
+  // Paket 20 — SK pegawai ikut di kartu "Perlu Ditindaklanjuti"
+  homeFollowupSk: { en: "staff SK", id: "SK pegawai" },
   // Paket 17 — Pengaturan Kop Surat (letterhead settings)
   homeLetterheadTitle: { en: "Letterhead settings", id: "Pengaturan Kop Surat" },
   homeLetterheadHint: {
@@ -339,6 +341,14 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   kegNotifAkanHabis: { en: "term ends in", id: "masa bhakti berakhir dalam" },
   kegNotifDaysAgo: { en: "days ago", id: "hari lalu" },
   kegNotifDays: { en: "days", id: "hari" },
+  // Paket 20 — Pengingat Masa Berlaku SK (SK expiry reminders, 30-day window)
+  kegSkTitle: { en: "SK Expiry Reminders", id: "Pengingat Masa Berlaku SK" },
+  kegSkEmpty: {
+    en: "All appointment decrees (SK) are still valid ✓",
+    id: "Semua SK masih berlaku ✓",
+  },
+  kegSkHabis: { en: "SK expired", id: "SK sudah habis" },
+  kegSkAkanHabis: { en: "SK expires in", id: "SK habis dalam" },
   kegFormTitle: { en: "Add officer", id: "Input pegawai" },
   kegAdd: { en: "Save officer", id: "Simpan data" },
   kegNeedName: {

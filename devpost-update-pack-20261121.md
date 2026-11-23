@@ -204,6 +204,28 @@ so the office keeps working offline. 199 automated checks on every build
   Agenda yang memang khusus petugas. Tes: headless 204 → **211
   cek** (7 cek baru, semua hijau), PWA tetap **16/16** (total
   227/228 — 1 cek flaky bawaan, lihat §4).
+- **Paket 20 (23 Nov siang): Pengingat Masa Berlaku SK Pegawai** —
+  bagian "Pengingat Masa Berlaku SK" baru di tab Kepegawaian, di atas
+  daftar pegawai: daftar pegawai yang SK-nya sudah habis atau akan
+  habis dalam 30 hari, diurutkan dari yang paling mendesak (sudah habis
+  dulu — paling lama habis di atas — lalu yang paling dekat habis).
+  Tiap item menampilkan nama, jabatan + desa, tanggal habis, dan sisa
+  hari ("SK sudah habis X hari lalu" / "SK habis dalam X hari").
+  Semua dihitung dari tanggal habis SK (`masaSelesai`) yang sudah ada
+  di data pegawai — tanpa tanggal, nama, atau jenis SK karangan;
+  pegawai tanpa tanggal habis dilewati. Bila tidak ada yang mendekati
+  habis: pesan positif "Semua SK masih berlaku ✓". Item SK yang
+  mendesak juga ikut muncul di kartu "Perlu Ditindaklanjuti" di
+  Beranda (Paket 16), lengkap dengan hitungan hari dan lompat ke tab
+  Kepegawaian saat diketuk. 100% lokal, bekerja offline; ikut
+  tersembunyi di Mode Warga bersama tab Kepegawaian yang memang khusus
+  petugas. **Status jujur (23 Nov ~13:00 WIB): kode selesai dan
+  logika pengingat sudah diverifikasi di Node (urutan, batas 30 hari,
+  hitungan hari, pegawai tanpa tanggal dilewati) — tetapi hitungan
+  tes headless penuh (target 233+) BELUM bisa dijalankan karena
+  lingkungan VM sedang rusak (Chrome tidak bisa start + proses build
+  tidak bisa menulis file sejak 23 Nov ~12:32 WIB; lihat §4).
+  Jangan tulis angka 233 di Devpost sebelum tes penuh itu hijau.**
 
 ## 3. Checklist sebelum Bos tekan submit
 

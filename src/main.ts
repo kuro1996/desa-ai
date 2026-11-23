@@ -54,6 +54,7 @@ import {
   AGAMA_LIST,
   buildKepegawaianSummary,
   computeNotifications,
+  computeSkReminders,
   computeStats,
   daysUntilEnd,
   DESA_LIST,
@@ -754,12 +755,13 @@ function renderMonthlyTrend(): void {
 // it works fully offline — same sources as the monthly report.
 
 interface FollowUpItem {
-  kind: "pengaduan" | "agenda";
+  kind: "pengaduan" | "agenda" | "kepegawaian";
   id: string;
   title: string;
-  date: number; // createdAt (complaint) / tanggal (register)
-  status: AduanStatus | AgendaStatus;
+  date: number; // createdAt (complaint) / tanggal (register) / masaSelesai (SK)
+  status: AduanStatus | AgendaStatus | "habis" | "akan-habis";
   needDisposisi: boolean;
+  skDays?: number; // days until SK expiry (negative = expired) — kepegawaian only
 }
 
 function followUpItems(): FollowUpItem[] {
@@ -786,17 +788,32 @@ function followUpItems(): FollowUpItem[] {
       needDisposisi: e.arah === "masuk" && e.disposisi === "",
     });
   }
+  // Paket 20 — expired / soon-expiring staff decrees (SK) join the list.
+  // Sort key is the SK end date, so the most overdue SK sorts first.
+  for (const n of computeSkReminders(loadPerangkat())) {
+    items.push({
+      kind: "kepegawaian",
+      id: n.perangkat.id,
+      title: `${n.perangkat.nama} — ${n.perangkat.jabatan}, ${n.perangkat.desa}`,
+      date: new Date(`${n.perangkat.masaSelesai}T00:00:00`).getTime(),
+      status: n.kind,
+      needDisposisi: false,
+      skDays: n.days,
+    });
+  }
   return items.sort((a, b) => a.date - b.date);
 }
 
 function renderFollowUp(): void {
   const items = followUpItems();
   const nAduan = items.filter((i) => i.kind === "pengaduan").length;
-  const nAgenda = items.length - nAduan;
+  const nAgenda = items.filter((i) => i.kind === "agenda").length;
+  const nSk = items.filter((i) => i.kind === "kepegawaian").length;
   const nDisp = items.filter((i) => i.needDisposisi).length;
   $("home-followup-count").textContent = String(items.length);
   $("home-followup-summary").textContent =
     `${nAduan} ${t("homeFollowupAduan", lang)} · ${nAgenda} ${t("homeFollowupAgenda", lang)}` +
+    (nSk > 0 ? ` · ${nSk} ${t("homeFollowupSk", lang)}` : "") +
     (nDisp > 0 ? ` · ${nDisp} ${t("homeFollowupNoDisposisi", lang)}` : "");
   const list = $("home-followup-list");
   list.innerHTML = "";
@@ -809,20 +826,35 @@ function renderFollowUp(): void {
     const strong = document.createElement("strong");
     strong.textContent = item.title;
     li.appendChild(strong);
-    const days = Math.max(
-      0,
-      Math.floor((Date.now() - item.date) / 86_400_000),
-    );
     const detail = document.createElement("span");
-    const statusLabel =
-      item.status === "baru"
-        ? t("aduStatusBaru", lang)
-        : t("aduStatusDiproses", lang);
-    detail.textContent =
-      `${item.kind === "pengaduan" ? t("tabPengaduan", lang) : t("tabAgenda", lang)} · ` +
-      statusLabel +
-      (item.needDisposisi ? ` · ${t("homeFollowupNoDisposisi", lang)}` : "") +
-      ` · ${days} ${t("homeAduanWaiting", lang)} (${new Date(item.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })})`;
+    const dateStr = new Date(item.date).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    if (item.kind === "kepegawaian") {
+      const d = item.skDays ?? 0;
+      detail.textContent =
+        `${t("homeFollowupSk", lang)} · ` +
+        (d < 0
+          ? `${t("kegSkHabis", lang)} ${-d} ${t("kegNotifDaysAgo", lang)}`
+          : `${t("kegSkAkanHabis", lang)} ${d} ${t("kegNotifDays", lang)}`) +
+        ` (${dateStr})`;
+    } else {
+      const days = Math.max(
+        0,
+        Math.floor((Date.now() - item.date) / 86_400_000),
+      );
+      const statusLabel =
+        item.status === "baru"
+          ? t("aduStatusBaru", lang)
+          : t("aduStatusDiproses", lang);
+      detail.textContent =
+        `${item.kind === "pengaduan" ? t("tabPengaduan", lang) : t("tabAgenda", lang)} · ` +
+        statusLabel +
+        (item.needDisposisi ? ` · ${t("homeFollowupNoDisposisi", lang)}` : "") +
+        ` · ${days} ${t("homeAduanWaiting", lang)} (${dateStr})`;
+    }
     li.appendChild(detail);
     list.appendChild(li);
   }
@@ -2552,6 +2584,29 @@ function renderKepegawaian(): void {
         : `${t("kegNotifAkanHabis", lang)} ${n.days} ${t("kegNotifDays", lang)} (${formatDateId(n.perangkat.masaSelesai)})`;
     li.appendChild(detail);
     notifList.appendChild(li);
+  }
+
+  // Paket 20 — Pengingat Masa Berlaku SK (30-day window; the SK's validity
+  // is the appointment term already stored as masaSelesai — nothing is
+  // invented; records without an end date are skipped by computeSkReminders).
+  const skReminders = computeSkReminders(items);
+  const skList = $("keg-sk-list");
+  skList.innerHTML = "";
+  $("keg-sk-count").textContent = String(skReminders.length);
+  $("keg-sk-empty").hidden = skReminders.length > 0;
+  for (const n of skReminders) {
+    const li = document.createElement("li");
+    li.className = `notif-item ${n.kind === "habis" ? "notif-habis" : ""}`;
+    const strong = document.createElement("strong");
+    strong.textContent = `${n.perangkat.nama} — ${n.perangkat.jabatan}, ${n.perangkat.desa}`;
+    li.appendChild(strong);
+    const detail = document.createElement("span");
+    detail.textContent =
+      n.kind === "habis"
+        ? `${t("kegSkHabis", lang)} ${-n.days} ${t("kegNotifDaysAgo", lang)} (${formatDateId(n.perangkat.masaSelesai)})`
+        : `${t("kegSkAkanHabis", lang)} ${n.days} ${t("kegNotifDays", lang)} (${formatDateId(n.perangkat.masaSelesai)})`;
+    li.appendChild(detail);
+    skList.appendChild(li);
   }
 
   // Table (search + filters)
