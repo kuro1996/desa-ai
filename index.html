@@ -28,8 +28,8 @@
         /* storage unavailable — light theme by default */
       }
     </script>
-    <script type="module" crossorigin src="./assets/index-DysbpIBF.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-DI1tEHBw.css">
+    <script type="module" crossorigin src="./assets/index-gxRmQowA.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-UtH5gVSz.css">
   </head>
   <body>
     <header class="hero">
@@ -137,6 +137,10 @@
         <button class="tab" data-tab="pengaduan" role="tab" aria-selected="false" type="button">
           <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
           <span data-i18n="tabPengaduan">Complaints</span>
+        </button>
+        <button class="tab" data-tab="agenda" role="tab" aria-selected="false" type="button">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M2 10h20"/></svg>
+          <span data-i18n="tabAgenda">Mail Register</span>
         </button>
       </nav>
 
@@ -929,6 +933,102 @@
             <button class="btn" type="submit" data-i18n="close">Close</button>
           </form>
         </dialog>
+      </section>
+
+      <!-- ============ AGENDA SURAT (mail register) — Paket 11 ============ -->
+      <section id="panel-agenda" class="panel" role="tabpanel" hidden>
+        <h2 data-i18n="agendaTitle">Buku agenda surat — surat masuk &amp; keluar</h2>
+        <p class="hint" data-i18n="agendaHint">
+          Setiap surat yang masuk atau keluar kantor tercatat dengan nomor agenda.
+        </p>
+        <p id="agenda-demo-note" class="banner banner-warn" data-i18n="agendaDemoNote">
+          ⚠️ DATA CONTOH — bukan data asli.
+        </p>
+
+        <div class="stats adu-stats">
+          <div class="stat-card stat-rose">
+            <p class="stat-label" data-i18n="agendaStatMasuk">Surat masuk</p>
+            <h3 id="agenda-stat-masuk">0</h3>
+          </div>
+          <div class="stat-card stat-amber">
+            <p class="stat-label" data-i18n="agendaStatKeluar">Surat keluar</p>
+            <h3 id="agenda-stat-keluar">0</h3>
+          </div>
+          <div class="stat-card stat-green">
+            <p class="stat-label" data-i18n="agendaStatBelum">Perlu tindak lanjut</p>
+            <h3 id="agenda-stat-belum">0</h3>
+          </div>
+        </div>
+
+        <h3 class="subhead" data-i18n="agendaFormTitle">Catat surat</h3>
+        <form id="agenda-form" class="form-grid">
+          <label class="field">
+            <span data-i18n="agendaArah">Arah surat</span>
+            <select id="agenda-in-arah">
+              <option value="masuk" data-i18n="agendaArahMasuk">Masuk (surat masuk)</option>
+              <option value="keluar" data-i18n="agendaArahKeluar">Keluar (surat keluar)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span data-i18n="agendaNomorSurat">Nomor surat (pengirim / kita)</span>
+            <input id="agenda-in-nomor" type="text" placeholder="Contoh: 470/12/DS-KTS/XI/2026" />
+          </label>
+          <label class="field">
+            <span data-i18n="agendaPihak">Pengirim / tujuan</span>
+            <input
+              id="agenda-in-pihak"
+              type="text"
+              data-i18n-ph="agendaPihakPh"
+              placeholder="Contoh: Desa Katis"
+            />
+          </label>
+          <label class="field">
+            <span data-i18n="agendaTanggal">Tanggal surat</span>
+            <input id="agenda-in-tanggal" type="date" />
+          </label>
+          <label class="field">
+            <span data-i18n="agendaDisposisi">Disposisi</span>
+            <select id="agenda-in-disposisi"></select>
+          </label>
+          <label class="field field-wide">
+            <span data-i18n="agendaPerihal">Perihal</span>
+            <input
+              id="agenda-in-perihal"
+              type="text"
+              data-i18n-ph="agendaPerihalPh"
+              placeholder="Contoh: Permohonan rekomendasi bantuan sosial"
+            />
+          </label>
+          <div class="actions field-wide">
+            <button id="agenda-submit" class="btn btn-primary" type="submit">
+              <span data-i18n="agendaSubmit">Catat surat</span>
+            </button>
+          </div>
+        </form>
+        <div id="agenda-form-status" class="status" aria-live="polite"></div>
+
+        <h3 class="subhead" data-i18n="agendaListTitle">Daftar agenda</h3>
+        <div class="form-grid">
+          <label class="field">
+            <span data-i18n="agendaFilterArah">Semua arah</span>
+            <select id="agenda-filter-arah"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="agendaFilterStatus">Semua status</span>
+            <select id="agenda-filter-status"></select>
+          </label>
+        </div>
+        <div id="agenda-list" class="drafts-list"></div>
+        <p id="agenda-empty" class="hint" hidden data-i18n="agendaEmpty">
+          Tidak ada entri dengan filter ini.
+        </p>
+        <p id="agenda-count" class="hint"></p>
+        <div class="actions">
+          <button id="agenda-export" class="btn" type="button">
+            <span data-i18n="agendaExport">Ekspor CSV</span>
+          </button>
+        </div>
+        <div id="agenda-export-status" class="status" aria-live="polite"></div>
       </section>
     </main>
 
