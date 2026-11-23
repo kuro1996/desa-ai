@@ -2610,33 +2610,6 @@ function renderKepegawaian(): void {
     skList.appendChild(li);
   }
 
-  // Paket 21 — Statistik Pegawai: breakdown per jabatan / per desa / SK,
-  // computed only from the records already stored (nothing invented;
-  // a record without jabatan/desa groups under "Tidak diketahui", and a
-  // record without a usable SK end date counts as "tanpa tanggal SK").
-  const bd = computeStaffBreakdown(items);
-  $("keg-stat21-total").textContent = String(bd.total);
-  const renderBreakdown = (id: string, rows: Array<{ key: string; count: number }>): void => {
-    const ul = $(id);
-    ul.innerHTML = "";
-    for (const r of rows) {
-      const li = document.createElement("li");
-      const label = document.createElement("span");
-      label.textContent = r.key === "" ? t("kegStat21Unknown", lang) : r.key;
-      const count = document.createElement("strong");
-      count.textContent = String(r.count);
-      li.appendChild(label);
-      li.appendChild(count);
-      ul.appendChild(li);
-    }
-  };
-  renderBreakdown("keg-stat21-jabatan", bd.byJabatan);
-  renderBreakdown("keg-stat21-desa", bd.byDesa);
-  $("keg-stat21-sk-berlaku").textContent = String(bd.skBerlaku);
-  $("keg-stat21-sk-habis").textContent = String(bd.skHabis);
-  $("keg-stat21-sk-tanpa").textContent = String(bd.skTanpaTanggal);
-  $("keg-stat21-sk-tanpa-wrap").hidden = bd.skTanpaTanggal === 0;
-
   // Table (search + filters)
   const search = ($("keg-search") as HTMLInputElement).value ?? "";
   const desaF = ($("keg-filter-desa") as HTMLSelectElement).value ?? "";
@@ -2729,6 +2702,50 @@ function renderKepegawaian(): void {
   });
   $("keg-count").textContent =
     `${t("kegShowing", lang)} ${filtered.length} ${t("kegOf", lang)} ${items.length} ${t("kegRecords", lang)}`;
+
+  // Paket 21 — Statistik Pegawai: breakdown per jabatan / per desa / SK,
+  // computed only from the records already stored (nothing invented;
+  // a record without jabatan/desa groups under "Tidak diketahui", and a
+  // record without a usable SK end date counts as "tanpa tanggal SK").
+  // Paket 22 — Pencarian Cepat Pegawai: the breakdown follows the current
+  // filter (search + dropdowns), so the numbers always describe the rows
+  // actually shown; a note says so while a filter is active. The top stat
+  // cards, SK reminders and notifications above stay global — they are
+  // office-wide alerts, not search results.
+  const filterActive =
+    search.trim() !== "" || desaF !== "" || jabF !== "" || unitF !== "" || prevStatus !== "";
+  const bd = computeStaffBreakdown(filtered);
+  $("keg-stat21-total").textContent = String(bd.total);
+  const renderBreakdown = (id: string, rows: Array<{ key: string; count: number }>): void => {
+    const ul = $(id);
+    ul.innerHTML = "";
+    for (const r of rows) {
+      const li = document.createElement("li");
+      const label = document.createElement("span");
+      label.textContent = r.key === "" ? t("kegStat21Unknown", lang) : r.key;
+      const count = document.createElement("strong");
+      count.textContent = String(r.count);
+      li.appendChild(label);
+      li.appendChild(count);
+      ul.appendChild(li);
+    }
+  };
+  renderBreakdown("keg-stat21-jabatan", bd.byJabatan);
+  renderBreakdown("keg-stat21-desa", bd.byDesa);
+  $("keg-stat21-sk-berlaku").textContent = String(bd.skBerlaku);
+  $("keg-stat21-sk-habis").textContent = String(bd.skHabis);
+  $("keg-stat21-sk-tanpa").textContent = String(bd.skTanpaTanggal);
+  $("keg-stat21-sk-tanpa-wrap").hidden = bd.skTanpaTanggal === 0;
+  const filterNote = $("keg-stat21-filter-note");
+  filterNote.hidden = !filterActive;
+  if (filterActive) {
+    filterNote.textContent =
+      `${t("kegStat21Filtered", lang)}: ${t("kegShowing", lang)} ${filtered.length} ${t("kegOf", lang)} ${items.length} ${t("kegRecords", lang)}`;
+  }
+
+  // Paket 22 — an empty search result says so explicitly instead of
+  // leaving a bare empty table.
+  $("keg-no-result").hidden = filtered.length > 0;
 
   // Desa cards
   const desaWrap = $("keg-desa-cards");

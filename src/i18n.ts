@@ -359,6 +359,13 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   kegStat21SkHabis: { en: "SK expired", id: "SK sudah habis" },
   kegStat21SkTanpaTanggal: { en: "No SK end date", id: "Tanpa tanggal SK" },
   kegStat21Unknown: { en: "Unknown", id: "Tidak diketahui" },
+  // Paket 22 — Pencarian Cepat Pegawai: empty-result message + the note
+  // shown on the statistics card while a search/filter is active.
+  kegNoResult: { en: "No staff match your search.", id: "Tidak ada pegawai yang cocok." },
+  kegStat21Filtered: {
+    en: "Statistics for the filtered results",
+    id: "Statistik untuk hasil saringan",
+  },
   kegFormTitle: { en: "Add officer", id: "Input pegawai" },
   kegAdd: { en: "Save officer", id: "Simpan data" },
   kegNeedName: {

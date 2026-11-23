@@ -1664,6 +1664,75 @@ async function main() {
     await page.evaluate(() => document.getElementById("keg-search")?.dispatchEvent(new Event("input", { bubbles: true })));
     await sleep(200);
 
+    // Paket 22 — Pencarian Cepat Pegawai: case-insensitive substring
+    // search on name/position/village, an explicit empty-result message,
+    // and statistics that follow the active search. (24 records here:
+    // 23 demo + the "Tes Tambah" record added above.)
+    const setKegSearch = async (q) => {
+      await page.$eval("#keg-search", (el) => { el.value = ""; });
+      await page.evaluate(() =>
+        document.getElementById("keg-search")?.dispatchEvent(new Event("input", { bubbles: true })),
+      );
+      if (q) await page.type("#keg-search", q);
+      await sleep(300);
+    };
+    const kegSearchState = () =>
+      page.evaluate(() => ({
+        rows: document.querySelectorAll("#keg-table-body tr").length,
+        noResultHidden: document.getElementById("keg-no-result")?.hidden ?? true,
+        count: document.getElementById("keg-count")?.textContent ?? "",
+        statTotal: document.getElementById("keg-stat21-total")?.textContent ?? "",
+        noteHidden: document.getElementById("keg-stat21-filter-note")?.hidden ?? true,
+        note: document.getElementById("keg-stat21-filter-note")?.textContent ?? "",
+        jabGroups: document.querySelectorAll("#keg-stat21-jabatan li").length,
+        desaGroups: document.querySelectorAll("#keg-stat21-desa li").length,
+        skSum:
+          Number(document.getElementById("keg-stat21-sk-berlaku")?.textContent ?? "0") +
+          Number(document.getElementById("keg-stat21-sk-habis")?.textContent ?? "0") +
+          Number(document.getElementById("keg-stat21-sk-tanpa")?.textContent ?? "0"),
+      }));
+    await setKegSearch("AHMAD");
+    const p22UpperRows = (await kegSearchState()).rows;
+    check("kepegawaian search is case-insensitive", p22UpperRows === 1, `${p22UpperRows} rows for "AHMAD"`);
+    await setKegSearch("ahma");
+    const p22SubRows = (await kegSearchState()).rows;
+    check("kepegawaian search matches a name substring", p22SubRows === 2, `${p22SubRows} rows for "ahma" (Ahmad Fauzi + Siti Rahmawati)`);
+    await setKegSearch("kepala desa");
+    const p22JabRows = (await kegSearchState()).rows;
+    check("kepegawaian search matches position", p22JabRows === 5, `${p22JabRows} rows for "kepala desa"`);
+    await setKegSearch("terak");
+    const p22DesaRows = (await kegSearchState()).rows;
+    check("kepegawaian search matches village", p22DesaRows === 3, `${p22DesaRows} rows for "terak" (2 demo + Tes Tambah)`);
+    await setKegSearch("zzzz-tidak-ada");
+    const p22NoMatch = await kegSearchState();
+    check(
+      "kepegawaian search with no match shows the empty message",
+      p22NoMatch.rows === 0 && !p22NoMatch.noResultHidden && /0/.test(p22NoMatch.count),
+      `rows=${p22NoMatch.rows} noResultHidden=${p22NoMatch.noResultHidden} count=${p22NoMatch.count}`,
+    );
+    await setKegSearch("Ahmad");
+    const p22FilteredBd = await kegSearchState();
+    check(
+      "kepegawaian statistics follow the active search",
+      p22FilteredBd.statTotal === "1" &&
+        !p22FilteredBd.noteHidden &&
+        p22FilteredBd.note.includes("24") &&
+        p22FilteredBd.jabGroups === 1 &&
+        p22FilteredBd.desaGroups === 1 &&
+        p22FilteredBd.skSum === 1,
+      `statTotal=${p22FilteredBd.statTotal} note=${p22FilteredBd.note} jab=${p22FilteredBd.jabGroups} desa=${p22FilteredBd.desaGroups} skSum=${p22FilteredBd.skSum}`,
+    );
+    await setKegSearch("");
+    const p22Cleared = await kegSearchState();
+    check(
+      "kepegawaian clearing the search restores full statistics",
+      p22Cleared.rows === 24 &&
+        p22Cleared.statTotal === "24" &&
+        p22Cleared.noteHidden &&
+        p22Cleared.noResultHidden,
+      `rows=${p22Cleared.rows} statTotal=${p22Cleared.statTotal} noteHidden=${p22Cleared.noteHidden}`,
+    );
+
     // Village filter: Katis has 3 demo records
     await page.select("#keg-filter-desa", "Katis");
     await sleep(300);
