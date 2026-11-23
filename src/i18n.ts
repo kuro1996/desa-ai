@@ -62,6 +62,16 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   homeReportPrinted: { en: "Report sent to print.", id: "Laporan dikirim ke printer." },
   homeReportExport: { en: "Export CSV", id: "Ekspor CSV" },
   homeReportExported: { en: "Monthly report CSV downloaded.", id: "Laporan CSV diunduh." },
+  // Paket 18 — Grafik Tren Bulanan (6 bulan terakhir)
+  homeMonthTrendTitle: { en: "Monthly trend — last 6 months", id: "Tren bulanan — 6 bulan terakhir" },
+  homeMonthTrendHint: {
+    en: "Letters, mail register and complaints per month, from local data only.",
+    id: "Surat, agenda, dan pengaduan per bulan, dari data lokal saja.",
+  },
+  mtrendSurat: { en: "Letters saved", id: "Surat tersimpan" },
+  mtrendMasuk: { en: "Register in", id: "Agenda masuk" },
+  mtrendKeluar: { en: "Register out", id: "Agenda keluar" },
+  mtrendAduan: { en: "Complaints", id: "Pengaduan" },
   // Paket 14 — Backup & Restore
   homeBackupTitle: { en: "Data & backup", id: "Data & cadangan" },
   homeBackupHint: {

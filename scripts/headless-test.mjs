@@ -562,6 +562,120 @@ async function main() {
         offlineCsv.includes("Agenda,Surat masuk bulan ini,"),
       offlineCsv.split("\n").slice(3, 4).join(""),
     );
+    // Paket 18: Grafik Tren Bulanan — 6 bulan × 4 seri, data lokal.
+    const trendDom = await page.evaluate(() => {
+      const svg = document.querySelector("#home-month-trend svg");
+      const rects = [...document.querySelectorAll("#home-month-trend rect")];
+      const legend = [...document.querySelectorAll("#home-month-trend-legend > span")];
+      const lastLabel = new Date().toLocaleDateString("id-ID", {
+        month: "short",
+        year: "2-digit",
+      });
+      return {
+        hasSvg: !!svg,
+        bars: rects.length,
+        legend: legend.length,
+        lastMonthShown: (svg?.textContent ?? "").includes(lastLabel),
+      };
+    });
+    check(
+      "monthly trend chart renders 6 months × 4 series with a 4-item legend",
+      trendDom.hasSvg && trendDom.bars === 24 && trendDom.legend === 4 &&
+        trendDom.lastMonthShown,
+      `bars=${trendDom.bars} legend=${trendDom.legend} lastMonth=${trendDom.lastMonthShown}`,
+    );
+    // Bar counts match local data, computed independently here.
+    const trendExpected = await page.evaluate(() => {
+      const read = (key) => {
+        try {
+          return JSON.parse(localStorage.getItem(key) ?? "[]");
+        } catch {
+          return [];
+        }
+      };
+      const now = new Date();
+      const months = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push({ y: d.getFullYear(), m: d.getMonth() });
+      }
+      const inYM = (ts, y, m) => {
+        const d = new Date(ts);
+        return d.getFullYear() === y && d.getMonth() === m;
+      };
+      const letters = read("desaai-drafts-v1").filter((d) => d.kind === "letter");
+      const agenda = read("desaai-agenda-v1");
+      const aduan = read("desaai-pengaduan-v1");
+      return months.map(({ y, m }) => ({
+        surat: letters.filter((d) => inYM(d.createdAt, y, m)).length,
+        masuk: agenda.filter((e) => e.arah === "masuk" && inYM(e.tanggal, y, m)).length,
+        keluar: agenda.filter((e) => e.arah === "keluar" && inYM(e.tanggal, y, m)).length,
+        aduan: aduan.filter((a) => inYM(a.createdAt, y, m)).length,
+      }));
+    });
+    const trendActual = await page.$$eval("#home-month-trend rect", (rects) => {
+      const out = Array.from({ length: 6 }, () => ({}));
+      for (const r of rects) {
+        out[Number(r.dataset.month)][r.dataset.series] = Number(r.dataset.value);
+      }
+      return out;
+    });
+    check(
+      "monthly trend bar counts match local data",
+      JSON.stringify(trendActual) === JSON.stringify(trendExpected),
+      JSON.stringify(trendActual),
+    );
+    // Months without data render as 0, not as missing bars.
+    const trendZeros = await page.$$eval("#home-month-trend .mtrend-value", (texts) =>
+      texts.map((t) => t.textContent),
+    );
+    const zeroBars = trendExpected.flatMap((g) => Object.values(g)).filter((v) => v === 0).length;
+    const zeroGroups = trendExpected.filter(
+      (g) => Object.values(g).every((v) => v === 0),
+    ).length;
+    check(
+      "monthly trend shows 0 for months without data",
+      zeroGroups >= 1 &&
+        trendZeros.filter((t) => t === "0").length === zeroBars &&
+        trendZeros.length === 24,
+      `zeroGroups=${zeroGroups} zeroBars=${zeroBars} zeroLabels=${trendZeros.filter((t) => t === "0").length}`,
+    );
+    // Offline: re-rendering the home tab still shows the same chart.
+    await page.setOfflineMode(true);
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    const trendOffline = await page.$$eval("#home-month-trend rect", (rects) => {
+      const out = Array.from({ length: 6 }, () => ({}));
+      for (const r of rects) {
+        out[Number(r.dataset.month)][r.dataset.series] = Number(r.dataset.value);
+      }
+      return out;
+    });
+    await page.setOfflineMode(false);
+    check(
+      "monthly trend chart works offline",
+      JSON.stringify(trendOffline) === JSON.stringify(trendExpected),
+      JSON.stringify(trendOffline),
+    );
+    // Mode Warga: the report card (and its trend chart) stays visible,
+    // like the monthly report itself — only officer cards are hidden.
+    await page.click("#mode-toggle");
+    await sleep(200);
+    const trendWarga = await page.evaluate(() => ({
+      wrapVisible:
+        getComputedStyle(document.getElementById("home-month-trend-wrap")).display !== "none",
+      reportVisible:
+        getComputedStyle(document.querySelector(".bento-report")).display !== "none",
+    }));
+    await page.click("#mode-toggle");
+    await sleep(200);
+    await page.click('[data-tab="home"]');
+    await sleep(200);
+    check(
+      "monthly trend chart stays visible in Mode Warga with the report card",
+      trendWarga.wrapVisible && trendWarga.reportVisible,
+      JSON.stringify(trendWarga),
+    );
     // Paket 14: Backup & Restore — one JSON file, all five collections.
     const backupCard = await page.$("#home-backup-card");
     check("backup card exists on the home dashboard", !!backupCard);

@@ -1982,6 +1982,65 @@ html[data-theme="dark"] .ikm-radios label:has(input:checked) {
   font-size: 11px;
 }
 
+/* ---------- Paket 18: monthly trend chart (grouped bars) ---------- */
+
+.month-trend {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.mtrend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 0;
+  font-size: 0.82rem;
+}
+
+.mtrend-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.mtrend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.mtrend-bar-0,
+.mtrend-swatch.mtrend-0 {
+  fill: var(--green);
+  background: var(--green);
+}
+
+.mtrend-bar-1,
+.mtrend-swatch.mtrend-1 {
+  fill: var(--teal);
+  background: var(--teal);
+}
+
+.mtrend-bar-2,
+.mtrend-swatch.mtrend-2 {
+  fill: var(--amber);
+  background: var(--amber);
+}
+
+.mtrend-bar-3,
+.mtrend-swatch.mtrend-3 {
+  fill: var(--blue);
+  background: var(--blue);
+}
+
+.mtrend-value {
+  fill: var(--ink);
+  font-size: 10px;
+  font-weight: 700;
+}
+
 /* ---------- Paket 7: command palette, citizen mode, complaints chart ---------- */
 
 /* Command palette — modal dialog, centered near the top. */

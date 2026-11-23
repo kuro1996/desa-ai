@@ -635,6 +635,117 @@ function renderReportPreview(): void {
   }
 }
 
+// ---------- Paket 18 — Grafik Tren Bulanan (6 bulan terakhir) ----------
+// Grouped bars, hand-rolled SVG like the IKM trend (no dependency).
+// Four series, all counted from local data only: letters saved
+// (listLocalDrafts kind "letter", by createdAt), mail register in/out
+// (loadAgenda, by tanggal), complaints (loadAduan, by createdAt).
+// A month with no entries shows 0 — never invented.
+
+interface MonthlyTrendPoint {
+  label: string;
+  surat: number;
+  masuk: number;
+  keluar: number;
+  aduan: number;
+}
+
+type MonthlyTrendKey = "surat" | "masuk" | "keluar" | "aduan";
+
+function monthlyTrendData(now = new Date()): MonthlyTrendPoint[] {
+  const months: Array<{ y: number; m: number }> = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ y: d.getFullYear(), m: d.getMonth() });
+  }
+  const inYM = (ts: number, y: number, m: number): boolean => {
+    const d = new Date(ts);
+    return d.getFullYear() === y && d.getMonth() === m;
+  };
+  const letters = listLocalDrafts().filter((d) => d.kind === "letter");
+  const agenda = loadAgenda();
+  const aduan = loadAduan();
+  return months.map(({ y, m }) => ({
+    label: new Date(y, m, 1).toLocaleDateString("id-ID", {
+      month: "short",
+      year: "2-digit",
+    }),
+    surat: letters.filter((d) => inYM(d.createdAt, y, m)).length,
+    masuk: agenda.filter((e) => e.arah === "masuk" && inYM(e.tanggal, y, m)).length,
+    keluar: agenda.filter((e) => e.arah === "keluar" && inYM(e.tanggal, y, m)).length,
+    aduan: aduan.filter((a) => inYM(a.createdAt, y, m)).length,
+  }));
+}
+
+/** Integer grid step so the Y axis never shows fractions (counts are whole). */
+function monthlyTrendStep(max: number): number {
+  const target = max / 4;
+  const pow = Math.pow(10, Math.floor(Math.log10(Math.max(1, target))));
+  for (const mult of [1, 2, 5, 10]) {
+    if (mult * pow >= target) return Math.max(1, mult * pow);
+  }
+  return Math.max(1, 10 * pow);
+}
+
+function renderMonthlyTrend(): void {
+  const wrap = $("home-month-trend");
+  const pts = monthlyTrendData();
+  const series: Array<{ key: MonthlyTrendKey; label: string }> = [
+    { key: "surat", label: t("mtrendSurat", lang) },
+    { key: "masuk", label: t("mtrendMasuk", lang) },
+    { key: "keluar", label: t("mtrendKeluar", lang) },
+    { key: "aduan", label: t("mtrendAduan", lang) },
+  ];
+  const max = Math.max(1, ...pts.flatMap((p) => series.map((s) => p[s.key])));
+  const step = monthlyTrendStep(max);
+  const top = Math.ceil(max / step) * step;
+  const W = 640;
+  const H = 220;
+  const L = 36;
+  const R = 8;
+  const T = 20;
+  const B = 30;
+  const y = (v: number): number => T + (1 - v / top) * (H - T - B);
+  const groupW = (W - L - R) / pts.length;
+  const barW = 12;
+  const gap = 3;
+  const contentW = series.length * barW + (series.length - 1) * gap;
+  const grid: string[] = [];
+  for (let v = 0; v <= top; v += step) {
+    grid.push(
+      `<line x1="${L}" y1="${y(v)}" x2="${W - R}" y2="${y(v)}" class="trend-grid"/>` +
+        `<text x="${L - 6}" y="${y(v) + 4}" class="trend-axis" text-anchor="end">${v}</text>`,
+    );
+  }
+  const bars: string[] = [];
+  pts.forEach((p, i) => {
+    const gx = L + i * groupW + (groupW - contentW) / 2;
+    series.forEach((s, j) => {
+      const v = p[s.key];
+      const bx = gx + j * (barW + gap);
+      bars.push(
+        `<rect x="${bx.toFixed(1)}" y="${y(v).toFixed(1)}" width="${barW}" ` +
+          `height="${(y(0) - y(v)).toFixed(1)}" class="mtrend-bar-${j}" ` +
+          `data-month="${i}" data-series="${s.key}" data-value="${v}">` +
+          `<title>${p.label} — ${s.label}: ${v}</title></rect>`,
+      );
+      bars.push(
+        `<text x="${(bx + barW / 2).toFixed(1)}" y="${(y(v) - 4).toFixed(1)}" ` +
+          `class="mtrend-value" text-anchor="middle">${v}</text>`,
+      );
+    });
+    bars.push(
+      `<text x="${(L + i * groupW + groupW / 2).toFixed(1)}" y="${H - 8}" ` +
+        `class="trend-axis" text-anchor="middle">${p.label}</text>`,
+    );
+  });
+  wrap.innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Tren bulanan" ` +
+    `preserveAspectRatio="none" style="width:100%;height:auto;display:block">` +
+    `${grid.join("")}${bars.join("")}` +
+    `</svg>`;
+}
+
 // ---------- Paket 16 — "Perlu Ditindaklanjuti" ----------
 // One list of everything still needing officer action, oldest first:
 // open complaints + open mail-register items. A register entry for an
@@ -1337,6 +1448,7 @@ function renderHome(): void {
   renderTrend();
   renderAduanChart();
   renderReportPreview();
+  renderMonthlyTrend();
   renderFollowUp();
   renderBriefing();
   renderHomeSearch();

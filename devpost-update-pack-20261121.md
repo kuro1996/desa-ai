@@ -178,6 +178,18 @@ so the office keeps working offline. 199 automated checks on every build
   perintah di command palette (Ctrl+K). Tes: headless 189 → **199
   cek** (10 cek baru, semua hijau), PWA tetap **16/16** (total
   215/216 — 1 cek flaky bawaan, lihat §4).
+- **Paket 18 (23 Nov siang): Grafik Tren Bulanan** — grafik batang di
+  kartu Laporan Bulanan (Beranda) untuk 6 bulan terakhir: Surat
+  tersimpan, Agenda masuk, Agenda keluar, dan Pengaduan — semuanya
+  dihitung dari data lokal yang sudah ada (tanggal tiap entri), tanpa
+  library (SVG buatan tangan, pola yang sama dengan grafik tren IKM).
+  Tiap batang berlabel angka (bulan tanpa data tampil 0, bukan kosong
+  atau dikarang), tooltip per batang, legenda Bahasa Indonesia, dan
+  sumbu Y dengan langkah bilangan bulat. 100% lokal, bekerja offline;
+  kartu laporan — dan grafiknya — tetap terlihat di Mode Warga,
+  konsisten dengan laporan itu sendiri. Tes: headless 199 → **204
+  cek** (5 cek baru, semua hijau), PWA tetap **16/16** (total
+  220/221 — 1 cek flaky bawaan, lihat §4).
 
 ## 3. Checklist sebelum Bos tekan submit
 
@@ -217,3 +229,5 @@ so the office keeps working offline. 199 automated checks on every build
   total 215/216; 10 cek kop-surat baru semua hijau, PWA 16/16; satu
   cek "Buat SK" sempat gagal di 2 run lalu lolos di run ke-3 (flaky
   timing, bukan regresi — kode prefill tidak disentuh Paket 17).**
+  **Update Paket 18: cek flaky itu GAGAL lagi di run terakhir (204/205 headless) —
+  total 220/221; 5 cek tren-bulanan baru semua hijau, PWA 16/16.**
