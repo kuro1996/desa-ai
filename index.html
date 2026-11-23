@@ -160,6 +160,23 @@
             <div id="home-search-results" class="search-results" aria-live="polite"></div>
           </div>
 
+          <!-- Paket 10 — Briefing Pagi: daily digest + copy to WhatsApp -->
+          <div id="home-briefing" class="bento-card bento-briefing">
+            <p class="bento-label"><span data-i18n="briefingTitle">Briefing Pagi</span> — <span id="home-briefing-date"></span></p>
+            <p id="home-briefing-summary" class="briefing-summary"></p>
+            <p class="bento-sub"><span data-i18n="briefingFocus">Fokus hari ini</span>:</p>
+            <ul id="home-briefing-focus" class="notif-list"></ul>
+            <p id="home-briefing-empty" class="hint" hidden data-i18n="briefingEmpty">
+              Tidak ada yang mendesak hari ini.
+            </p>
+            <div class="actions">
+              <button id="home-briefing-copy" class="btn btn-primary" type="button">
+                <span data-i18n="briefingCopy">Salin briefing</span>
+              </button>
+            </div>
+            <div id="home-briefing-status" class="status" aria-live="polite"></div>
+          </div>
+
           <div id="home-warga-card" class="bento-card bento-warga" hidden>
             <p class="bento-label" data-i18n="wargaCardTitle">Layanan warga</p>
             <p class="hint" data-i18n="wargaCardHint">

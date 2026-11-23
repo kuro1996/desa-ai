@@ -1571,6 +1571,29 @@ html[data-theme="dark"] .ikm-radios label:has(input:checked) {
   grid-column: 1 / -1;
 }
 
+.bento-briefing {
+  grid-column: 1 / -1;
+  border-left: 5px solid var(--teal);
+}
+
+.briefing-summary {
+  margin: 2px 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.briefing-summary.briefing-urgent {
+  color: #dc2626;
+}
+
+.briefing-focus-item {
+  cursor: pointer;
+}
+
+.briefing-focus-item:hover {
+  text-decoration: underline;
+}
+
 .bento-ikm {
   grid-column: span 2;
   grid-row: span 2;
@@ -1816,7 +1839,8 @@ html[data-theme="dark"] .ikm-radios label:has(input:checked) {
 body.mode-warga .tab[data-tab="letters"],
 body.mode-warga .tab[data-tab="summarize"],
 body.mode-warga .tab[data-tab="drafts"],
-body.mode-warga .tab[data-tab="kepegawaian"] {
+body.mode-warga .tab[data-tab="kepegawaian"],
+body.mode-warga #home-briefing {
   display: none;
 }
 .actions-col {

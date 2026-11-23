@@ -141,8 +141,8 @@ async function main() {
     }));
     const monthName = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
     check(
-      "bento shows 10 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
-      bento.cards === 10 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
+      "bento shows 11 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
+      bento.cards === 11 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
         bento.lettersToday === "0" && bento.aduanBaru === "3" &&
         bento.monthIkm === "12" && bento.monthAduan === "6" && bento.monthLetters === "0" &&
         bento.monthName === monthName,
@@ -176,6 +176,60 @@ async function main() {
       "home lists 3 oldest unresolved complaints with waiting time",
       homeAduan.items === 3 && /Biaya tidak sesuai/.test(homeAduan.first) && /waiting|menunggu/.test(homeAduan.first),
       `items=${homeAduan.items} first=${homeAduan.first.slice(0, 60)}`,
+    );
+    // Paket 10 — Briefing Pagi: date, summary counts, focus list, copy, nav.
+    const briefing = await page.evaluate(() => ({
+      visible:
+        !document.getElementById("home-briefing").hidden &&
+        getComputedStyle(document.getElementById("home-briefing")).display !== "none",
+      date: document.getElementById("home-briefing-date")?.textContent ?? "",
+      summary: document.getElementById("home-briefing-summary")?.textContent ?? "",
+      focusItems: [...document.querySelectorAll("#home-briefing-focus li")].map(
+        (li) => li.textContent ?? "",
+      ),
+      emptyHidden: document.getElementById("home-briefing-empty").hidden,
+    }));
+    const todayLong = new Date().toLocaleDateString("id-ID", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+    check(
+      "briefing card shows today's date + summary counts (3 new complaints, IKM 90)",
+      briefing.visible &&
+        briefing.date === todayLong &&
+        /3 (pengaduan baru|new complaints)/.test(briefing.summary) &&
+        /IKM 90/.test(briefing.summary),
+      `date=${briefing.date} summary=${briefing.summary}`,
+    );
+    check(
+      "briefing focus lists 1–3 items, oldest complaint first",
+      briefing.focusItems.length >= 1 &&
+        briefing.focusItems.length <= 3 &&
+        /(Pengaduan tertua|Oldest complaint)/.test(briefing.focusItems[0]) &&
+        briefing.emptyHidden,
+      `items=${briefing.focusItems.length} first=${briefing.focusItems[0]?.slice(0, 60)}`,
+    );
+    // Clicking the first focus item opens the complaints tab.
+    await page.evaluate(() => {
+      document.querySelector("#home-briefing-focus li")?.click();
+    });
+    await sleep(300);
+    const focusNav = await page.$eval('[data-tab="pengaduan"]', (el) =>
+      el.classList.contains("active"),
+    );
+    check("briefing focus item navigates to the complaints tab", focusNav);
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    // Copy button reports a status (clipboard API or manual fallback).
+    await page.click("#home-briefing-copy");
+    await sleep(300);
+    const briefingCopyStatus = await page.$eval("#home-briefing-status", (el) => el.textContent ?? "");
+    check(
+      "copy briefing reports a status (copied or manual fallback)",
+      /Disalin|Copied|Salinan gagal|Copy failed/.test(briefingCopyStatus),
+      briefingCopyStatus,
     );
     // Paket 6: printed monthly report carries an attention section.
     await page.evaluate(() => {
@@ -1359,10 +1413,12 @@ async function main() {
       lettersHidden:
         getComputedStyle(document.querySelector('[data-tab="letters"]')).display === "none",
       cardVisible: !document.getElementById("home-warga-card").hidden,
+      briefingHidden:
+        getComputedStyle(document.getElementById("home-briefing")).display === "none",
     }));
     check(
-      "citizen mode hides officer tabs and shows resident card",
-      warga.bodyWarga && warga.lettersHidden && warga.cardVisible,
+      "citizen mode hides officer tabs + briefing and shows resident card",
+      warga.bodyWarga && warga.lettersHidden && warga.cardVisible && warga.briefingHidden,
       JSON.stringify(warga),
     );
     await page.click("#warga-go-ikm");

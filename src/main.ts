@@ -700,6 +700,151 @@ function renderHomeSearch(): void {
   }
 }
 
+// ---------- Paket 10 — Briefing Pagi (morning briefing) ----------
+interface BriefingFocus {
+  text: string;
+  tab: string;
+}
+
+interface Briefing {
+  dateLabel: string;
+  summary: string;
+  focus: BriefingFocus[];
+  urgent: boolean;
+  waText: string;
+}
+
+let briefingWaText = "";
+
+function buildBriefing(now = new Date()): Briefing {
+  const aduan = loadAduan();
+  const aduStats = computeAduanStats(aduan);
+  const openAduan = aduan
+    .filter((a) => a.status !== "selesai")
+    .sort((a, b) => a.createdAt - b.createdAt);
+  const notifs = computeNotifications(loadPerangkat(), now);
+  const ikmStats = computeIkm(loadIkm());
+  const lettersToday = listLocalDrafts().filter(
+    (d) => d.kind === "letter" && sameDay(new Date(d.createdAt), now),
+  ).length;
+  const habis = notifs.filter((n) => n.kind === "habis").length;
+  const akan = notifs.filter((n) => n.kind === "akan-habis").length;
+  const dateLabel = now.toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const summary = [
+    `${aduStats.baru} ${t("briefingAduan", lang)}`,
+    `${habis} ${t("briefingMasaHabis", lang)}`,
+    ikmStats.count === 0
+      ? "IKM –"
+      : `IKM ${ikmFmt(ikmStats.overall)} (${ikmStats.category})`,
+    `${lettersToday} ${t("briefingSurat", lang)}`,
+  ].join(" • ");
+  const focus: BriefingFocus[] = [];
+  if (openAduan.length > 0) {
+    const a = openAduan[0];
+    const days = Math.max(
+      0,
+      Math.floor((now.getTime() - a.createdAt) / 86_400_000),
+    );
+    focus.push({
+      text: `${t("briefingOldestAduan", lang)}: ${a.nama || t("ikmAnon", lang)} — ${a.jenis}, ${days} ${t("homeAduanWaiting", lang)}`,
+      tab: "pengaduan",
+    });
+  }
+  if (notifs.length > 0) {
+    const n = notifs[0];
+    focus.push({
+      text:
+        n.kind === "habis"
+          ? `${t("briefingMasaHabisItem", lang)}: ${n.perangkat.nama} — ${n.perangkat.jabatan}, ${n.perangkat.desa}`
+          : `${t("briefingMasaAkanItem", lang)}: ${n.perangkat.nama} — ${n.perangkat.jabatan}, ${n.perangkat.desa} (${n.days} ${t("kegNotifDays", lang)})`,
+      tab: "kepegawaian",
+    });
+  }
+  if (ikmStats.count > 0) {
+    const label =
+      lang === "id"
+        ? IKM_ELEMENTS[ikmStats.minIdx].labelId
+        : IKM_ELEMENTS[ikmStats.minIdx].labelEn;
+    focus.push({
+      text: `${t("briefingIkmLowest", lang)}: ${label} (${ikmFmt(ikmStats.perElement[ikmStats.minIdx])})`,
+      tab: "ikm",
+    });
+  }
+  const waLines = [
+    "*Briefing Pagi — Kecamatan Simpangkatis*",
+    dateLabel,
+    `• Pengaduan baru: ${aduStats.baru} (belum selesai: ${openAduan.length})`,
+    `• Masa bhakti: ${akan} akan habis ≤90 hari, ${habis} sudah habis`,
+    ikmStats.count === 0
+      ? "• IKM: belum ada jawaban"
+      : `• IKM: ${ikmFmt(ikmStats.overall)} (kategori ${ikmStats.category}), ${ikmStats.count} responden`,
+    `• Surat hari ini: ${lettersToday}`,
+    "Fokus hari ini:",
+    ...(focus.length > 0
+      ? focus.map((f) => `- ${f.text}`)
+      : ["- Tidak ada yang mendesak."]),
+    "DesaAI — data contoh, bukan data asli.",
+  ];
+  const urgent =
+    habis > 0 || openAduan.some((a) => now.getTime() - a.createdAt >= 7 * 86_400_000);
+  return {
+    dateLabel,
+    summary,
+    focus: focus.slice(0, 3),
+    urgent,
+    waText: waLines.join("\n"),
+  };
+}
+
+function renderBriefing(): void {
+  const b = buildBriefing();
+  briefingWaText = b.waText;
+  $("home-briefing-date").textContent = b.dateLabel;
+  const summaryEl = $("home-briefing-summary");
+  summaryEl.textContent = b.summary;
+  summaryEl.classList.toggle("briefing-urgent", b.urgent);
+  const list = $("home-briefing-focus");
+  list.innerHTML = "";
+  $("home-briefing-empty").hidden = b.focus.length > 0;
+  for (const f of b.focus) {
+    const li = document.createElement("li");
+    li.className = "notif-item briefing-focus-item";
+    const strong = document.createElement("strong");
+    strong.textContent = f.text;
+    li.appendChild(strong);
+    li.addEventListener("click", () => activateTab(f.tab));
+    list.appendChild(li);
+  }
+}
+
+async function copyBriefing(): Promise<void> {
+  const status = $("home-briefing-status");
+  try {
+    await navigator.clipboard.writeText(briefingWaText);
+    setStatus(status, t("briefingCopied", lang));
+  } catch {
+    // Fallback for browsers without async-clipboard permission.
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = briefingWaText;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      setStatus(status, ok ? t("briefingCopied", lang) : t("briefingCopyFail", lang));
+    } catch {
+      setStatus(status, t("briefingCopyFail", lang));
+    }
+  }
+}
+
 function renderHome(): void {
   const now = new Date();
   // IKM card (same numbers as the IKM dashboard).
@@ -799,6 +944,7 @@ function renderHome(): void {
   renderTrend();
   renderAduanChart();
   renderReportPreview();
+  renderBriefing();
   renderHomeSearch();
   renderQuickStats();
 }
@@ -826,6 +972,7 @@ function initHome(): void {
     document.querySelector<HTMLButtonElement>('[data-tab="kepegawaian"]')?.click(),
   );
   $("home-report-print").addEventListener("click", printMonthlyReport);
+  $("home-briefing-copy").addEventListener("click", () => void copyBriefing());
 }
 
 // ---------- status chips ----------
