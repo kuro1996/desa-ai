@@ -56,6 +56,13 @@ export function listLocalDrafts(): Draft[] {
   return loadLocal();
 }
 
+/** Replace the entire local drafts archive (used by Backup & Restore —
+ * Paket 14). Firestore copies are untouched; the merged library view
+ * dedupes by id on restore so a draft is never shown twice. */
+export function replaceLocalDrafts(drafts: Draft[]): void {
+  saveLocal([...drafts]);
+}
+
 function firestoreReady(svc: FirebaseServices): svc is FirebaseServices & {
   db: Firestore;
   uid: string;

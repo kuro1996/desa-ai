@@ -1625,7 +1625,8 @@ html[data-theme="dark"] .ikm-radios label:has(input:checked) {
 }
 
 .bento-trend,
-.bento-report {
+.bento-report,
+.bento-backup {
   grid-column: 1 / -1;
 }
 
@@ -1684,6 +1685,25 @@ html[data-theme="dark"] .ikm-radios label:has(input:checked) {
 
 .report-preview {
   margin: 8px 0;
+}
+
+/* Paket 14 — Backup & Restore card. */
+.backup-counts {
+  margin: 8px 0;
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.backup-confirm {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--warn, #b45309);
+  border-radius: 8px;
+}
+
+.backup-confirm-text {
+  margin: 0 0 4px;
+  font-size: 0.92rem;
 }
 
 .report-row {
@@ -1841,7 +1861,8 @@ body.mode-warga .tab[data-tab="summarize"],
 body.mode-warga .tab[data-tab="drafts"],
 body.mode-warga .tab[data-tab="kepegawaian"],
 body.mode-warga .tab[data-tab="agenda"],
-body.mode-warga #home-briefing {
+body.mode-warga #home-briefing,
+body.mode-warga #home-backup-card {
   display: none;
 }
 .actions-col {

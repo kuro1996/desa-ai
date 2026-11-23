@@ -15,7 +15,7 @@ long or complex prompts fall back to **cloud Gemini**. Every answer shows a
 visible routing badge ("On-device • private" vs "Cloud") and the reason it
 routed that way, so staff always know where their data went.
 
-**What it does (8 tabs):**
+**What it does (9 tabs):**
 - **Draft Letters** — 7 templates (Surat Dinas, SK, Undangan, Pengantar,
   Surat Keterangan, **SKTM — Surat Keterangan Tidak Mampu**, SK Pengangkatan
   Perangkat Desa), automatic per-template letter numbering, editable drafts,
@@ -50,8 +50,8 @@ by a human officer before use.
 
 **Tech:** Vite + TypeScript, Firebase AI Logic (Gemini Nano 4 on-device +
 Gemini cloud fallback), Firestore mirror (best-effort), localStorage-first
-so the office keeps working offline. 152 automated headless-Chrome checks
-green on every build.
+so the office keeps working offline. 189 automated checks on every build
+(173 headless-Chrome + 16 PWA; 1 known flaky check, see §4).
 
 ## 2. Yang baru sejak submit (untuk kolom "What's new" / pembaruan deskripsi)
 
@@ -124,6 +124,20 @@ green on every build.
   Kartu laporan kini juga menampilkan baris agenda, dan versi cetaknya
   ikut mencantumkan rekap agenda. Tes: headless 158 → **163 cek**,
   PWA tetap **16/16** (total 179/179 hijau).
+- **Paket 14 (23 Nov sore): Backup & Restore Semua Data** — kartu baru
+  **Data & cadangan** di Beranda: tombol **Backup data** mengunduh
+  semua data kantor sebagai satu file `desaai-backup-YYYY-MM-DD.json`
+  (surat/arsip draf — termasuk salinan Firestore — pegawai, jawaban
+  IKM, pengaduan, agenda + metadata versi/tanggal/jumlah per koleksi);
+  tombol **Restore data** membaca file pilihan pengguna, **memvalidasi
+  dulu** (versi format, struktur tiap koleksi, jumlah isi harus cocok —
+  file rusak/asing ditolak tanpa menyentuh data), lalu menampilkan
+  ringkasan isi backup dan meminta konfirmasi sebelum mengganti data;
+  setelah restore semua tampilan + cermin Firestore mengikuti data
+  baru lewat jalur sync yang sudah ada. 100% lokal, bekerja offline,
+  disembunyikan di Mode Warga. Tes: headless 163 → **173 cek**
+  (10 cek backup/restore baru, semua hijau), PWA tetap **16/16**
+  (total 189/190 — 1 cek flaky bawaan, lihat §4).
 
 ## 3. Checklist sebelum Bos tekan submit
 
@@ -152,3 +166,6 @@ green on every build.
   live BELUM terbukti dari VM (Chrome headless di VM tidak bisa mencapai
   origin HTTP apa pun) — bukti live: buka situs di HP Bos, cek chip
   Online + "Add to Home Screen" muncul (lihat uji-cloud-hp-20261123.md).
+  **Update Paket 14: cek flaky itu GAGAL lagi di run terakhir
+  (173/174 headless) — total 189/190; 10 cek backup/restore baru semua
+  hijau, PWA 16/16.**

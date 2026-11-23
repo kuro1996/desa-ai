@@ -178,8 +178,8 @@ async function main() {
     }));
     const monthName = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
     check(
-      "bento shows 11 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
-      bento.cards === 11 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
+      "bento shows 12 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
+      bento.cards === 12 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
         bento.lettersToday === "0" && bento.aduanBaru === "3" &&
         bento.monthIkm === "12" && bento.monthAduan === "6" && bento.monthLetters === "0" &&
         bento.monthName === monthName,
@@ -447,6 +447,234 @@ async function main() {
       offlineCsv.includes("Bagian,Metrik,Nilai") &&
         offlineCsv.includes("Agenda,Surat masuk bulan ini,"),
       offlineCsv.split("\n").slice(3, 4).join(""),
+    );
+    // Paket 14: Backup & Restore — one JSON file, all five collections.
+    const backupCard = await page.$("#home-backup-card");
+    check("backup card exists on the home dashboard", !!backupCard);
+    const backupCountsText = await page.$eval(
+      "#home-backup-counts",
+      (el) => el.textContent ?? "",
+    );
+    check(
+      "backup card shows live counts for all five collections",
+      ["Letters", "Personnel", "IKM", "Complaints", "Register"].every((s) =>
+        backupCountsText.includes(s),
+      ),
+      backupCountsText,
+    );
+    const readLastBlobText = () =>
+      page.evaluate(async () => {
+        const blobs = window.__csvBlobs ?? [];
+        const last = blobs[blobs.length - 1];
+        return last ? await last.text() : "";
+      });
+    const readLocalCollections = () =>
+      page.evaluate(() => {
+        const read = (key) => {
+          try {
+            return JSON.parse(localStorage.getItem(key) ?? "[]");
+          } catch {
+            return [];
+          }
+        };
+        return {
+          surat: read("desaai-drafts-v1"),
+          pegawai: read("desaai-perangkat-v1"),
+          ikm: read("desaai-ikm-v1"),
+          pengaduan: read("desaai-pengaduan-v1"),
+          agenda: read("desaai-agenda-v1"),
+        };
+      });
+    await page.click("#home-backup-export");
+    await sleep(300);
+    const backupJson = await readLastBlobText();
+    const backupExportStatus = await page.$eval(
+      "#home-backup-status",
+      (el) => el.textContent ?? "",
+    );
+    const backupNow = new Date();
+    const expectBackupFile = `desaai-backup-${backupNow.getFullYear()}-${String(
+      backupNow.getMonth() + 1,
+    ).padStart(2, "0")}-${String(backupNow.getDate()).padStart(2, "0")}.json`;
+    let backupParsed = null;
+    try {
+      backupParsed = JSON.parse(backupJson);
+    } catch {
+      backupParsed = null;
+    }
+    const groundTruth = await readLocalCollections();
+    check(
+      "backup export produces valid JSON with app + format version + date",
+      !!backupParsed &&
+        backupParsed.app === "desaai" &&
+        backupParsed.formatVersion === 1 &&
+        typeof backupParsed.exportedAt === "string" &&
+        !Number.isNaN(Date.parse(backupParsed.exportedAt)),
+      backupJson.slice(0, 120),
+    );
+    check(
+      "backup contains all five collections with counts matching local data",
+      !!backupParsed &&
+        ["surat", "pegawai", "ikm", "pengaduan", "agenda"].every(
+          (k) => Array.isArray(backupParsed.collections?.[k]),
+        ) &&
+        backupParsed.counts.surat === groundTruth.surat.length &&
+        backupParsed.counts.pegawai === groundTruth.pegawai.length &&
+        backupParsed.counts.ikm === groundTruth.ikm.length &&
+        backupParsed.counts.pengaduan === groundTruth.pengaduan.length &&
+        backupParsed.counts.agenda === groundTruth.agenda.length,
+      backupParsed ? JSON.stringify(backupParsed.counts) : "unparsed",
+    );
+    check(
+      "backup export reports the filename",
+      backupExportStatus.includes(expectBackupFile),
+      backupExportStatus,
+    );
+    // Restore a valid backup: mutate a copy with markers, confirm, verify
+    // the data changed — then restore the original backup to leave the
+    // seeded state intact for the later module tests.
+    const tmpDir = "/tmp";
+    const syntheticPath = join(tmpDir, "desaai-backup-synthetic-20261123.json");
+    const originalPath = join(tmpDir, "desaai-backup-original-20261123.json");
+    const corruptPath = join(tmpDir, "desaai-backup-corrupt-20261123.json");
+    const wrongVersionPath = join(tmpDir, "desaai-backup-wrongver-20261123.json");
+    const synthetic = JSON.parse(JSON.stringify(backupParsed));
+    synthetic.collections.agenda[0] = {
+      ...synthetic.collections.agenda[0],
+      perihal: "RESTORE-TEST agenda",
+    };
+    synthetic.collections.pegawai[0] = {
+      ...synthetic.collections.pegawai[0],
+      nama: "RESTORE-TEST Pegawai",
+    };
+    synthetic.collections.ikm[0] = {
+      ...synthetic.collections.ikm[0],
+      komentar: "RESTORE-TEST komentar",
+    };
+    synthetic.collections.pengaduan[0] = {
+      ...synthetic.collections.pengaduan[0],
+      isi: "RESTORE-TEST aduan",
+    };
+    synthetic.collections.surat = [
+      {
+        id: "d-restore-test-1",
+        kind: "letter",
+        title: "RESTORE-TEST Surat",
+        content: "Isi surat restore test.",
+        createdAt: Date.now(),
+        source: "local",
+      },
+    ];
+    synthetic.counts.surat = 1;
+    writeFileSync(syntheticPath, JSON.stringify(synthetic, null, 2));
+    writeFileSync(originalPath, backupJson);
+    const backupFileInput = await page.$("#home-backup-file");
+    await backupFileInput.uploadFile(syntheticPath);
+    await sleep(500);
+    const confirmShown =
+      (await page.$eval("#home-backup-confirm", (el) => !el.hidden)) &&
+      (await page.$eval(
+        "#home-backup-confirm-text",
+        (el) => el.textContent ?? "",
+      ));
+    check(
+      "restore shows a confirmation summary with the backup contents",
+      !!confirmShown &&
+        /Letters 1/.test(confirmShown) &&
+        /Personnel 23/.test(confirmShown),
+      confirmShown || "",
+    );
+    await page.click("#home-backup-confirm-yes");
+    await sleep(800);
+    const afterRestore = await readLocalCollections();
+    const countsAfterRestore = await page.$eval(
+      "#home-backup-counts",
+      (el) => el.textContent ?? "",
+    );
+    check(
+      "restore replaces data with the backup contents",
+      afterRestore.agenda[0]?.perihal === "RESTORE-TEST agenda" &&
+        afterRestore.pegawai[0]?.nama === "RESTORE-TEST Pegawai" &&
+        afterRestore.ikm[0]?.komentar === "RESTORE-TEST komentar" &&
+        afterRestore.pengaduan[0]?.isi === "RESTORE-TEST aduan" &&
+        afterRestore.surat.length === 1 &&
+        afterRestore.surat[0]?.title === "RESTORE-TEST Surat" &&
+        /Letters 1/.test(countsAfterRestore),
+      `agenda=${afterRestore.agenda[0]?.perihal} surat=${afterRestore.surat.length} counts=${countsAfterRestore}`,
+    );
+    await backupFileInput.uploadFile(originalPath);
+    await sleep(500);
+    await page.click("#home-backup-confirm-yes");
+    await sleep(800);
+    const afterRevert = await readLocalCollections();
+    check(
+      "restoring the original backup returns the seeded data",
+      afterRevert.agenda[0]?.perihal !== "RESTORE-TEST agenda" &&
+        afterRevert.pegawai[0]?.nama !== "RESTORE-TEST Pegawai" &&
+        afterRevert.surat.length === groundTruth.surat.length &&
+        afterRevert.agenda.length === groundTruth.agenda.length,
+      `agenda=${afterRevert.agenda[0]?.perihal} surat=${afterRevert.surat.length}`,
+    );
+    // Corrupt file: rejected, data untouched, confirm panel stays hidden.
+    writeFileSync(corruptPath, "this is not json {{{");
+    await backupFileInput.uploadFile(corruptPath);
+    await sleep(500);
+    const corruptStatus = await page.$eval(
+      "#home-backup-status",
+      (el) => el.textContent ?? "",
+    );
+    const corruptConfirmHidden = await page.$eval(
+      "#home-backup-confirm",
+      (el) => el.hidden,
+    );
+    const agendaAfterCorrupt = await page.evaluate(
+      () => JSON.parse(localStorage.getItem("desaai-agenda-v1") ?? "[]").length,
+    );
+    check(
+      "corrupt backup file is rejected and data is unchanged",
+      /invalid/i.test(corruptStatus) &&
+        corruptConfirmHidden &&
+        agendaAfterCorrupt === groundTruth.agenda.length,
+      corruptStatus,
+    );
+    // Wrong format version: rejected, data untouched.
+    writeFileSync(
+      wrongVersionPath,
+      JSON.stringify({ ...backupParsed, formatVersion: 99 }),
+    );
+    await backupFileInput.uploadFile(wrongVersionPath);
+    await sleep(500);
+    const wrongVerStatus = await page.$eval(
+      "#home-backup-status",
+      (el) => el.textContent ?? "",
+    );
+    const agendaAfterWrongVer = await page.evaluate(
+      () => JSON.parse(localStorage.getItem("desaai-agenda-v1") ?? "[]").length,
+    );
+    check(
+      "backup with unknown format version is rejected and data is unchanged",
+      /invalid/i.test(wrongVerStatus) &&
+        agendaAfterWrongVer === groundTruth.agenda.length,
+      wrongVerStatus,
+    );
+    // Offline: backup export still produces a valid JSON file.
+    await page.setOfflineMode(true);
+    await page.click("#home-backup-export");
+    await sleep(300);
+    const offlineBackupJson = await readLastBlobText();
+    await page.setOfflineMode(false);
+    let offlineParsed = null;
+    try {
+      offlineParsed = JSON.parse(offlineBackupJson);
+    } catch {
+      offlineParsed = null;
+    }
+    check(
+      "backup export works offline",
+      !!offlineParsed &&
+        offlineParsed.app === "desaai" &&
+        offlineParsed.counts.agenda === groundTruth.agenda.length,
+      offlineBackupJson.slice(0, 80),
     );
     // Dark mode: toggles, persists across reload, toggles back to light.
     await page.click("#theme-toggle");
@@ -1625,12 +1853,14 @@ async function main() {
       cardVisible: !document.getElementById("home-warga-card").hidden,
       briefingHidden:
         getComputedStyle(document.getElementById("home-briefing")).display === "none",
+      backupHidden:
+        getComputedStyle(document.getElementById("home-backup-card")).display === "none",
       agendaHidden:
         getComputedStyle(document.querySelector('[data-tab="agenda"]')).display === "none",
     }));
     check(
-      "citizen mode hides officer tabs + briefing + agenda and shows resident card",
-      warga.bodyWarga && warga.lettersHidden && warga.cardVisible && warga.briefingHidden && warga.agendaHidden,
+      "citizen mode hides officer tabs + briefing + agenda + backup card and shows resident card",
+      warga.bodyWarga && warga.lettersHidden && warga.cardVisible && warga.briefingHidden && warga.agendaHidden && warga.backupHidden,
       JSON.stringify(warga),
     );
     await page.click("#warga-go-ikm");

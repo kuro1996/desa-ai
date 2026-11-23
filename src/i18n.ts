@@ -62,6 +62,36 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   homeReportPrinted: { en: "Report sent to print.", id: "Laporan dikirim ke printer." },
   homeReportExport: { en: "Export CSV", id: "Ekspor CSV" },
   homeReportExported: { en: "Monthly report CSV downloaded.", id: "Laporan CSV diunduh." },
+  // Paket 14 — Backup & Restore
+  homeBackupTitle: { en: "Data & backup", id: "Data & cadangan" },
+  homeBackupHint: {
+    en: "Download all office data as one JSON file, or restore it from a backup. Everything stays in this browser — no data leaves the device.",
+    id: "Unduh semua data kantor sebagai satu file JSON, atau pulihkan dari cadangan. Semua tetap di browser ini — tidak ada data yang keluar dari perangkat.",
+  },
+  homeBackupExport: { en: "Backup data", id: "Backup data" },
+  homeBackupRestore: { en: "Restore data", id: "Restore data" },
+  homeBackupExported: { en: "Backup downloaded.", id: "Backup diunduh." },
+  homeBackupRestored: { en: "Data restored from backup.", id: "Data dipulihkan dari backup." },
+  homeBackupCancelled: { en: "Restore cancelled — current data kept.", id: "Restore dibatalkan — data saat ini tetap." },
+  homeBackupConfirmQ: {
+    en: "Restore this backup? Current data will be replaced.",
+    id: "Pulihkan backup ini? Data saat ini akan diganti.",
+  },
+  homeBackupConfirmYes: { en: "Yes, restore", id: "Ya, restore" },
+  homeBackupConfirmNo: { en: "Cancel", id: "Batal" },
+  homeBackupInvalid: {
+    en: "Backup file is invalid — nothing was changed.",
+    id: "File backup tidak valid — tidak ada yang diubah.",
+  },
+  homeBackupTooBig: {
+    en: "Backup file is too large — nothing was changed.",
+    id: "File backup terlalu besar — tidak ada yang diubah.",
+  },
+  homeBackupReadFail: {
+    en: "Could not read the backup file — nothing was changed.",
+    id: "File backup tidak bisa dibaca — tidak ada yang diubah.",
+  },
+  cmdBackup: { en: "Backup data", id: "Backup data" },
   // Paket 10 — morning briefing (Briefing Pagi)
   briefingTitle: { en: "Morning briefing", id: "Briefing Pagi" },
   briefingFocus: { en: "Today's focus", id: "Fokus hari ini" },

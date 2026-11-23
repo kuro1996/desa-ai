@@ -315,6 +315,42 @@
             </div>
             <div id="home-report-status" class="status" aria-live="polite"></div>
           </div>
+
+          <!-- Paket 14 — Backup & Restore: one JSON file, all collections. -->
+          <div class="bento-card bento-backup" id="home-backup-card">
+            <p class="bento-label" data-i18n="homeBackupTitle">Data &amp; backup</p>
+            <p class="hint" data-i18n="homeBackupHint">
+              Download all office data as one JSON file, or restore it from a
+              backup. Everything stays in this browser.
+            </p>
+            <p class="backup-counts" id="home-backup-counts"></p>
+            <div class="actions">
+              <button id="home-backup-export" class="btn btn-primary" type="button">
+                <span data-i18n="homeBackupExport">Backup data</span>
+              </button>
+              <button id="home-backup-import" class="btn" type="button">
+                <span data-i18n="homeBackupRestore">Restore data</span>
+              </button>
+            </div>
+            <input
+              id="home-backup-file"
+              type="file"
+              accept=".json,application/json"
+              hidden
+            />
+            <div id="home-backup-confirm" class="backup-confirm" hidden>
+              <p id="home-backup-confirm-text" class="backup-confirm-text"></p>
+              <div class="actions">
+                <button id="home-backup-confirm-yes" class="btn btn-primary" type="button">
+                  <span data-i18n="homeBackupConfirmYes">Yes, restore</span>
+                </button>
+                <button id="home-backup-confirm-no" class="btn" type="button">
+                  <span data-i18n="homeBackupConfirmNo">Cancel</span>
+                </button>
+              </div>
+            </div>
+            <div id="home-backup-status" class="status" aria-live="polite"></div>
+          </div>
         </div>
         <!-- Print-only rendering of the monthly report (filled in by JS before window.print()). -->
         <div id="report-print-area" class="print-only" aria-hidden="true">

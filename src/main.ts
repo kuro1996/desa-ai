@@ -14,12 +14,21 @@ import {
   type AgendaStatus,
 } from "./agenda";
 import {
+  BACKUP_MAX_BYTES,
+  backupCountsLine,
+  backupFilename,
+  backupToJson,
+  collectBackup,
+  validateBackup,
+  type DesaaiBackup,
+} from "./backup";
+import {
   generateStream,
   probeOnDevice,
   warmUpDeviceModel,
   type OnDeviceState,
 } from "./ai";
-import { countLocalDrafts, deleteDraft, listDrafts, listLocalDrafts, saveDraft, type Draft } from "./drafts";
+import { countLocalDrafts, deleteDraft, listDrafts, listLocalDrafts, replaceLocalDrafts, saveDraft, type Draft } from "./drafts";
 import { getLastFirestoreSync, initFirebase, type FirebaseServices } from "./firebase";
 import { t, type Lang } from "./i18n";
 import {
@@ -229,6 +238,14 @@ function paletteCommands(): PaletteCmd[] {
     { id: "cmd-new-aduan", label: () => t("cmdNewAduan", lang), run: () => activateTab("pengaduan") },
     { id: "cmd-fill-ikm", label: () => t("cmdFillIkm", lang), run: () => activateTab("ikm") },
     { id: "cmd-print-report", label: () => t("cmdPrintReport", lang), run: () => printMonthlyReport() },
+    {
+      id: "cmd-backup",
+      label: () => t("cmdBackup", lang),
+      run: () => {
+        activateTab("home");
+        document.getElementById("home-backup-export")?.click();
+      },
+    },
     {
       id: "cmd-theme",
       label: () => t("cmdTheme", lang),
@@ -680,6 +697,133 @@ function exportMonthlyReportCsv(): void {
   setStatus($("home-report-status"), `${t("homeReportExported", lang)} ${filename}`);
 }
 
+// ---------- Backup & Restore (Paket 14) ----------
+
+let pendingBackup: DesaaiBackup | null = null;
+/** Merged drafts count (local + Firestore), refreshed by refreshDrafts(). */
+let mergedDraftCount: number | null = null;
+
+function backupCounts(): {
+  surat: number;
+  pegawai: number;
+  ikm: number;
+  pengaduan: number;
+  agenda: number;
+} {
+  return {
+    surat: mergedDraftCount ?? listLocalDrafts().length,
+    pegawai: loadPerangkat().length,
+    ikm: loadIkm().length,
+    pengaduan: loadAduan().length,
+    agenda: loadAgenda().length,
+  };
+}
+
+function renderBackupCard(): void {
+  const el = document.getElementById("home-backup-counts");
+  if (el) el.textContent = backupCountsLine(backupCounts(), lang);
+}
+
+async function exportBackup(): Promise<void> {
+  const status = $("home-backup-status");
+  try {
+    const backup = await collectBackup(svc);
+    const filename = backupFilename();
+    downloadFile(filename, backupToJson(backup), "application/json;charset=utf-8");
+    setStatus(status, `${t("homeBackupExported", lang)} ${filename}`);
+  } catch (e) {
+    console.warn("DesaAI: backup export failed.", e);
+    setStatus(status, t("homeBackupReadFail", lang), true);
+  }
+  renderBackupCard();
+}
+
+function resetBackupFileInput(): void {
+  ($("home-backup-file") as HTMLInputElement).value = "";
+}
+
+function hideBackupConfirm(): void {
+  $("home-backup-confirm").hidden = true;
+  pendingBackup = null;
+}
+
+async function handleBackupFile(file: File): Promise<void> {
+  const status = $("home-backup-status");
+  hideBackupConfirm();
+  if (file.size > BACKUP_MAX_BYTES) {
+    setStatus(status, t("homeBackupTooBig", lang), true);
+    resetBackupFileInput();
+    return;
+  }
+  let text: string;
+  try {
+    text = await file.text();
+  } catch {
+    setStatus(status, t("homeBackupReadFail", lang), true);
+    resetBackupFileInput();
+    return;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    setStatus(status, t("homeBackupInvalid", lang), true);
+    resetBackupFileInput();
+    return;
+  }
+  const result = validateBackup(parsed, lang);
+  if (!result.ok) {
+    setStatus(
+      status,
+      `${t("homeBackupInvalid", lang)} ${result.errors[0] ?? ""}`,
+      true,
+    );
+    resetBackupFileInput();
+    return;
+  }
+  pendingBackup = result.backup;
+  const d = new Date(result.backup.exportedAt);
+  const dateStr = Number.isNaN(d.getTime())
+    ? result.backup.exportedAt
+    : d.toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+  $("home-backup-confirm-text").textContent =
+    `${t("homeBackupConfirmQ", lang)} — ${dateStr} · ${backupCountsLine(result.backup.counts, lang)}`;
+  $("home-backup-confirm").hidden = false;
+  setStatus(status, "");
+}
+
+/** Replace all local collections with the validated backup, then let the
+ * existing Firestore mirrors follow (same paths as normal edits). */
+async function applyBackup(backup: DesaaiBackup): Promise<void> {
+  saveAgenda(backup.collections.agenda);
+  saveIkm(backup.collections.ikm);
+  saveAduan(backup.collections.pengaduan);
+  savePerangkat(backup.collections.pegawai);
+  // Letters: replace the local archive, but skip drafts that already
+  // exist in Firestore — otherwise the merged library would show them
+  // twice. On a fresh browser (different anonymous uid) nothing is
+  // skipped, so the letters are fully recovered locally.
+  const current = await listDrafts(svc);
+  const currentIds = new Set(current.map((d) => d.id));
+  replaceLocalDrafts(
+    backup.collections.surat.filter(
+      (d) => d.source === "local" || !currentIds.has(d.id),
+    ),
+  );
+  mergedDraftCount = null;
+  syncAllToFirestore();
+  await refreshDrafts();
+  renderHome();
+  renderKepegawaian();
+  renderIkm();
+  renderPengaduan();
+  renderAgenda();
+}
+
 let homeSearchQuery = "";
 
 function renderHomeSearch(): void {
@@ -1043,6 +1187,7 @@ function renderHome(): void {
   renderBriefing();
   renderHomeSearch();
   renderQuickStats();
+  renderBackupCard();
 }
 
 function initHome(): void {
@@ -1070,6 +1215,31 @@ function initHome(): void {
   $("home-report-print").addEventListener("click", printMonthlyReport);
   $("home-report-export").addEventListener("click", exportMonthlyReportCsv);
   $("home-briefing-copy").addEventListener("click", () => void copyBriefing());
+  // Paket 14 — Backup & Restore.
+  $("home-backup-export").addEventListener("click", () => void exportBackup());
+  $("home-backup-import").addEventListener("click", () =>
+    ($("home-backup-file") as HTMLInputElement).click(),
+  );
+  ($("home-backup-file") as HTMLInputElement).addEventListener(
+    "change",
+    (ev) => {
+      const file = (ev.target as HTMLInputElement).files?.[0];
+      if (file) void handleBackupFile(file);
+    },
+  );
+  $("home-backup-confirm-yes").addEventListener("click", async () => {
+    const backup = pendingBackup;
+    hideBackupConfirm();
+    resetBackupFileInput();
+    if (!backup) return;
+    await applyBackup(backup);
+    setStatus($("home-backup-status"), t("homeBackupRestored", lang));
+  });
+  $("home-backup-confirm-no").addEventListener("click", () => {
+    hideBackupConfirm();
+    resetBackupFileInput();
+    setStatus($("home-backup-status"), t("homeBackupCancelled", lang));
+  });
 }
 
 // ---------- status chips ----------
@@ -1694,6 +1864,9 @@ async function refreshDrafts(): Promise<void> {
   const list = $("drafts-list");
   const empty = $("drafts-empty");
   const all = await listDrafts(svc);
+  // Paket 14 — the home backup card shows the merged letters count.
+  mergedDraftCount = all.length;
+  renderBackupCard();
   const q = draftsQuery.trim().toLowerCase();
   const drafts = q
     ? all.filter(
