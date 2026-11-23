@@ -1,6 +1,18 @@
 // DesaAI — app wiring: tabs, language toggle, letter drafting,
 // document summarizer, procedure Q&A (KB-grounded), drafts library.
 import {
+  AGENDA_DISPOSISI,
+  computeAgendaStats,
+  createAgendaEntry,
+  filterAgenda,
+  isAgendaDemoRecord,
+  loadAgenda,
+  saveAgenda,
+  type AgendaArah,
+  type AgendaEntry,
+  type AgendaStatus,
+} from "./agenda";
+import {
   generateStream,
   probeOnDevice,
   warmUpDeviceModel,
@@ -136,6 +148,7 @@ const TAB_HASHES: Record<string, string> = {
   kepegawaian: "kepegawaian",
   ikm: "ikm",
   pengaduan: "pengaduan",
+  agenda: "agenda",
 };
 const HASH_BY_TAB: Record<string, string> = Object.fromEntries(
   Object.entries(TAB_HASHES).map(([h, tab]) => [tab, h]),
@@ -160,6 +173,7 @@ function activateTab(tab: string, updateHash = true): void {
   if (tab === "kepegawaian") renderKepegawaian();
   if (tab === "ikm") renderIkm();
   if (tab === "pengaduan") renderPengaduan();
+  if (tab === "agenda") renderAgenda();
   // A detail dialog belongs to its tab — close it when leaving the tab.
   document.querySelectorAll("dialog[open]").forEach((d) => {
     (d as HTMLDialogElement).close();
@@ -209,6 +223,7 @@ function paletteCommands(): PaletteCmd[] {
   });
   cmds.push(
     { id: "cmd-new-letter", label: () => t("cmdNewLetter", lang), run: () => activateTab("letters") },
+    { id: "cmd-new-agenda", label: () => t("cmdNewAgenda", lang), run: () => activateTab("agenda") },
     { id: "cmd-new-aduan", label: () => t("cmdNewAduan", lang), run: () => activateTab("pengaduan") },
     { id: "cmd-fill-ikm", label: () => t("cmdFillIkm", lang), run: () => activateTab("ikm") },
     { id: "cmd-print-report", label: () => t("cmdPrintReport", lang), run: () => printMonthlyReport() },
@@ -318,7 +333,7 @@ type AppMode = "petugas" | "warga";
 let appMode: AppMode = "petugas";
 
 // Officer-only tabs — hidden from the nav while in citizen mode.
-const OFFICER_TABS = ["letters", "summarize", "drafts", "kepegawaian"];
+const OFFICER_TABS = ["letters", "summarize", "drafts", "kepegawaian", "agenda"];
 
 function updateModeButton(): void {
   $("mode-toggle-label").textContent = t(
@@ -651,6 +666,22 @@ function renderHomeSearch(): void {
         })),
     },
     {
+      key: "homeSearchAgenda",
+      items: loadAgenda()
+        .filter(
+          (e) =>
+            e.perihal.toLowerCase().includes(q) ||
+            e.pihak.toLowerCase().includes(q) ||
+            e.nomorAgenda.toLowerCase().includes(q),
+        )
+        .slice(0, 5)
+        .map((e) => ({
+          label: e.perihal,
+          sub: `${e.nomorAgenda} • ${e.pihak}`,
+          go: () => activateTab("agenda"),
+        })),
+    },
+    {
       key: "homeSearchAduan",
       items: loadAduan()
         .filter(
@@ -727,6 +758,9 @@ function buildBriefing(now = new Date()): Briefing {
   const lettersToday = listLocalDrafts().filter(
     (d) => d.kind === "letter" && sameDay(new Date(d.createdAt), now),
   ).length;
+  const masukToday = loadAgenda().filter(
+    (e) => e.arah === "masuk" && sameDay(new Date(e.tanggal), now),
+  ).length;
   const habis = notifs.filter((n) => n.kind === "habis").length;
   const akan = notifs.filter((n) => n.kind === "akan-habis").length;
   const dateLabel = now.toLocaleDateString("id-ID", {
@@ -742,6 +776,7 @@ function buildBriefing(now = new Date()): Briefing {
       ? "IKM –"
       : `IKM ${ikmFmt(ikmStats.overall)} (${ikmStats.category})`,
     `${lettersToday} ${t("briefingSurat", lang)}`,
+    `${masukToday} ${t("briefingAgendaMasuk", lang)}`,
   ].join(" • ");
   const focus: BriefingFocus[] = [];
   if (openAduan.length > 0) {
@@ -784,6 +819,7 @@ function buildBriefing(now = new Date()): Briefing {
       ? "• IKM: belum ada jawaban"
       : `• IKM: ${ikmFmt(ikmStats.overall)} (kategori ${ikmStats.category}), ${ikmStats.count} responden`,
     `• Surat hari ini: ${lettersToday}`,
+    `• Surat masuk hari ini: ${masukToday}`,
     "Fokus hari ini:",
     ...(focus.length > 0
       ? focus.map((f) => `- ${f.text}`)
@@ -2144,6 +2180,12 @@ function initKepegawaian(): void {
       setStatus(status, "");
     } catch (e) {
       console.error("DesaAI: kepegawaian summary failed", e);
+      // Fail soft: never leave the officer with an empty panel — the
+      // offline recap is always available, even when the AI call fails.
+      output.textContent = recap;
+      badge.textContent = t("badgeUnknown", lang);
+      badge.className = "badge badge-unknown";
+      reason.textContent = t("kegSumOfflineNote", lang);
       setStatus(status, t("statusAiError", lang), true);
     } finally {
       btn.disabled = false;
@@ -2411,6 +2453,7 @@ function initIkm(): void {
 // ---------- Pengaduan ----------
 
 let aduItems: Aduan[] = [];
+let agendaItems: AgendaEntry[] = [];
 
 function aduStatusPill(status: AduanStatus): { text: string; cls: string } {
   if (status === "baru") return { text: t("aduStatusBaru", lang), cls: "baru" };
@@ -2655,6 +2698,201 @@ function initPengaduan(): void {
   });
 }
 
+// ---------- Buku Agenda Surat (Paket 11) ----------
+
+function renderAgenda(): void {
+  agendaItems = loadAgenda();
+  const stats = computeAgendaStats(agendaItems);
+  $("agenda-stat-masuk").textContent = String(stats.masuk);
+  $("agenda-stat-keluar").textContent = String(stats.keluar);
+  $("agenda-stat-belum").textContent = String(stats.belum);
+  const arahSel = $("agenda-filter-arah") as HTMLSelectElement;
+  const prevArah = arahSel.value as AgendaArah | "";
+  arahSel.innerHTML = "";
+  for (const [value, key] of [
+    ["", "agendaFilterArah"],
+    ["masuk", "agendaArahMasuk"],
+    ["keluar", "agendaArahKeluar"],
+  ] as const) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = t(key, lang);
+    arahSel.appendChild(opt);
+  }
+  arahSel.value = prevArah;
+  const statusSel = $("agenda-filter-status") as HTMLSelectElement;
+  const prevStatus = statusSel.value as AgendaStatus | "";
+  statusSel.innerHTML = "";
+  for (const [value, key] of [
+    ["", "agendaFilterStatus"],
+    ["baru", "aduStatusBaru"],
+    ["diproses", "aduStatusDiproses"],
+    ["selesai", "aduStatusSelesai"],
+  ] as const) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = t(key, lang);
+    statusSel.appendChild(opt);
+  }
+  statusSel.value = prevStatus;
+  const list = filterAgenda(agendaItems, prevArah, prevStatus);
+  const wrap = $("agenda-list");
+  wrap.innerHTML = "";
+  $("agenda-empty").hidden = list.length > 0;
+  for (const e of list) {
+    const div = document.createElement("div");
+    div.className = "draft-item aduan-item";
+    div.dataset.id = e.id;
+    const h = document.createElement("h3");
+    h.textContent = `${e.nomorAgenda} — ${e.perihal}`;
+    if (isAgendaDemoRecord(e)) {
+      const badge = document.createElement("span");
+      badge.className = "demo-badge";
+      badge.textContent = t("kegDemoBadge", lang);
+      h.appendChild(badge);
+    }
+    div.appendChild(h);
+    const meta = document.createElement("p");
+    meta.textContent = `${e.arah === "masuk" ? t("agendaArahMasuk", lang) : t("agendaArahKeluar", lang)} • ${e.pihak} • ${new Date(e.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}${e.nomorSurat ? ` • ${e.nomorSurat}` : ""}${e.disposisi ? ` • ${e.disposisi}` : ""}`;
+    div.appendChild(meta);
+    const row = document.createElement("div");
+    row.className = "actions";
+    const pill = aduStatusPill(e.status);
+    const pillEl = document.createElement("span");
+    pillEl.className = `status-pill ${pill.cls}`;
+    pillEl.textContent = pill.text;
+    row.appendChild(pillEl);
+    const sel = document.createElement("select");
+    sel.className = "aduan-status";
+    sel.dataset.id = e.id;
+    sel.setAttribute("aria-label", t("agendaFilterStatus", lang));
+    for (const [value, key] of [
+      ["baru", "aduStatusBaru"],
+      ["diproses", "aduStatusDiproses"],
+      ["selesai", "aduStatusSelesai"],
+    ] as const) {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = t(key, lang);
+      sel.appendChild(opt);
+    }
+    sel.value = e.status;
+    row.appendChild(sel);
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "btn";
+    delBtn.textContent = t("delete", lang);
+    delBtn.dataset.id = e.id;
+    row.appendChild(delBtn);
+    div.appendChild(row);
+    wrap.appendChild(div);
+  }
+  $("agenda-count").textContent =
+    `${t("kegShowing", lang)} ${list.length} ${t("kegOf", lang)} ${agendaItems.length} ${t("kegRecords", lang)}`;
+  // Keep the form disposisi select in sync with the current language.
+  const dispSel = $("agenda-in-disposisi") as HTMLSelectElement;
+  const prevDisp = dispSel.value;
+  dispSel.innerHTML = "";
+  const noneOpt = document.createElement("option");
+  noneOpt.value = "";
+  noneOpt.textContent = t("agendaDisposisiNone", lang);
+  dispSel.appendChild(noneOpt);
+  for (const d of AGENDA_DISPOSISI) {
+    const opt = document.createElement("option");
+    opt.value = d;
+    opt.textContent = d;
+    dispSel.appendChild(opt);
+  }
+  dispSel.value = prevDisp;
+}
+
+function initAgenda(): void {
+  renderAgenda();
+  const dateInput = $("agenda-in-tanggal") as HTMLInputElement;
+  if (!dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+  $("agenda-filter-arah").addEventListener("change", renderAgenda);
+  $("agenda-filter-status").addEventListener("change", renderAgenda);
+  $("agenda-export").addEventListener("click", () => {
+    const rows = [
+      ["No Agenda", "Arah", "No Surat", "Pengirim/Tujuan", "Perihal", "Tanggal", "Disposisi", "Status"],
+      ...agendaItems.map((e) => [
+        e.nomorAgenda,
+        e.arah,
+        e.nomorSurat,
+        e.pihak,
+        e.perihal,
+        new Date(e.tanggal).toLocaleDateString("id-ID"),
+        e.disposisi,
+        t(
+          e.status === "baru"
+            ? "aduStatusBaru"
+            : e.status === "diproses"
+              ? "aduStatusDiproses"
+              : "aduStatusSelesai",
+          lang,
+        ),
+      ]),
+    ];
+    downloadFile(
+      `agenda-${new Date().toISOString().slice(0, 10)}.csv`,
+      rows.map((r) => r.map(csvEscape).join(";")).join("\n"),
+      "text/csv;charset=utf-8",
+    );
+    setStatus($("agenda-export-status"), t("agendaExported", lang));
+  });
+  $("agenda-list").addEventListener("change", (ev) => {
+    const sel = (ev.target as HTMLElement).closest(
+      "select.aduan-status",
+    ) as HTMLSelectElement | null;
+    if (!sel || !sel.dataset.id) return;
+    const next = sel.value as AgendaStatus;
+    agendaItems = agendaItems.map((e) =>
+      e.id === sel.dataset.id ? { ...e, status: next } : e,
+    );
+    saveAgenda(agendaItems);
+    renderAgenda();
+    setStatus($("agenda-form-status"), t("agendaStatusChanged", lang));
+  });
+  $("agenda-list").addEventListener("click", (ev) => {
+    const btn = (ev.target as HTMLElement).closest(
+      "button[data-id]",
+    ) as HTMLButtonElement | null;
+    if (!btn || !btn.dataset.id) return;
+    if (!confirm(t("agendaConfirmDelete", lang))) return;
+    agendaItems = agendaItems.filter((e) => e.id !== btn.dataset.id);
+    saveAgenda(agendaItems);
+    renderAgenda();
+    setStatus($("agenda-form-status"), t("agendaDeleted", lang));
+  });
+  $("agenda-form").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const pihak = ($("agenda-in-pihak") as HTMLInputElement).value.trim();
+    const perihal = ($("agenda-in-perihal") as HTMLInputElement).value.trim();
+    if (!pihak || !perihal) {
+      setStatus($("agenda-form-status"), t("agendaFormError", lang), true);
+      return;
+    }
+    const dateVal = ($("agenda-in-tanggal") as HTMLInputElement).value;
+    const tanggal = dateVal ? new Date(`${dateVal}T00:00:00`).getTime() : Date.now();
+    const entry = createAgendaEntry(agendaItems, {
+      arah: ($("agenda-in-arah") as HTMLSelectElement).value as AgendaArah,
+      nomorSurat: ($("agenda-in-nomor") as HTMLInputElement).value,
+      pihak,
+      perihal,
+      tanggal,
+      disposisi: ($("agenda-in-disposisi") as HTMLSelectElement).value,
+    });
+    agendaItems = [...agendaItems, entry];
+    saveAgenda(agendaItems);
+    ($("agenda-form") as HTMLFormElement).reset();
+    ($("agenda-in-tanggal") as HTMLInputElement).value = new Date()
+      .toISOString()
+      .slice(0, 10);
+    renderAgenda();
+    setStatus($("agenda-form-status"), `${t("agendaAdded", lang)} ${entry.nomorAgenda}`);
+  });
+}
+
 // ---------- boot ----------
 
 async function boot(): Promise<void> {
@@ -2667,6 +2905,7 @@ async function boot(): Promise<void> {
   initKepegawaian();
   initIkm();
   initPengaduan();
+  initAgenda();
   initPalette();
   initMode();
   renderQuickStats();

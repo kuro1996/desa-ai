@@ -1840,6 +1840,7 @@ body.mode-warga .tab[data-tab="letters"],
 body.mode-warga .tab[data-tab="summarize"],
 body.mode-warga .tab[data-tab="drafts"],
 body.mode-warga .tab[data-tab="kepegawaian"],
+body.mode-warga .tab[data-tab="agenda"],
 body.mode-warga #home-briefing {
   display: none;
 }

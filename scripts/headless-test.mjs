@@ -953,7 +953,17 @@ async function main() {
     await page.evaluate(() => document.getElementById("keg-search")?.dispatchEvent(new Event("input", { bubbles: true })));
     await sleep(200);
     await page.click("#keg-summarize");
-    await sleep(600);
+    // The AI path may take a while to fail in this VM; wait for the recap
+    // text instead of a fixed sleep (was flaky at 600 ms).
+    await page
+      .waitForFunction(
+        () =>
+          /Rekap kepegawaian/.test(
+            document.getElementById("keg-sum-output")?.textContent ?? "",
+          ),
+        { timeout: 30000 },
+      )
+      .catch(() => {});
     const sumWrapVisible = await page.$eval("#keg-sum-output-wrap", (el) => !el.hidden);
     const sumText = await page.$eval("#keg-sum-output", (el) => el.textContent);
     check(
@@ -1188,6 +1198,97 @@ async function main() {
     await page.select("#adu-filter-jenis", "");
     await sleep(200);
 
+    // 8c. Buku Agenda Surat (Paket 11): seeds, auto-number, filters, CSV, delete
+    await page.click('[data-tab="agenda"]');
+    await sleep(300);
+    const agsVisible = await page.$eval("#panel-agenda", (el) => !el.hidden);
+    check("agenda tab opens", agsVisible);
+    const agsNote = await page.$eval("#agenda-demo-note", (el) => el.textContent);
+    check(
+      "agenda shows clear SAMPLE DATA label",
+      /contoh|sample/i.test(agsNote) && /bukan data asli|not real data/i.test(agsNote),
+      agsNote.slice(0, 80),
+    );
+    const agsStats = await page.evaluate(() => ({
+      masuk: Number(document.getElementById("agenda-stat-masuk")?.textContent ?? 0),
+      keluar: Number(document.getElementById("agenda-stat-keluar")?.textContent ?? 0),
+      belum: Number(document.getElementById("agenda-stat-belum")?.textContent ?? 0),
+      items: document.querySelectorAll("#agenda-list .aduan-item").length,
+    }));
+    check(
+      "agenda seeds 4 demo entries (2 masuk, 2 keluar, 2 need follow-up)",
+      agsStats.items === 4 && agsStats.masuk === 2 && agsStats.keluar === 2 && agsStats.belum === 2,
+      `items=${agsStats.items} masuk=${agsStats.masuk} keluar=${agsStats.keluar} belum=${agsStats.belum}`,
+    );
+    await page.click("#agenda-submit");
+    await sleep(300);
+    const agsEmptyStatus = await page.$eval("#agenda-form-status", (el) => el.textContent);
+    const agsCountAfterEmpty = await page.$eval("#agenda-count", (el) => el.textContent);
+    check(
+      "agenda form rejects an empty submit",
+      /Isi pengirim|fill in/i.test(agsEmptyStatus) && /4/.test(agsCountAfterEmpty),
+      `status=${agsEmptyStatus} count=${agsCountAfterEmpty}`,
+    );
+    const agsYear = new Date().getFullYear();
+    await page.select("#agenda-in-arah", "masuk");
+    await page.type("#agenda-in-nomor", "123/DS-BRS/XI/2026");
+    await page.type("#agenda-in-pihak", "Desa Beruas");
+    await page.type("#agenda-in-perihal", "Permohonan data warga pindah");
+    await page.click("#agenda-submit");
+    await sleep(400);
+    const agsAfterAdd = await page.evaluate(() => ({
+      masuk: Number(document.getElementById("agenda-stat-masuk")?.textContent ?? 0),
+      belum: Number(document.getElementById("agenda-stat-belum")?.textContent ?? 0),
+      items: document.querySelectorAll("#agenda-list .aduan-item").length,
+      firstText: document.querySelector("#agenda-list .aduan-item")?.textContent ?? "",
+    }));
+    check(
+      "agenda submit adds an entry with the next auto number",
+      agsAfterAdd.items === 5 && agsAfterAdd.masuk === 3 && agsAfterAdd.belum === 3 &&
+        new RegExp(`005/AGS/${agsYear}`).test(agsAfterAdd.firstText) &&
+        /Permohonan data warga pindah/.test(agsAfterAdd.firstText),
+      `items=${agsAfterAdd.items} masuk=${agsAfterAdd.masuk} belum=${agsAfterAdd.belum}`,
+    );
+    await page.select("#agenda-filter-arah", "keluar");
+    await sleep(300);
+    const agsKeluar = await page.$$eval("#agenda-list .aduan-item", (els) => els.length);
+    check("agenda direction filter shows outgoing letters", agsKeluar === 2, `${agsKeluar} items`);
+    await page.select("#agenda-filter-arah", "");
+    await sleep(200);
+    await page.select("#agenda-list .aduan-item:first-child .aduan-status", "selesai");
+    await sleep(400);
+    const agsAfterStatus = await page.evaluate(() => ({
+      belum: Number(document.getElementById("agenda-stat-belum")?.textContent ?? 0),
+    }));
+    check("agenda status change updates the follow-up count", agsAfterStatus.belum === 2, `belum=${agsAfterStatus.belum}`);
+    await page.click("#agenda-export");
+    await sleep(200);
+    const agsExportStatus = await page.$eval("#agenda-export-status", (el) => el.textContent ?? "");
+    check(
+      "agenda CSV export reports success",
+      /diekspor|exported/i.test(agsExportStatus),
+      `status=${agsExportStatus}`,
+    );
+    await page.evaluate(() => {
+      document.querySelector("#agenda-list .aduan-item .actions .btn")?.click();
+    });
+    await sleep(400);
+    const agsAfterDelete = await page.$$eval("#agenda-list .aduan-item", (els) => els.length);
+    check("agenda delete removes the entry", agsAfterDelete === 4, `${agsAfterDelete} items`);
+    // Global search finds agenda entries by subject.
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    await page.$eval("#home-search", (el) => { el.value = ""; });
+    await page.type("#home-search", "BOS 2026");
+    await sleep(300);
+    const searchAgs = await page.$eval("#home-search-results", (el) => el.textContent);
+    check(
+      "global search finds mail-register entries by subject",
+      /Undangan sosialisasi BOS 2026/.test(searchAgs) && /Agenda surat|Mail register/.test(searchAgs),
+      searchAgs.slice(0, 120),
+    );
+    await page.$eval("#home-search", (el) => { el.value = ""; });
+
     // 9. Modern layout: no horizontal overflow at phone width; all 7 tabs work
     await page.setViewport({ width: 390, height: 844 });
     await sleep(400);
@@ -1213,7 +1314,7 @@ async function main() {
       overflow.docScroll <= overflow.inner + 1 && overflow.bad.length === 0,
       `scrollWidth=${overflow.docScroll} inner=${overflow.inner} bad=${overflow.bad.join(" | ")}`,
     );
-    const tabs = ["home", "letters", "summarize", "qa", "drafts", "kepegawaian", "ikm", "pengaduan"];
+    const tabs = ["home", "letters", "summarize", "qa", "drafts", "kepegawaian", "ikm", "pengaduan", "agenda"];
     let tabsOk = true;
     let tabsDetail = "";
     for (const tab of tabs) {
@@ -1226,7 +1327,7 @@ async function main() {
         break;
       }
     }
-    check("all 8 tabs open at phone width", tabsOk, tabsDetail || "8/8 tabs");
+    check("all 9 tabs open at phone width", tabsOk, tabsDetail || "9/9 tabs");
     const heroPhoneH = await page.$eval(".hero", (el) => el.getBoundingClientRect().height);
     check(
       "hero is slim on phones (180–280px)",
@@ -1312,8 +1413,8 @@ async function main() {
       })),
     );
     check(
-      "all 8 tabs have an SVG icon + label",
-      tabIcons.length === 8 && tabIcons.every((t) => t.hasSvg && t.label.length > 0),
+      "all 9 tabs have an SVG icon + label",
+      tabIcons.length === 9 && tabIcons.every((t) => t.hasSvg && t.label.length > 0),
       tabIcons.map((t) => `${t.label}:${t.hasSvg ? "svg" : "NO-SVG"}`).join(" | "),
     );
     // Survey distribution: link + QR code (generated locally, offline)
@@ -1415,10 +1516,12 @@ async function main() {
       cardVisible: !document.getElementById("home-warga-card").hidden,
       briefingHidden:
         getComputedStyle(document.getElementById("home-briefing")).display === "none",
+      agendaHidden:
+        getComputedStyle(document.querySelector('[data-tab="agenda"]')).display === "none",
     }));
     check(
-      "citizen mode hides officer tabs + briefing and shows resident card",
-      warga.bodyWarga && warga.lettersHidden && warga.cardVisible && warga.briefingHidden,
+      "citizen mode hides officer tabs + briefing + agenda and shows resident card",
+      warga.bodyWarga && warga.lettersHidden && warga.cardVisible && warga.briefingHidden && warga.agendaHidden,
       JSON.stringify(warga),
     );
     await page.click("#warga-go-ikm");
