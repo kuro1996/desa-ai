@@ -50,7 +50,7 @@ by a human officer before use.
 
 **Tech:** Vite + TypeScript, Firebase AI Logic (Gemini Nano 4 on-device +
 Gemini cloud fallback), Firestore mirror (best-effort), localStorage-first
-so the office keeps working offline. 138 automated headless-Chrome checks
+so the office keeps working offline. 142 automated headless-Chrome checks
 green on every build.
 
 ## 2. Yang baru sejak submit (untuk kolom "What's new" / pembaruan deskripsi)
@@ -84,6 +84,14 @@ green on every build.
   TERVERIFIKASI masuk Firestore 21 Nov 18:27 WIB** (users/{uid}/ikm/rekap:
   14 item — 12 demo + 2 jawaban Bos; updatedAt 18:26:08 WIB). Tes
   headless 138 cek, semua hijau.
+- **Paket 10 (23 Nov pagi): Briefing Pagi** — kartu ringkasan harian di
+  Beranda: tanggal hari ini, ringkasan (pengaduan baru, masa bhakti
+  habis, skor IKM, surat hari ini), 3 fokus hari ini (pengaduan tertua,
+  masa bhakti terdekat, unsur IKM terendah — klik fokus membuka tab
+  terkait), ringkasan memerah bila ada yang mendesak, dan tombol
+  **Salin briefing** yang menyalin teks WhatsApp siap tempel untuk grup
+  staf/Camat (disembunyikan di Mode Warga). Tes headless 138 → **142
+  cek, semua hijau**.
 
 ## 3. Checklist sebelum Bos tekan submit
 
