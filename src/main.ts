@@ -2533,6 +2533,10 @@ let kegItems: Perangkat[] = [];
 // select, so the Paket 21 statistics stay exactly as filtered.
 let kegSortKey: KegSortKey | null = null;
 let kegSortDir: KegSortDir = "asc";
+// Paket 25 — the rows currently shown in the staff table (search +
+// filters already applied, in the current sort order); the CSV export
+// writes exactly these rows, so the file always matches the screen.
+let kegLastRows: Perangkat[] = [];
 
 function kegFillSelect(
   el: HTMLSelectElement,
@@ -2699,6 +2703,10 @@ function renderKepegawaian(): void {
   // by the search/filters (never reset the search); the statistics below
   // are computed from `filtered`, so sorting cannot change their numbers.
   const sorted = kegSortKey ? sortPerangkat(filtered, kegSortKey, kegSortDir) : filtered;
+  // Paket 25 — remember the displayed rows for the CSV export, and
+  // disable the export button when the current view is empty.
+  kegLastRows = sorted;
+  ($("keg-export-csv") as HTMLButtonElement).disabled = sorted.length === 0;
   const tbody = $("keg-table-body");
   tbody.innerHTML = "";
   sorted.forEach((p, i) => {
@@ -2914,6 +2922,52 @@ function kegShowDetail(p: Perangkat): void {
   if (!dlg.open) dlg.showModal();
 }
 
+// ---------- Paket 25 — Ekspor CSV Daftar Pegawai ----------
+// Export exactly the rows currently shown in the table: the search +
+// filters (Paket 22/24) already applied, in the current sort order
+// (Paket 23). Header + values in Indonesian, dates kept as the stored
+// ISO dates so a spreadsheet can sort them; the status is derived only
+// from the stored masaSelesai (nothing invented). 100% local, so it
+// works fully offline — no Firebase call.
+function kegStaffCsv(rows: Perangkat[], now = new Date()): { filename: string; text: string } {
+  const header =
+    "No,Nama,Unit,Jabatan,Desa,Tempat Lahir,Tanggal Lahir,Agama,No. HP,Masa Mulai,Masa Selesai,Status,Sisa Hari,Alamat";
+  const lines = rows.map((p, i) => {
+    const status = masaStatus(p, now);
+    const statusId =
+      status === "aktif" ? "Aktif" : status === "akan-habis" ? "Akan habis" : "Habis";
+    const cells = [
+      String(i + 1),
+      p.nama,
+      p.unit === "kecamatan" ? "Kecamatan" : "Desa",
+      p.jabatan,
+      p.desa,
+      p.tempatLahir,
+      p.tglLahir,
+      p.agama,
+      p.noHp || "-",
+      p.masaMulai,
+      p.masaSelesai,
+      statusId,
+      String(daysUntilEnd(p, now)),
+      p.alamat || "-",
+    ];
+    return cells.map(csvEscape).join(",");
+  });
+  const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return { filename: `daftar-pegawai-${stamp}.csv`, text: [header, ...lines].join("\n") };
+}
+
+function exportKegCsv(): void {
+  if (kegLastRows.length === 0) {
+    setStatus($("keg-export-status"), t("kegExportEmpty", lang));
+    return;
+  }
+  const { filename, text } = kegStaffCsv(kegLastRows);
+  downloadFile(filename, text, "text/csv;charset=utf-8");
+  setStatus($("keg-export-status"), `${t("kegExported", lang)} ${filename}`);
+}
+
 function kegSetLetterField(key: string, value: string): void {
   const el = document.getElementById(`letter-field-${key}`) as
     | HTMLInputElement
@@ -3010,6 +3064,8 @@ function initKepegawaian(): void {
   $("keg-filter-unit").addEventListener("change", renderKepegawaian);
   $("keg-filter-jabatan").addEventListener("change", renderKepegawaian);
   $("keg-filter-status").addEventListener("change", renderKepegawaian);
+  // Paket 25 — export the rows currently shown (filtered + sorted).
+  $("keg-export-csv").addEventListener("click", exportKegCsv);
 
   // Paket 23 — sortable column headers: click (or Enter/Space on the
   // focused header) cycles asc -> desc -> cleared (stored order).

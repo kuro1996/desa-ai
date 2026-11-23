@@ -291,6 +291,25 @@ so the office keeps working offline. 199 automated checks on every build
   LIVE — deploy gh-pages 86b0dab (ls-remote terverifikasi), index
   200, bundle index-ByQJR_qq.js 200 + marker data-sort-key /
   keg-table; secret check bersih.**
+- **Paket 24 (23 Nov sore): Filter Cepat Pegawai per Desa &
+  Jabatan** — dropdown filter Desa & Jabatan sebenarnya sudah ada,
+  tapi pilihannya statis: pegawai kecamatan (desa "Kecamatan
+  Simpangkatis") dan jabatan di luar daftar tidak bisa dipilih sama
+  sekali. Kini pilihan dropdown dihitung dinamis dari data yang
+  benar-benar ada (12 pilihan desa termasuk "Kecamatan
+  Simpangkatis", 17 pilihan jabatan; diurutkan A–Z, diperbarui tiap
+  render, pilihan aktif dipertahankan bila masih ada), plus tombol
+  "Reset filter" baru yang mengembalikan keempat dropdown (desa,
+  unit, jabatan, status) ke "Semua" — tanpa menyentuh teks pencarian
+  dan urutan kolom. Filter bekerja BERSAMA pencarian (Paket 22) dan
+  pengurutan (Paket 23); hanya data yang sudah ada, 100% lokal,
+  bekerja offline; tersembunyi di Mode Warga bersama tab
+  Kepegawaian. **Status (23 Nov malam): KODE SELESAI + tes 281/281
+  hijau (headless 265/265 + PWA 16/16; 15 cek filter baru semua
+  hijau); commit main 043ba8e ter-push. **Status (23 Nov malam):
+  LIVE — deploy gh-pages a9acc4e (ls-remote terverifikasi), index
+  200, bundle index-Vyuv_H8S.js 200 + marker keg-filter-reset;
+  secret check bersih.**
 
 ## 3. Checklist sebelum Bos tekan submit
 

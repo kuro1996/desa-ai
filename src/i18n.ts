@@ -394,6 +394,14 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   kegFilterDesa: { en: "All villages", id: "Semua desa" },
   kegFilterJabatan: { en: "All positions", id: "Semua jabatan" },
   kegFilterReset: { en: "Reset filters", id: "Reset filter" },
+  // Paket 25 — Ekspor CSV Daftar Pegawai: button + status line that
+  // reports the exported filename (or that there is nothing to export).
+  kegExportCsv: { en: "Export CSV", id: "Ekspor CSV" },
+  kegExported: { en: "Exported", id: "Diekspor" },
+  kegExportEmpty: {
+    en: "Nothing to export — no staff match the current filter.",
+    id: "Tidak ada yang diekspor — tidak ada pegawai yang cocok dengan filter saat ini.",
+  },
   kegShowing: { en: "Showing", id: "Menampilkan" },
   kegOf: { en: "of", id: "dari" },
   kegRecords: { en: "records", id: "data" },

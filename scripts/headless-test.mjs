@@ -2089,6 +2089,184 @@ async function main() {
       `rows=${p24Clean.rows} first=${await kegFirstName()}`,
     );
 
+    // Paket 25 — Ekspor CSV Daftar Pegawai: the file holds exactly the
+    // rows currently shown (search + filters applied, current sort
+    // order), with an Indonesian header; local data only, offline.
+    const installCsvCapture = () =>
+      page.evaluate(() => {
+        window.__csvBlobs = [];
+        if (!window.__csvCaptureInstalled) {
+          const orig = URL.createObjectURL.bind(URL);
+          URL.createObjectURL = (blob) => {
+            window.__csvBlobs.push(blob);
+            return orig(blob);
+          };
+          window.__csvCaptureInstalled = true;
+        }
+      });
+    const readLastCsv25 = () =>
+      page.evaluate(async () => {
+        const blobs = window.__csvBlobs ?? [];
+        const last = blobs[blobs.length - 1];
+        return last ? await last.text() : "";
+      });
+    const kegCsvLines = async () => (await readLastCsv25()).trim().split("\n");
+    const kegExportDisabled = () =>
+      page.$eval("#keg-export-csv", (el) => el.disabled);
+    const todayStamp = () => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
+    await installCsvCapture();
+    const p25Btn = await page.$("#keg-export-csv");
+    check(
+      "kepegawaian CSV export button exists with Indonesian label",
+      !!p25Btn &&
+        (await page.$eval("#keg-export-csv", (el) => el.textContent ?? "")) ===
+          "Ekspor CSV" &&
+        (await kegExportDisabled()) === false,
+      `label=${await page.$eval("#keg-export-csv", (el) => el.textContent ?? "")}`,
+    );
+    const p25FirstDefault = await kegFirstName();
+    await page.click("#keg-export-csv");
+    await sleep(300);
+    const p25Csv = await readLastCsv25();
+    const p25Lines = p25Csv.trim().split("\n");
+    check(
+      "kepegawaian CSV export has Indonesian header + all 24 rows",
+      p25Lines[0] ===
+        "No,Nama,Unit,Jabatan,Desa,Tempat Lahir,Tanggal Lahir,Agama,No. HP,Masa Mulai,Masa Selesai,Status,Sisa Hari,Alamat" &&
+        p25Lines.length === 25,
+      `header=${p25Lines[0] ?? ""} lines=${p25Lines.length}`,
+    );
+    check(
+      "kepegawaian CSV first row matches the table first row",
+      p25Lines[1]?.split(",")[1] === p25FirstDefault,
+      `first=${p25Lines[1]?.split(",")[1] ?? ""} table=${p25FirstDefault}`,
+    );
+    check(
+      "kepegawaian CSV holds real records with status + remaining days",
+      p25Csv.includes("Dedi Kurniawan,Desa,Kepala Desa,Katis") &&
+        p25Csv.includes(",Aktif,") &&
+        p25Csv.includes(",Habis,"),
+      p25Lines.slice(1, 3).join(" | "),
+    );
+    const p25Status = await page.$eval(
+      "#keg-export-status",
+      (el) => el.textContent ?? "",
+    );
+    check(
+      "kepegawaian CSV export reports the filename",
+      p25Status.includes(`daftar-pegawai-${todayStamp()}.csv`),
+      p25Status,
+    );
+    await page.select("#keg-filter-desa", "Katis");
+    await sleep(300);
+    await page.click("#keg-export-csv");
+    await sleep(300);
+    const p25KatisLines = await kegCsvLines();
+    check(
+      "kepegawaian CSV export follows the village filter",
+      p25KatisLines.length === 4 &&
+        p25KatisLines.slice(1).every((l) => l.includes(",Katis,")),
+      `${p25KatisLines.length - 1} data rows`,
+    );
+    await page.select("#keg-filter-desa", "");
+    await setKegSearch("kepala desa");
+    await clickKegSort("nama");
+    await clickKegSort("nama");
+    await sleep(300);
+    const p25DescFirst = await kegFirstName();
+    await page.click("#keg-export-csv");
+    await sleep(300);
+    const p25DescLines = await kegCsvLines();
+    check(
+      "kepegawaian CSV export follows search + descending sort",
+      p25DescLines.length === 6 &&
+        p25DescLines[1]?.split(",")[1] === p25DescFirst,
+      `rows=${p25DescLines.length - 1} first=${p25DescLines[1]?.split(",")[1] ?? ""} table=${p25DescFirst}`,
+    );
+    await setKegSearch("zzz-tidak-ada");
+    await sleep(300);
+    const p25Empty = await page.evaluate(() => ({
+      disabled: document.getElementById("keg-export-csv").disabled,
+      noResult: !document.getElementById("keg-no-result").hidden,
+      rows: document.querySelectorAll("#keg-table-body tr").length,
+    }));
+    check(
+      "kepegawaian CSV export disabled when the view is empty",
+      p25Empty.disabled === true && p25Empty.noResult === true && p25Empty.rows === 0,
+      `disabled=${p25Empty.disabled} noResult=${p25Empty.noResult} rows=${p25Empty.rows}`,
+    );
+    await setKegSearch("");
+    // CSV escaping: a value with a comma + quotes is quoted and its
+    // quotes doubled (edit one record in storage, reload, restore —
+    // like the Paket 24 new-position check).
+    const p25OrigAlamat = await page.evaluate(() => {
+      const items = JSON.parse(localStorage.getItem("desaai-perangkat-v1"));
+      const rec = items.find((p) => p.nama === "Tes Tambah");
+      const old = rec.alamat;
+      rec.alamat = 'Jl. Merdeka, No. 1 "A"';
+      localStorage.setItem("desaai-perangkat-v1", JSON.stringify(items));
+      return old;
+    });
+    await page.reload({ waitUntil: "load" });
+    await sleep(500);
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(300);
+    await installCsvCapture();
+    await page.click("#keg-export-csv");
+    await sleep(300);
+    const p25EscCsv = await readLastCsv25();
+    check(
+      "kepegawaian CSV escapes commas and quotes in values",
+      p25EscCsv.includes('"Jl. Merdeka, No. 1 ""A"""'),
+      p25EscCsv.split("\n").find((l) => l.includes("Tes Tambah")) ?? "",
+    );
+    await page.evaluate((old) => {
+      const items = JSON.parse(localStorage.getItem("desaai-perangkat-v1"));
+      items.find((p) => p.nama === "Tes Tambah").alamat = old;
+      localStorage.setItem("desaai-perangkat-v1", JSON.stringify(items));
+    }, p25OrigAlamat);
+    await page.reload({ waitUntil: "load" });
+    await sleep(500);
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(300);
+    await installCsvCapture();
+    // Offline: the export is local data only, so it works with no network.
+    await page.setOfflineMode(true);
+    await page.click("#keg-export-csv");
+    await sleep(300);
+    const p25OfflineCsv = await readLastCsv25();
+    await page.setOfflineMode(false);
+    check(
+      "kepegawaian CSV export works offline",
+      p25OfflineCsv.includes("No,Nama,Unit,Jabatan,Desa") &&
+        p25OfflineCsv.trim().split("\n").length === 25,
+      `${p25OfflineCsv.trim().split("\n").length} lines`,
+    );
+    // Mode Warga hides the whole staff tab, export button included.
+    await page.click("#mode-toggle");
+    await sleep(200);
+    const p25Warga = await page.evaluate(
+      () =>
+        document.body.classList.contains("mode-warga") &&
+        document.getElementById("keg-export-csv")?.offsetParent === null,
+    );
+    await page.click("#mode-toggle");
+    await sleep(200);
+    check("kepegawaian CSV export button hidden in Mode Warga", p25Warga, `hidden=${p25Warga}`);
+    // Leave the table in its default view for the checks below.
+    const p25Clean = await kegSearchState();
+    check(
+      "kepegawaian view cleared after the Paket 25 checks",
+      p25Clean.rows === 24 &&
+        p25Clean.statTotal === "24" &&
+        (await kegFirstName()) === "Ahmad Fauzi" &&
+        (await kegExportDisabled()) === false,
+      `rows=${p25Clean.rows} first=${await kegFirstName()}`,
+    );
+
     // Village filter: Katis has 3 demo records
     await page.select("#keg-filter-desa", "Katis");
     await sleep(300);
