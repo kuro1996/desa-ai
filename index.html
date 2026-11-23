@@ -34,8 +34,8 @@
         /* storage unavailable — light theme by default */
       }
     </script>
-    <script type="module" crossorigin src="./assets/index-8IHpMy5Z.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-DKCbH3ll.css">
+    <script type="module" crossorigin src="./assets/index-CVG5gCiO.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CWQpG8qU.css">
   </head>
   <body>
     <header class="hero">
@@ -1126,6 +1126,20 @@
             <p class="stat-label" data-i18n="agendaStatBelum">Perlu tindak lanjut</p>
             <h3 id="agenda-stat-belum">0</h3>
           </div>
+        </div>
+
+        <h3 class="subhead" data-i18n="agendaCalTitle">Kalender agenda</h3>
+        <div class="agenda-cal" id="agenda-cal">
+          <div class="agenda-cal-nav">
+            <button id="agenda-cal-prev" class="btn" type="button" aria-label="Bulan sebelumnya">‹</button>
+            <h4 id="agenda-cal-label" class="agenda-cal-label"></h4>
+            <button id="agenda-cal-next" class="btn" type="button" aria-label="Bulan berikutnya">›</button>
+            <button id="agenda-cal-today" class="btn" type="button">
+              <span data-i18n="agendaCalToday">Hari ini</span>
+            </button>
+          </div>
+          <div id="agenda-cal-grid" class="agenda-cal-grid"></div>
+          <div id="agenda-cal-detail" class="agenda-cal-detail" aria-live="polite"></div>
         </div>
 
         <h3 class="subhead" data-i18n="agendaFormTitle">Catat surat</h3>
