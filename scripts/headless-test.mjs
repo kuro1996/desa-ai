@@ -3033,6 +3033,63 @@ async function main() {
       agsStats.items === 4 && agsStats.masuk === 2 && agsStats.keluar === 2 && agsStats.belum === 2,
       `items=${agsStats.items} masuk=${agsStats.masuk} keluar=${agsStats.keluar} belum=${agsStats.belum}`,
     );
+    // Paket 26 — Pencarian teks di tab Agenda (perihal / pihak / nomor
+    // agenda / nomor surat), berpadu dengan dropdown arah + status.
+    const agsSearch = async (q) => {
+      await page.$eval(
+        "#agenda-search",
+        (el, v) => {
+          el.value = v;
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+        },
+        q,
+      );
+      await sleep(300);
+      return page.$$eval("#agenda-list .aduan-item", (els) => els.length);
+    };
+    const agsSearchStats = () =>
+      page.evaluate(() => ({
+        masuk: Number(document.getElementById("agenda-stat-masuk")?.textContent ?? 0),
+        keluar: Number(document.getElementById("agenda-stat-keluar")?.textContent ?? 0),
+        belum: Number(document.getElementById("agenda-stat-belum")?.textContent ?? 0),
+        emptyHidden: document.getElementById("agenda-empty")?.hidden ?? true,
+      }));
+    check("agenda search by subject finds one entry", (await agsSearch("bantuan sosial")) === 1, "bantuan sosial");
+    check("agenda search by sender finds one entry", (await agsSearch("Katis")) === 1, "Katis");
+    check("agenda search by agenda number finds one entry", (await agsSearch("002/AGS/2026")) === 1, "002/AGS/2026");
+    check("agenda search by letter number finds one entry", (await agsSearch("470/12")) === 1, "470/12");
+    check("agenda search is case-insensitive", (await agsSearch("bos")) === 1, "bos");
+    // Search composes with the direction dropdown: "Desa" matches both
+    // Desa Katis (masuk) and Desa Terak (keluar).
+    await page.select("#agenda-filter-arah", "masuk");
+    await sleep(200);
+    check("agenda search + direction filter compose", (await agsSearch("Desa")) === 1, "Desa + masuk");
+    await page.select("#agenda-filter-arah", "");
+    await sleep(200);
+    await page.select("#agenda-filter-status", "selesai");
+    await sleep(200);
+    check("agenda search + status filter compose", (await agsSearch("Desa")) === 1, "Desa + selesai");
+    await page.select("#agenda-filter-status", "");
+    await sleep(200);
+    // No match: empty list + empty message, stats stay global.
+    const agsNoMatch = await agsSearch("zzz-tidak-ada");
+    const agsNoMatchState = await agsSearchStats();
+    check(
+      "agenda search with no match shows the empty message, stats stay global",
+      agsNoMatch === 0 &&
+        agsNoMatchState.emptyHidden === false &&
+        agsNoMatchState.masuk === 2 &&
+        agsNoMatchState.keluar === 2 &&
+        agsNoMatchState.belum === 2,
+      `items=${agsNoMatch} emptyHidden=${agsNoMatchState.emptyHidden} masuk=${agsNoMatchState.masuk}`,
+    );
+    // Offline: search still works on local data.
+    await page.setOfflineMode(true);
+    const agsOfflineSearch = await agsSearch("BOS");
+    await page.setOfflineMode(false);
+    check("agenda search works offline (local data only)", agsOfflineSearch === 1, `BOS offline=${agsOfflineSearch}`);
+    // Clearing the search restores all 4 seed entries.
+    check("clearing the agenda search restores all entries", (await agsSearch("")) === 4, "cleared");
     // Paket 19: Kalender Agenda — monthly view over the register.
     // (Runs while the register still holds only the 4 seed entries.)
     const calState = () =>

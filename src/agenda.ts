@@ -108,10 +108,19 @@ export function filterAgenda(
   items: AgendaEntry[],
   arah: AgendaArah | "",
   status: AgendaStatus | "",
+  query = "",
 ): AgendaEntry[] {
+  const q = query.trim().toLowerCase();
   const sorted = [...items].sort((a, b) => b.tanggal - a.tanggal);
   return sorted.filter(
-    (e) => (!arah || e.arah === arah) && (!status || e.status === status),
+    (e) =>
+      (!arah || e.arah === arah) &&
+      (!status || e.status === status) &&
+      (!q ||
+        e.perihal.toLowerCase().includes(q) ||
+        e.pihak.toLowerCase().includes(q) ||
+        e.nomorAgenda.toLowerCase().includes(q) ||
+        e.nomorSurat.toLowerCase().includes(q)),
   );
 }
 

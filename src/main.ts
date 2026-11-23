@@ -3771,7 +3771,12 @@ function renderAgenda(): void {
     statusSel.appendChild(opt);
   }
   statusSel.value = prevStatus;
-  const list = filterAgenda(agendaItems, prevArah, prevStatus);
+  // Paket 26 — Pencarian teks di tab Agenda: perihal / pihak / nomor
+  // agenda / nomor surat; berpadu dengan kedua dropdown (arah + status).
+  // Statistik (masuk/keluar/belum) dan kalender tetap GLOBAL — total
+  // kantor, bukan hasil saringan (keputusan yang sama seperti Paket 22).
+  const agsQuery = ($("agenda-search") as HTMLInputElement).value ?? "";
+  const list = filterAgenda(agendaItems, prevArah, prevStatus, agsQuery);
   const wrap = $("agenda-list");
   wrap.innerHTML = "";
   $("agenda-empty").hidden = list.length > 0;
@@ -3998,6 +4003,7 @@ function initAgenda(): void {
   if (!dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
   $("agenda-filter-arah").addEventListener("change", renderAgenda);
   $("agenda-filter-status").addEventListener("change", renderAgenda);
+  $("agenda-search").addEventListener("input", renderAgenda);
   $("agenda-cal-prev").addEventListener("click", () => {
     agendaCalMonth -= 1;
     if (agendaCalMonth < 0) {

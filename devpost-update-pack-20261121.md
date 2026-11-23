@@ -310,6 +310,25 @@ so the office keeps working offline. 199 automated checks on every build
   LIVE — deploy gh-pages a9acc4e (ls-remote terverifikasi), index
   200, bundle index-Vyuv_H8S.js 200 + marker keg-filter-reset;
   secret check bersih.**
+- **Paket 25 (23 Nov malam): Ekspor CSV Daftar Pegawai** — tombol
+  "Ekspor CSV" baru di tab Kepegawaian yang mengunduh
+  `daftar-pegawai-YYYY-MM-DD.csv` berisi persis baris yang sedang
+  tampil di layar: pencarian (Paket 22), filter Desa/Jabatan/Unit/
+  Status (Paket 24), dan urutan kolom saat ini (Paket 23) semuanya
+  diterapkan — yang diunduh adalah yang terlihat, bukan seluruh
+  data. Header + nilai Bahasa Indonesia, tanggal ISO (bisa
+  diurutkan di spreadsheet), kolom Status + Sisa Hari (dihitung dari
+  tanggal habis SK, tidak ada yang dikarang), kolom Alamat. Escape
+  CSV standar (koma/kutip digandakan). Tombol nonaktif saat hasil
+  kosong; 100% lokal, bekerja offline; tersembunyi di Mode Warga
+  bersama tab Kepegawaian. **Status (23 Nov malam): KODE SELESAI +
+  tes 293/293 hijau (headless 277/277 + PWA 16/16; 12 cek ekspor
+  baru semua hijau; flaky bawaan "kepegawaian summary renders an
+  offline recap without AI" tidak gagal kali ini); commit main
+  63a5ea5 ter-push. **Status (23 Nov malam): LIVE — deploy
+  gh-pages d58ef4b (ls-remote terverifikasi), index 200, bundle
+  index-Td-wGKUP.js 200 + marker keg-export-csv; secret check
+  bersih; 0 entri node_modules.**
 
 ## 3. Checklist sebelum Bos tekan submit
 

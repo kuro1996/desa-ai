@@ -179,6 +179,8 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   agendaListTitle: { en: "Register", id: "Daftar agenda" },
   agendaFilterArah: { en: "All directions", id: "Semua arah" },
   agendaFilterStatus: { en: "All statuses", id: "Semua status" },
+  agendaSearch: { en: "Search register", id: "Cari agenda" },
+  agendaSearchPh: { en: "Subject, sender, or number…", id: "Perihal, pihak, atau nomor…" },
   agendaEmpty: { en: "No entries with this filter.", id: "Tidak ada entri dengan filter ini." },
   agendaExport: { en: "Export CSV", id: "Ekspor CSV" },
   agendaExported: { en: "Register exported.", id: "Agenda diekspor." },
