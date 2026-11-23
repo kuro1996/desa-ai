@@ -349,6 +349,16 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   },
   kegSkHabis: { en: "SK expired", id: "SK sudah habis" },
   kegSkAkanHabis: { en: "SK expires in", id: "SK habis dalam" },
+  // Paket 21 — Statistik Pegawai (staff breakdown: per position / village / SK)
+  kegStat21Title: { en: "Staff Statistics", id: "Statistik Pegawai" },
+  kegStat21Total: { en: "Total staff", id: "Total pegawai" },
+  kegStat21Jabatan: { en: "By position", id: "Per jabatan" },
+  kegStat21Desa: { en: "By village", id: "Per desa" },
+  kegStat21Sk: { en: "SK validity", id: "Masa berlaku SK" },
+  kegStat21SkBerlaku: { en: "SK still valid", id: "SK masih berlaku" },
+  kegStat21SkHabis: { en: "SK expired", id: "SK sudah habis" },
+  kegStat21SkTanpaTanggal: { en: "No SK end date", id: "Tanpa tanggal SK" },
+  kegStat21Unknown: { en: "Unknown", id: "Tidak diketahui" },
   kegFormTitle: { en: "Add officer", id: "Input pegawai" },
   kegAdd: { en: "Save officer", id: "Simpan data" },
   kegNeedName: {

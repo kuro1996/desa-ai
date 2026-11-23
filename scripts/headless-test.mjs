@@ -1467,6 +1467,141 @@ async function main() {
     // so the form tests below can click #keg-add.
     await page.click('[data-tab="kepegawaian"]');
     await sleep(300);
+    // Paket 21 — Statistik Pegawai: breakdown per jabatan / per desa / SK,
+    // computed only from the stored records. Expected values computed from
+    // localStorage + today's date (never hard-coded dates).
+    const readBd = () =>
+      page.evaluate(() => ({
+        total: document.getElementById("keg-stat21-total")?.textContent ?? "",
+        jab: [...document.querySelectorAll("#keg-stat21-jabatan li")].map(
+          (li) => li.textContent ?? "",
+        ),
+        desa: [...document.querySelectorAll("#keg-stat21-desa li")].map(
+          (li) => li.textContent ?? "",
+        ),
+        skBerlaku: document.getElementById("keg-stat21-sk-berlaku")?.textContent ?? "",
+        skHabis: document.getElementById("keg-stat21-sk-habis")?.textContent ?? "",
+        skTanpa: document.getElementById("keg-stat21-sk-tanpa")?.textContent ?? "",
+        skTanpaHidden: document.getElementById("keg-stat21-sk-tanpa-wrap")?.hidden ?? true,
+        rows: document.querySelectorAll("#keg-table-body tr").length,
+        statTotal: document.getElementById("keg-stat-total")?.textContent ?? "",
+      }));
+    const bdExpected = await page.evaluate(() => {
+      const items = JSON.parse(localStorage.getItem("desaai-perangkat-v1") ?? "[]");
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const group = (pick) => {
+        const map = new Map();
+        for (const p of items) map.set((pick(p) ?? "").trim(), (map.get((pick(p) ?? "").trim()) ?? 0) + 1);
+        return [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "id"));
+      };
+      let berlaku = 0, habis = 0, tanpa = 0;
+      for (const p of items) {
+        if (!p.masaSelesai) { tanpa += 1; continue; }
+        const d = Math.round((new Date(`${p.masaSelesai}T00:00:00`).getTime() - today.getTime()) / 86400000);
+        if (Number.isNaN(d)) tanpa += 1; else if (d < 0) habis += 1; else berlaku += 1;
+      }
+      return { total: items.length, jab: group((p) => p.jabatan), desa: group((p) => p.desa), berlaku, habis, tanpa };
+    });
+    const bd = await readBd();
+    const rowCount = (rows) => rows.reduce((a, t) => a + Number((t.match(/(\d+)$/) ?? ["0", "0"])[1]), 0);
+    check(
+      "staff breakdown total matches the officer list and stat cards",
+      bd.total === String(bdExpected.total) &&
+        bd.statTotal === String(bdExpected.total) &&
+        bd.rows === bdExpected.total,
+      `total=${bd.total} statTotal=${bd.statTotal} rows=${bd.rows} expected=${bdExpected.total}`,
+    );
+    check(
+      "staff breakdown by position sums to total, most common first",
+      rowCount(bd.jab) === bdExpected.total &&
+        bd.jab.length === bdExpected.jab.length &&
+        bd.jab[0].startsWith(bdExpected.jab[0][0]) &&
+        bd.jab[0].endsWith(String(bdExpected.jab[0][1])),
+      `groups=${bd.jab.length} first=${bd.jab[0]} expected-first=${bdExpected.jab[0][0]}×${bdExpected.jab[0][1]}`,
+    );
+    check(
+      "staff breakdown by village sums to total",
+      rowCount(bd.desa) === bdExpected.total &&
+        bd.desa.length === bdExpected.desa.length &&
+        bd.desa[0].startsWith(bdExpected.desa[0][0]) &&
+        bd.desa[0].endsWith(String(bdExpected.desa[0][1])),
+      `groups=${bd.desa.length} first=${bd.desa[0]} expected-first=${bdExpected.desa[0][0]}×${bdExpected.desa[0][1]}`,
+    );
+    check(
+      "staff breakdown SK counts match stored end dates",
+      bd.skBerlaku === String(bdExpected.berlaku) &&
+        bd.skHabis === String(bdExpected.habis) &&
+        bd.skTanpa === String(bdExpected.tanpa) &&
+        bd.skTanpaHidden === (bdExpected.tanpa === 0),
+      `berlaku=${bd.skBerlaku}/${bdExpected.berlaku} habis=${bd.skHabis}/${bdExpected.habis} tanpa=${bd.skTanpa}/${bdExpected.tanpa}`,
+    );
+    // Manipulation: a record without position/village/end date groups under
+    // "Unknown" and counts as "No SK end date" — never guessed.
+    const seedKegRaw21 = await page.evaluate(() => localStorage.getItem("desaai-perangkat-v1"));
+    const bdManip = await page.evaluate(() => {
+      const items = JSON.parse(localStorage.getItem("desaai-perangkat-v1") ?? "[]");
+      const p = items[0];
+      p.jabatan = "";
+      p.desa = "";
+      p.masaSelesai = "";
+      localStorage.setItem("desaai-perangkat-v1", JSON.stringify(items));
+      return { nama: p.nama };
+    });
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(400);
+    const bdManipRead = await readBd();
+    await page.evaluate((raw) => {
+      if (raw) localStorage.setItem("desaai-perangkat-v1", raw);
+    }, seedKegRaw21);
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(400);
+    check(
+      "staff breakdown groups a missing position/village as Unknown and counts a dateless SK",
+      bdManipRead.total === String(bdExpected.total) &&
+        bdManipRead.jab.some((t) => t.startsWith("Unknown")) &&
+        bdManipRead.desa.some((t) => t.startsWith("Unknown")) &&
+        bdManipRead.skTanpa === String(bdExpected.tanpa + 1) &&
+        !bdManipRead.skTanpaHidden,
+      `total=${bdManipRead.total} jab-unknown=${bdManipRead.jab.some((t) => t.startsWith("Unknown"))} tanpa=${bdManipRead.skTanpa}`,
+    );
+    // Offline: the breakdown still renders from local data.
+    await page.setOfflineMode(true);
+    await page.click('[data-tab="home"]');
+    await sleep(200);
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(300);
+    const bdOffline = await readBd();
+    await page.setOfflineMode(false);
+    check(
+      "staff breakdown renders offline (local data only)",
+      bdOffline.total === String(bdExpected.total) &&
+        bdOffline.jab.length === bdExpected.jab.length &&
+        bdOffline.desa.length === bdExpected.desa.length,
+      `total=${bdOffline.total} jab-groups=${bdOffline.jab.length} desa-groups=${bdOffline.desa.length}`,
+    );
+    // Mode Warga: the kepegawaian tab (officer-only) is hidden, so the
+    // breakdown inside it is not visible either.
+    await page.click("#mode-toggle");
+    await sleep(200);
+    const bdWargaHidden = await page.evaluate(
+      () =>
+        document.body.classList.contains("mode-warga") &&
+        document.getElementById("keg-stat21")?.offsetParent === null,
+    );
+    await page.click("#mode-toggle");
+    await sleep(200);
+    const bdWargaBack = await page.evaluate(
+      () => !document.body.classList.contains("mode-warga"),
+    );
+    check(
+      "staff breakdown hidden in Mode Warga (kepegawaian is officer-only)",
+      bdWargaHidden && bdWargaBack,
+    );
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(300);
     // Desa cards: 10 cards; lembaga: 6 cards
     const desaCards = await page.$$eval("#keg-desa-cards .desa-card", (els) => els.length);
     check("kepegawaian renders 10 village cards", desaCards === 10, `${desaCards} cards`);

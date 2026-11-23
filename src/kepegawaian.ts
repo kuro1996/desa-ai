@@ -351,6 +351,60 @@ export function computeSkReminders(items: Perangkat[], now = new Date()): NotifI
   return list;
 }
 
+// ---------- Paket 21 — Statistik Pegawai ----------
+// Breakdown of the current staff list, computed only from the records
+// already stored: per-position and per-village counts, plus SK validity
+// (appointment term end = masaSelesai, same rule as Paket 20 — a record
+// without a usable end date counts as "no SK end date", never guessed).
+export interface BreakdownRow {
+  key: string; // raw jabatan/desa value; "" means missing/unknown
+  count: number;
+}
+
+export interface StaffBreakdown {
+  total: number;
+  byJabatan: BreakdownRow[];
+  byDesa: BreakdownRow[];
+  skBerlaku: number;
+  skHabis: number;
+  skTanpaTanggal: number;
+}
+
+function groupCounts(items: Perangkat[], pick: (p: Perangkat) => string): BreakdownRow[] {
+  const map = new Map<string, number>();
+  for (const p of items) {
+    const key = (pick(p) ?? "").trim();
+    map.set(key, (map.get(key) ?? 0) + 1);
+  }
+  return [...map.entries()]
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key, "id"));
+}
+
+export function computeStaffBreakdown(items: Perangkat[], now = new Date()): StaffBreakdown {
+  let skBerlaku = 0;
+  let skHabis = 0;
+  let skTanpaTanggal = 0;
+  for (const p of items) {
+    if (!p.masaSelesai) {
+      skTanpaTanggal += 1;
+      continue;
+    }
+    const d = daysUntilEnd(p, now);
+    if (Number.isNaN(d)) skTanpaTanggal += 1;
+    else if (d < 0) skHabis += 1;
+    else skBerlaku += 1;
+  }
+  return {
+    total: items.length,
+    byJabatan: groupCounts(items, (p) => p.jabatan),
+    byDesa: groupCounts(items, (p) => p.desa),
+    skBerlaku,
+    skHabis,
+    skTanpaTanggal,
+  };
+}
+
 export function filterPerangkat(
   items: Perangkat[],
   search: string,

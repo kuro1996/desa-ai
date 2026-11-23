@@ -55,6 +55,7 @@ import {
   buildKepegawaianSummary,
   computeNotifications,
   computeSkReminders,
+  computeStaffBreakdown,
   computeStats,
   daysUntilEnd,
   DESA_LIST,
@@ -2608,6 +2609,33 @@ function renderKepegawaian(): void {
     li.appendChild(detail);
     skList.appendChild(li);
   }
+
+  // Paket 21 — Statistik Pegawai: breakdown per jabatan / per desa / SK,
+  // computed only from the records already stored (nothing invented;
+  // a record without jabatan/desa groups under "Tidak diketahui", and a
+  // record without a usable SK end date counts as "tanpa tanggal SK").
+  const bd = computeStaffBreakdown(items);
+  $("keg-stat21-total").textContent = String(bd.total);
+  const renderBreakdown = (id: string, rows: Array<{ key: string; count: number }>): void => {
+    const ul = $(id);
+    ul.innerHTML = "";
+    for (const r of rows) {
+      const li = document.createElement("li");
+      const label = document.createElement("span");
+      label.textContent = r.key === "" ? t("kegStat21Unknown", lang) : r.key;
+      const count = document.createElement("strong");
+      count.textContent = String(r.count);
+      li.appendChild(label);
+      li.appendChild(count);
+      ul.appendChild(li);
+    }
+  };
+  renderBreakdown("keg-stat21-jabatan", bd.byJabatan);
+  renderBreakdown("keg-stat21-desa", bd.byDesa);
+  $("keg-stat21-sk-berlaku").textContent = String(bd.skBerlaku);
+  $("keg-stat21-sk-habis").textContent = String(bd.skHabis);
+  $("keg-stat21-sk-tanpa").textContent = String(bd.skTanpaTanggal);
+  $("keg-stat21-sk-tanpa-wrap").hidden = bd.skTanpaTanggal === 0;
 
   // Table (search + filters)
   const search = ($("keg-search") as HTMLInputElement).value ?? "";
