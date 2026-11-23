@@ -114,6 +114,16 @@ green on every build.
   152 → **158 cek**, harness PWA baru **16/16 cek** (logika service
   worker diuji: shell segar setelah deploy, aset ter-cache offline,
   API Firebase tidak pernah di-cache).
+- **Paket 13 (23 Nov siang): Ekspor CSV Laporan Bulanan** — tombol
+  **Ekspor CSV** di kartu Laporan Bulanan (Beranda) mengunduh rekap
+  bulan berjalan sebagai `laporan-bulanan-YYYY-MM.csv`: surat tersimpan,
+  agenda masuk/keluar + per status (baru/diproses/selesai), IKM
+  (responden, skor rata-rata, kategori), pengaduan per status, dan
+  kepegawaian (aktif/akan habis/habis). Header Bahasa Indonesia,
+  pemisah koma, escape benar; 100% data lokal sehingga bekerja offline.
+  Kartu laporan kini juga menampilkan baris agenda, dan versi cetaknya
+  ikut mencantumkan rekap agenda. Tes: headless 158 → **163 cek**,
+  PWA tetap **16/16** (total 179/179 hijau).
 
 ## 3. Checklist sebelum Bos tekan submit
 
@@ -136,7 +146,9 @@ green on every build.
 - Paket 12: 1 cek headless flaky bawaan ("kepegawaian summary renders an
   offline recap without AI") — gagal 3 dari 4 run 23 Nov, TERBUKTI gagal
   juga di kode pra-Paket 12 (baseline 151/152). Bukan akibat PWA; jangan
-  klaim 158/158 sebelum cek itu diperbaiki. Registrasi service worker
+  klaim 158/158 sebelum cek itu diperbaiki. **Update Paket 13: cek flaky
+  tersebut LOLOS di kedua run headless hari ini — total 179/179 hijau
+  (163 headless + 16 PWA).** Registrasi service worker
   live BELUM terbukti dari VM (Chrome headless di VM tidak bisa mencapai
   origin HTTP apa pun) — bukti live: buka situs di HP Bos, cek chip
   Online + "Add to Home Screen" muncul (lihat uji-cloud-hp-20261123.md).

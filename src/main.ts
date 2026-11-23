@@ -503,6 +503,11 @@ function renderTrend(): void {
 interface MonthlyReport {
   monthLabel: string;
   letters: number;
+  agsMasuk: number;
+  agsKeluar: number;
+  agsBaru: number;
+  agsDiproses: number;
+  agsSelesai: number;
   ikmCount: number;
   ikmScore: number;
   ikmCat: string;
@@ -525,9 +530,16 @@ function monthlyReportData(now = new Date()): MonthlyReport {
   const aduMonth = loadAduan().filter((a) => inMonth(a.createdAt, now));
   const aduStats = computeAduanStats(aduMonth);
   const keg = computeStats(loadPerangkat(), now);
+  // Mail register for the month, by letter date (tanggal), not record date.
+  const agsMonth = loadAgenda().filter((e) => inMonth(e.tanggal, now));
   return {
     monthLabel: monthNameId(now),
     letters,
+    agsMasuk: agsMonth.filter((e) => e.arah === "masuk").length,
+    agsKeluar: agsMonth.filter((e) => e.arah === "keluar").length,
+    agsBaru: agsMonth.filter((e) => e.status === "baru").length,
+    agsDiproses: agsMonth.filter((e) => e.status === "diproses").length,
+    agsSelesai: agsMonth.filter((e) => e.status === "selesai").length,
     ikmCount: ikmMonth.length,
     ikmScore: ikmStats.overall,
     ikmCat: ikmStats.category,
@@ -548,6 +560,10 @@ function renderReportPreview(): void {
   preview.innerHTML = "";
   const rows: Array<[string, string]> = [
     [t("homeMonthLetters", lang), String(d.letters)],
+    [
+      t("tabAgenda", lang),
+      `${d.agsMasuk} masuk · ${d.agsKeluar} keluar (${t("aduStatusBaru", lang)} ${d.agsBaru} · ${t("aduStatusDiproses", lang)} ${d.agsDiproses} · ${t("aduStatusSelesai", lang)} ${d.agsSelesai})`,
+    ],
     [
       t("homeMonthIkm", lang),
       `${d.ikmCount} — IKM ${d.ikmCount === 0 ? "–" : ikmFmt(d.ikmScore)} (${d.ikmCat})`,
@@ -608,6 +624,7 @@ function printMonthlyReport(): void {
   }
   $("report-print-body").textContent = [
     `Surat tersimpan bulan ini: ${d.letters}`,
+    `Agenda surat bulan ini: masuk ${d.agsMasuk}, keluar ${d.agsKeluar} (Baru ${d.agsBaru}, Diproses ${d.agsDiproses}, Selesai ${d.agsSelesai})`,
     `IKM: skor ${d.ikmCount === 0 ? "–" : ikmFmt(d.ikmScore)} (kategori ${d.ikmCat}), ${d.ikmCount} responden`,
     `Pengaduan bulan ini: ${d.aduTotal} (Baru ${d.aduBaru}, Diproses ${d.aduDiproses}, Selesai ${d.aduSelesai})`,
     `Kepegawaian: ${d.kegTotal} pegawai — aktif ${d.kegAktif}, akan habis ${d.kegAkan}, habis ${d.kegHabis}`,
@@ -620,6 +637,47 @@ function printMonthlyReport(): void {
   document.body.dataset.printTarget = "report";
   window.print();
   setStatus($("home-report-status"), t("homeReportPrinted", lang));
+}
+
+// Paket 13 — export the monthly report as a comma-separated CSV (header
+// Bahasa Indonesia). Local data only, so it works fully offline — no
+// Firebase call, same sources as the on-screen recap + mail register.
+function monthlyReportCsv(now = new Date()): { filename: string; text: string } {
+  const d = monthlyReportData(now);
+  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const rows: Array<[string, string, string]> = [
+    ["Surat", "Surat tersimpan bulan ini", String(d.letters)],
+    ["Agenda", "Surat masuk bulan ini", String(d.agsMasuk)],
+    ["Agenda", "Surat keluar bulan ini", String(d.agsKeluar)],
+    ["Agenda", "Agenda berstatus Baru", String(d.agsBaru)],
+    ["Agenda", "Agenda berstatus Diproses", String(d.agsDiproses)],
+    ["Agenda", "Agenda berstatus Selesai", String(d.agsSelesai)],
+    ["IKM", "Responden bulan ini", String(d.ikmCount)],
+    ["IKM", "Skor IKM rata-rata", d.ikmCount === 0 ? "–" : d.ikmScore.toFixed(2)],
+    ["IKM", "Kategori IKM", d.ikmCat],
+    ["Pengaduan", "Total pengaduan bulan ini", String(d.aduTotal)],
+    ["Pengaduan", "Berstatus Baru", String(d.aduBaru)],
+    ["Pengaduan", "Berstatus Diproses", String(d.aduDiproses)],
+    ["Pengaduan", "Berstatus Selesai", String(d.aduSelesai)],
+    ["Kepegawaian", "Total pegawai", String(d.kegTotal)],
+    ["Kepegawaian", "Aktif", String(d.kegAktif)],
+    ["Kepegawaian", "Akan habis masa bhakti", String(d.kegAkan)],
+    ["Kepegawaian", "Masa bhakti habis", String(d.kegHabis)],
+  ];
+  const lines = [
+    `Laporan Bulanan,${d.monthLabel}`,
+    "Kecamatan Simpangkatis,Kabupaten Bangka Tengah",
+    "",
+    "Bagian,Metrik,Nilai",
+    ...rows.map((r) => r.map(csvEscape).join(",")),
+  ];
+  return { filename: `laporan-bulanan-${ym}.csv`, text: lines.join("\n") };
+}
+
+function exportMonthlyReportCsv(): void {
+  const { filename, text } = monthlyReportCsv();
+  downloadFile(filename, text, "text/csv;charset=utf-8");
+  setStatus($("home-report-status"), `${t("homeReportExported", lang)} ${filename}`);
 }
 
 let homeSearchQuery = "";
@@ -1010,6 +1068,7 @@ function initHome(): void {
     document.querySelector<HTMLButtonElement>('[data-tab="kepegawaian"]')?.click(),
   );
   $("home-report-print").addEventListener("click", printMonthlyReport);
+  $("home-report-export").addEventListener("click", exportMonthlyReportCsv);
   $("home-briefing-copy").addEventListener("click", () => void copyBriefing());
 }
 
@@ -1148,10 +1207,11 @@ function downloadTxt(filename: string, text: string): void {
   downloadFile(filename, text, "text/plain;charset=utf-8");
 }
 
-/** Escape one CSV cell (semicolon-separated export): quote when the value
- * contains a separator, quote, or newline; double inner quotes. */
+/** Escape one CSV cell: quote when the value contains a separator (comma
+ * or semicolon — both export flavours exist), quote, or newline; double
+ * inner quotes. */
 function csvEscape(v: string): string {
-  return /[;"\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  return /[;,\"\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 }
 
 /** Read a JSON value from localStorage without throwing (backup export). */

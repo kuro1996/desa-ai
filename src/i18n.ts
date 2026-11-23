@@ -60,6 +60,8 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   },
   homeReportPrint: { en: "Print report", id: "Cetak laporan" },
   homeReportPrinted: { en: "Report sent to print.", id: "Laporan dikirim ke printer." },
+  homeReportExport: { en: "Export CSV", id: "Ekspor CSV" },
+  homeReportExported: { en: "Monthly report CSV downloaded.", id: "Laporan CSV diunduh." },
   // Paket 10 — morning briefing (Briefing Pagi)
   briefingTitle: { en: "Morning briefing", id: "Briefing Pagi" },
   briefingFocus: { en: "Today's focus", id: "Fokus hari ini" },

@@ -376,6 +376,78 @@ async function main() {
         /IKM/.test(reportPrint.body) && reportPrint.target === "report",
       `printed=${reportPrint.printed} title=${reportPrint.title} target=${reportPrint.target}`,
     );
+    // Paket 13: monthly report CSV export (local data only, works offline).
+    const reportExportBtn = await page.$("#home-report-export");
+    check("monthly report CSV export button exists", !!reportExportBtn);
+    await page.evaluate(() => {
+      window.__csvBlobs = [];
+      const orig = URL.createObjectURL.bind(URL);
+      URL.createObjectURL = (blob) => {
+        window.__csvBlobs.push(blob);
+        return orig(blob);
+      };
+    });
+    await page.click("#home-report-export");
+    await sleep(300);
+    const readLastCsv = () =>
+      page.evaluate(async () => {
+        const blobs = window.__csvBlobs ?? [];
+        const last = blobs[blobs.length - 1];
+        return last ? await last.text() : "";
+      });
+    const reportCsv = await readLastCsv();
+    const reportStatus = await page.$eval("#home-report-status", (el) => el.textContent ?? "");
+    const nowDate = new Date();
+    const expectFile = `laporan-bulanan-${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, "0")}.csv`;
+    check(
+      "monthly report CSV has Indonesian header + all five sections",
+      reportCsv.includes("Bagian,Metrik,Nilai") &&
+        ["Surat,", "Agenda,", "IKM,", "Pengaduan,", "Kepegawaian,"].every((s) =>
+          reportCsv.includes(s),
+        ),
+      reportCsv.split("\n").slice(0, 5).join(" | "),
+    );
+    // Agenda counts in the CSV match the register stored locally, computed
+    // independently here from localStorage (robust across months).
+    const agsStored = await page.evaluate(() => {
+      try {
+        return JSON.parse(localStorage.getItem("desaai-agenda-v1") ?? "[]");
+      } catch {
+        return [];
+      }
+    });
+    const agsMonth = agsStored.filter((e) => {
+      const d = new Date(e.tanggal);
+      return (
+        d.getFullYear() === nowDate.getFullYear() &&
+        d.getMonth() === nowDate.getMonth()
+      );
+    });
+    const csvAgsMasuk = agsMonth.filter((e) => e.arah === "masuk").length;
+    const csvAgsKeluar = agsMonth.filter((e) => e.arah === "keluar").length;
+    check(
+      "monthly report CSV agenda counts match the local register",
+      reportCsv.includes(`Agenda,Surat masuk bulan ini,${csvAgsMasuk}`) &&
+        reportCsv.includes(`Agenda,Surat keluar bulan ini,${csvAgsKeluar}`),
+      `masuk=${csvAgsMasuk} keluar=${csvAgsKeluar}`,
+    );
+    check(
+      "monthly report CSV export reports the filename",
+      reportStatus.includes(expectFile),
+      reportStatus,
+    );
+    // Offline: the export still produces the same CSV with no network.
+    await page.setOfflineMode(true);
+    await page.click("#home-report-export");
+    await sleep(300);
+    const offlineCsv = await readLastCsv();
+    await page.setOfflineMode(false);
+    check(
+      "monthly report CSV export works offline",
+      offlineCsv.includes("Bagian,Metrik,Nilai") &&
+        offlineCsv.includes("Agenda,Surat masuk bulan ini,"),
+      offlineCsv.split("\n").slice(3, 4).join(""),
+    );
     // Dark mode: toggles, persists across reload, toggles back to light.
     await page.click("#theme-toggle");
     await sleep(300);
