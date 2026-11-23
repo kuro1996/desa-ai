@@ -546,6 +546,43 @@
           No drafts yet. Generate a letter or summary and press “Save draft”.
         </p>
 
+        <!-- Paket 15: print preview for one archived letter (filled in by JS). -->
+        <div id="archive-print-preview" class="archive-print-preview" hidden>
+          <h3 class="subhead" data-i18n="printPreviewTitle">Print official letter</h3>
+          <p class="hint" data-i18n="printPreviewHint">
+            Check the details before printing — the letter prints exactly as shown
+            below. The body is editable; no name, number, or date is invented.
+          </p>
+          <div class="form-grid" id="archive-print-fields"></div>
+          <div
+            id="archive-print-sheet"
+            class="archive-print-sheet"
+            aria-label="Letter preview"
+          ></div>
+          <div class="actions">
+            <button id="archive-print-do" class="btn btn-primary" type="button">
+              <span data-i18n="printDo">Print</span>
+            </button>
+            <button id="archive-print-close" class="btn" type="button">
+              <span data-i18n="printClose">Close</span>
+            </button>
+          </div>
+        </div>
+        <!-- Print-only rendering of the archived letter (filled in by JS before window.print()). -->
+        <div id="archive-print-area" class="print-only" aria-hidden="true">
+          <div class="print-kop">
+            <img class="print-kop-logo" src="./logo.png" alt="" />
+            <div class="print-kop-text">
+              <p class="print-kop-gov">Pemerintah Kabupaten Bangka Tengah</p>
+              <p class="print-kop-office">Kecamatan Simpangkatis</p>
+            </div>
+          </div>
+          <hr />
+          <div class="print-meta" id="archive-print-meta"></div>
+          <div class="print-body" id="archive-print-body"></div>
+          <div class="print-sign" id="archive-print-sign"></div>
+        </div>
+
         <div class="backup-card">
           <h3 class="subhead" data-i18n="backupTitle">Data backup</h3>
           <p class="hint" data-i18n="backupHint">

@@ -50,8 +50,8 @@ by a human officer before use.
 
 **Tech:** Vite + TypeScript, Firebase AI Logic (Gemini Nano 4 on-device +
 Gemini cloud fallback), Firestore mirror (best-effort), localStorage-first
-so the office keeps working offline. 189 automated checks on every build
-(173 headless-Chrome + 16 PWA; 1 known flaky check, see §4).
+so the office keeps working offline. 199 automated checks on every build
+(183 headless-Chrome + 16 PWA; 1 known flaky check, see §4).
 
 ## 2. Yang baru sejak submit (untuk kolom "What's new" / pembaruan deskripsi)
 
@@ -138,6 +138,20 @@ so the office keeps working offline. 189 automated checks on every build
   disembunyikan di Mode Warga. Tes: headless 163 → **173 cek**
   (10 cek backup/restore baru, semua hijau), PWA tetap **16/16**
   (total 189/190 — 1 cek flaky bawaan, lihat §4).
+- **Paket 15 (23 Nov sore): Cetak Surat Resmi dari Arsip** — tiap entri
+  surat di Arsip kini punya tombol **Cetak Surat**: membuka pratinjau
+  surat resmi dengan kop (logo + Pemerintah Kabupaten Bangka Tengah /
+  Kecamatan Simpangkatis) dan kolom yang bisa diedit sebelum cetak —
+  nomor surat (ada tombol **Nomor otomatis** yang memakai penomoran
+  per-template yang sudah ada), tanggal, ditujukan kepada, perihal, dan
+  isi surat dari draf arsip. Tidak ada data yang dikarang: nomor/tujuan
+  yang kosong tercetak "—", dan nama penandatangan tercetak "—" karena
+  aplikasi tidak menyimpan nama Camat. Cetak via `window.print` dengan
+  stylesheet khusus (hanya surat yang tercetak, rapi di A4), 100% lokal
+  dan bekerja offline; tombol ikut tersembunyi di Mode Warga (arsip
+  memang khusus petugas). Tes: headless 173 → **183 cek** (10 cek
+  cetak-surat baru, semua hijau), PWA tetap **16/16** (total 199/200
+  — 1 cek flaky bawaan, lihat §4).
 
 ## 3. Checklist sebelum Bos tekan submit
 
@@ -168,4 +182,6 @@ so the office keeps working offline. 189 automated checks on every build
   Online + "Add to Home Screen" muncul (lihat uji-cloud-hp-20261123.md).
   **Update Paket 14: cek flaky itu GAGAL lagi di run terakhir
   (173/174 headless) — total 189/190; 10 cek backup/restore baru semua
-  hijau, PWA 16/16.**
+  hijau, PWA 16/16.** **Update Paket 15: cek flaky itu GAGAL lagi di
+  run terakhir (183/184 headless) — total 199/200; 10 cek cetak-surat
+  baru semua hijau, PWA 16/16.**

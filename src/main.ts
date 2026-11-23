@@ -116,6 +116,12 @@ function applyLang(): void {
   renderHome();
   setNetChip();
   void refreshDrafts();
+  // Paket 15 — keep an open print preview (with the officer's edits) when
+  // the language toggles; field values live in printForm, so rebuild is safe.
+  if (currentPrintDraft) {
+    buildArchivePrintFields();
+    renderArchiveSheet();
+  }
 }
 
 // ---------- theme (dark mode) ----------
@@ -1908,6 +1914,18 @@ async function refreshDrafts(): Promise<void> {
     openBtn.addEventListener("click", () => {
       openDraft(d);
     });
+    actions.appendChild(openBtn);
+    if (d.kind === "letter") {
+      // Paket 15 — print this archived letter as a formal official letter.
+      const printBtn = document.createElement("button");
+      printBtn.type = "button";
+      printBtn.className = "btn";
+      printBtn.textContent = t("printLetter", lang);
+      printBtn.addEventListener("click", () => {
+        openArchivePrint(d);
+      });
+      actions.appendChild(printBtn);
+    }
     const delBtn = document.createElement("button");
     delBtn.type = "button";
     delBtn.className = "btn";
@@ -1951,11 +1969,197 @@ function openDraft(d: Draft): void {
   }
 }
 
+// ---------- print an archived letter as a formal official letter (Paket 15) ----------
+// The archive stores only title + body + date, so the preview lets the officer
+// fill in the missing formal fields (number, addressee) before printing.
+// NOTHING is invented: an empty number/addressee prints as "—", and the
+// signatory name is "—" — the app has no Camat name on file. The letter
+// number auto-fill only fires when the officer presses the button, and only
+// for the template the draft title matches (drafts are saved with the
+// template's Indonesian name).
+
+let currentPrintDraft: Draft | null = null;
+let printForm = { nomor: "", tanggal: "", tujuan: "", perihal: "", isi: "" };
+
+function formatLetterDate(ts: number): string {
+  return new Date(ts).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function printMetaRow(label: string, value: string): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "print-meta-row";
+  const k = document.createElement("span");
+  k.className = "print-meta-key";
+  k.textContent = label;
+  const v = document.createElement("span");
+  v.className = "print-meta-val";
+  v.textContent = value || "—";
+  row.appendChild(k);
+  row.appendChild(v);
+  return row;
+}
+
+function printSignBlock(tanggal: string): HTMLElement {
+  const sign = document.createElement("div");
+  sign.className = "print-sign-inner";
+  const place = document.createElement("p");
+  place.textContent = `Simpangkatis, ${tanggal || "—"}`;
+  const title = document.createElement("p");
+  title.textContent = t("printSignerTitle", lang);
+  const name = document.createElement("p");
+  name.className = "print-sign-name";
+  // No Camat name on file — a clear placeholder, never an invented name.
+  name.textContent = "—";
+  const nip = document.createElement("p");
+  nip.textContent = "NIP. —";
+  sign.append(place, title, name, nip);
+  return sign;
+}
+
+function renderArchiveSheet(): void {
+  const sheet = $("archive-print-sheet");
+  sheet.innerHTML = "";
+  const kop = document.createElement("div");
+  kop.className = "print-kop";
+  const logo = document.createElement("img");
+  logo.className = "print-kop-logo";
+  logo.src = "./logo.png";
+  logo.alt = "";
+  const kopText = document.createElement("div");
+  kopText.className = "print-kop-text";
+  const gov = document.createElement("p");
+  gov.className = "print-kop-gov";
+  gov.textContent = t("printKopGov", lang);
+  const office = document.createElement("p");
+  office.className = "print-kop-office";
+  office.textContent = t("printKopOffice", lang);
+  kopText.append(gov, office);
+  kop.append(logo, kopText);
+  sheet.appendChild(kop);
+  sheet.appendChild(document.createElement("hr"));
+  const meta = document.createElement("div");
+  meta.className = "print-meta";
+  meta.append(
+    printMetaRow("Nomor", printForm.nomor),
+    printMetaRow("Tanggal", printForm.tanggal),
+    printMetaRow("Perihal", printForm.perihal),
+    printMetaRow("Kepada Yth.", printForm.tujuan),
+  );
+  sheet.appendChild(meta);
+  const body = document.createElement("div");
+  body.className = "print-body";
+  body.textContent = printForm.isi;
+  sheet.appendChild(body);
+  const sign = document.createElement("div");
+  sign.className = "print-sign";
+  sign.appendChild(printSignBlock(printForm.tanggal));
+  sheet.appendChild(sign);
+}
+
+function buildArchivePrintFields(): void {
+  const wrap = $("archive-print-fields");
+  wrap.innerHTML = "";
+  const mkField = (
+    key: keyof typeof printForm,
+    labelKey: string,
+    phKey: string | null,
+    textarea: boolean,
+  ): void => {
+    const label = document.createElement("label");
+    label.className = "field" + (textarea ? " field-wide" : "");
+    const span = document.createElement("span");
+    span.textContent = t(labelKey, lang);
+    label.appendChild(span);
+    const input = textarea
+      ? document.createElement("textarea")
+      : document.createElement("input");
+    input.id = `archive-print-${key}`;
+    if (input instanceof HTMLTextAreaElement) input.rows = 8;
+    if (phKey) input.placeholder = t(phKey, lang);
+    input.value = printForm[key];
+    input.addEventListener("input", () => {
+      printForm[key] = input.value;
+      renderArchiveSheet();
+    });
+    label.appendChild(input);
+    wrap.appendChild(label);
+  };
+  mkField("nomor", "printFieldNomor", "printFieldNomorPh", false);
+  // Auto-number, only when the draft title matches a known template.
+  const tpl = currentPrintDraft
+    ? TEMPLATES.find((x) => x.nameId === currentPrintDraft?.title)
+    : undefined;
+  if (tpl) {
+    const autoBtn = document.createElement("button");
+    autoBtn.type = "button";
+    autoBtn.className = "btn";
+    autoBtn.id = "archive-print-autonumber";
+    autoBtn.textContent = t("printAutoNumber", lang);
+    autoBtn.addEventListener("click", () => {
+      printForm.nomor = nextLetterNumber(tpl.id);
+      const input = $("archive-print-nomor") as HTMLInputElement;
+      input.value = printForm.nomor;
+      renderArchiveSheet();
+    });
+    wrap.appendChild(autoBtn);
+  }
+  mkField("tanggal", "printFieldTanggal", null, false);
+  mkField("tujuan", "printFieldTujuan", "printFieldTujuanPh", false);
+  mkField("perihal", "printFieldPerihal", null, false);
+  mkField("isi", "printFieldIsi", null, true);
+}
+
+function openArchivePrint(d: Draft): void {
+  currentPrintDraft = d;
+  printForm = {
+    nomor: "",
+    tanggal: formatLetterDate(d.createdAt),
+    tujuan: "",
+    perihal: d.title,
+    isi: d.content,
+  };
+  buildArchivePrintFields();
+  renderArchiveSheet();
+  $("archive-print-preview").hidden = false;
+  $("archive-print-preview").scrollIntoView({ block: "start" });
+}
+
+function closeArchivePrint(): void {
+  currentPrintDraft = null;
+  $("archive-print-preview").hidden = true;
+}
+
+function doArchivePrint(): void {
+  // Fill the print-only area from the same form the preview shows, so the
+  // printed page matches the preview exactly.
+  const meta = $("archive-print-meta");
+  meta.innerHTML = "";
+  meta.append(
+    printMetaRow("Nomor", printForm.nomor),
+    printMetaRow("Tanggal", printForm.tanggal),
+    printMetaRow("Perihal", printForm.perihal),
+    printMetaRow("Kepada Yth.", printForm.tujuan),
+  );
+  $("archive-print-body").textContent = printForm.isi;
+  const sign = $("archive-print-sign");
+  sign.innerHTML = "";
+  sign.appendChild(printSignBlock(printForm.tanggal));
+  document.body.dataset.printTarget = "archive-letter";
+  window.print();
+}
+
 function initDrafts(): void {
   ($("drafts-search") as HTMLInputElement).addEventListener("input", (ev) => {
     draftsQuery = (ev.target as HTMLInputElement).value;
     void refreshDrafts();
   });
+  // Paket 15 — print the archived letter shown in the preview.
+  $("archive-print-do").addEventListener("click", doArchivePrint);
+  $("archive-print-close").addEventListener("click", closeArchivePrint);
   $("backup-export").addEventListener("click", async () => {
     const backup = {
       app: "DesaAI",

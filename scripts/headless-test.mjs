@@ -1229,6 +1229,133 @@ async function main() {
       archiveItems.join(" | "),
     );
 
+    // 5a. Paket 15: print an official letter from the archive
+    const archiveBtns = await page.$$eval("#drafts-list .draft-item", (items) =>
+      items.map((d) => ({
+        title: d.querySelector("h3")?.textContent ?? "",
+        btns: [...d.querySelectorAll(".actions .btn")].map((b) => b.textContent.trim()),
+      })),
+    );
+    const archiveLetterBtns = archiveBtns.find((d) => d.title === "Surat Undangan")?.btns ?? [];
+    const archiveSummaryBtns = archiveBtns.find((d) => d.title === "Ringkasan dokumen")?.btns ?? [];
+    check(
+      "archive letter entry has a Print letter button (summary does not)",
+      archiveLetterBtns.includes("Print letter") && !archiveSummaryBtns.includes("Print letter"),
+      `letter=[${archiveLetterBtns.join(", ")}] summary=[${archiveSummaryBtns.join(", ")}]`,
+    );
+    await page.evaluate(() => {
+      const items = [...document.querySelectorAll("#drafts-list .draft-item")];
+      const target = items.find(
+        (d) => d.querySelector("h3")?.textContent === "Surat Undangan",
+      );
+      const btns = [...(target?.querySelectorAll(".actions .btn") ?? [])];
+      btns.find((b) => b.textContent.trim() === "Print letter")?.click();
+    });
+    await sleep(400);
+    const preview = await page.evaluate(() => ({
+      visible: !document.getElementById("archive-print-preview")?.hidden,
+      perihal: document.getElementById("archive-print-perihal")?.value ?? "",
+      isi: document.getElementById("archive-print-isi")?.value ?? "",
+      tanggal: document.getElementById("archive-print-tanggal")?.value ?? "",
+      sheet: document.getElementById("archive-print-sheet")?.textContent ?? "",
+      signName:
+        document.querySelector("#archive-print-sheet .print-sign-name")?.textContent ?? "",
+      autoNumber: !!document.getElementById("archive-print-autonumber"),
+    }));
+    check(
+      "print preview opens prefilled with the draft (perihal + isi + date) and the office kop",
+      preview.visible &&
+        preview.perihal === "Surat Undangan" &&
+        preview.isi === "Isi surat contoh" &&
+        preview.tanggal.length > 0 &&
+        /Pemerintah Kabupaten Bangka Tengah/.test(preview.sheet) &&
+        /Kecamatan Simpangkatis/.test(preview.sheet),
+      `perihal=${preview.perihal} isi=${preview.isi.slice(0, 20)} tanggal=${preview.tanggal}`,
+    );
+    check(
+      "print preview signatory name is a placeholder, never an invented name",
+      preview.signName === "—" && !/Rizky Ramadhan|Kepala Seksi/.test(preview.sheet),
+      `signName=${preview.signName}`,
+    );
+    check(
+      "auto-number button appears (draft title matches the Undangan template)",
+      preview.autoNumber,
+      `autoNumber=${preview.autoNumber}`,
+    );
+    await page.click("#archive-print-autonumber");
+    await sleep(200);
+    const nomorVal = await page.$eval("#archive-print-nomor", (el) => el.value);
+    check(
+      "auto-number fills a formal letter number",
+      /^140\/\d{3}\/DS\/[IVX]+\/\d{4}$/.test(nomorVal),
+      `nomor=${nomorVal}`,
+    );
+    // Editing the subject updates the preview sheet live.
+    await page.$eval("#archive-print-perihal", (el) => {
+      el.value = "";
+    });
+    await page.type("#archive-print-perihal", "Undangan Rapat RT");
+    await sleep(200);
+    const sheetAfterEdit = await page.$eval(
+      "#archive-print-sheet",
+      (el) => el.textContent ?? "",
+    );
+    check(
+      "editing perihal updates the preview sheet",
+      /Undangan Rapat RT/.test(sheetAfterEdit),
+      sheetAfterEdit.slice(0, 120),
+    );
+    // Print: fills the print-only area and calls window.print().
+    await page.evaluate(() => {
+      window.__archivePrinted = false;
+      window.print = () => {
+        window.__archivePrinted = true;
+      };
+    });
+    await page.click("#archive-print-do");
+    await sleep(300);
+    const archivePrint = await page.evaluate(() => ({
+      printed: window.__archivePrinted === true,
+      body: document.getElementById("archive-print-body")?.textContent ?? "",
+      meta: document.getElementById("archive-print-meta")?.textContent ?? "",
+      target: document.body.dataset.printTarget ?? "",
+    }));
+    check(
+      "archive print fills the print area and calls window.print()",
+      archivePrint.printed &&
+        /Isi surat contoh/.test(archivePrint.body) &&
+        /Undangan Rapat RT/.test(archivePrint.meta) &&
+        /140\/\d{3}\/DS\//.test(archivePrint.meta) &&
+        archivePrint.target === "archive-letter",
+      `printed=${archivePrint.printed} target=${archivePrint.target} meta=${archivePrint.meta.slice(0, 80)}`,
+    );
+    // Offline: printing still works with the preview already open (no new
+    // fetches — the logo is already cached from the page header).
+    await page.setOfflineMode(true);
+    await page.evaluate(() => {
+      window.__archivePrinted = false;
+    });
+    await page.click("#archive-print-do");
+    await sleep(300);
+    const offlinePrinted = await page.evaluate(
+      () => window.__archivePrinted === true,
+    );
+    await page.setOfflineMode(false);
+    check("archive print works offline", offlinePrinted, `printed=${offlinePrinted}`);
+    await page.click("#archive-print-close");
+    await sleep(200);
+    const previewClosed = await page.$eval(
+      "#archive-print-preview",
+      (el) => el.hidden,
+    );
+    check("print preview closes", previewClosed, `hidden=${previewClosed}`);
+    // The built CSS carries the archive print stylesheet (checked on disk).
+    check(
+      "print stylesheet covers the archive letter area",
+      /archive-print-area/.test(cssText) && /@media print/.test(cssText),
+      cssFiles.join(","),
+    );
+
     // 5b. Drafts search + delete + data backup export
     await page.type("#drafts-search", "Undangan");
     await sleep(400);

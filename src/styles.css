@@ -1320,8 +1320,117 @@ footer {
   margin-top: 0;
 }
 
+/* ---------- Paket 15: print an archived letter (on-screen preview sheet) ----------
+   The sheet is paper-white in both themes, like the printed page. */
+
+.archive-print-preview {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+}
+
+.archive-print-sheet {
+  max-width: 720px;
+  margin: 16px auto;
+  padding: 28px 32px;
+  background: #fff;
+  color: #000;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 4px 18px rgb(0 0 0 / 0.12);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 12pt;
+  line-height: 1.7;
+}
+
+.archive-print-sheet hr,
+#archive-print-area hr {
+  margin: 12px 0 16px;
+  border: none;
+  border-top: 2px solid #000;
+}
+
+.print-kop {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.print-kop-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  flex: none;
+}
+
+.print-kop-text {
+  flex: 1;
+  text-align: center;
+}
+
+.print-kop-gov,
+.print-kop-office {
+  margin: 0;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.print-kop-gov {
+  font-size: 11pt;
+}
+
+.print-kop-office {
+  font-size: 13pt;
+}
+
+.print-meta {
+  margin-bottom: 16px;
+}
+
+.print-meta-row {
+  display: flex;
+  gap: 8px;
+}
+
+.print-meta-key {
+  flex: none;
+  width: 110px;
+  font-weight: 700;
+}
+
+.print-meta-val {
+  flex: 1;
+}
+
+.print-sign {
+  margin-top: 32px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.print-sign-inner {
+  min-width: 220px;
+  text-align: left;
+}
+
+.print-sign-inner p {
+  margin: 0;
+}
+
+.print-sign-name {
+  min-height: 64px;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 4px;
+}
+
 /* ---------- print: only the chosen document prints, as a clean formal page ----------
-   Which area shows is picked by body[data-print-target] ("letter" | "report");
+   Which area shows is picked by body[data-print-target]
+   ("letter" | "report" | "archive-letter");
    with no target set the letter area shows, as before. */
 
 .print-only {
@@ -1337,13 +1446,16 @@ footer {
   body[data-print-target="letter"] #letter-print-area *,
   body[data-print-target="report"] #report-print-area,
   body[data-print-target="report"] #report-print-area *,
+  body[data-print-target="archive-letter"] #archive-print-area,
+  body[data-print-target="archive-letter"] #archive-print-area *,
   body:not([data-print-target]) #letter-print-area,
   body:not([data-print-target]) #letter-print-area * {
     visibility: visible;
   }
 
   #letter-print-area,
-  #report-print-area {
+  #report-print-area,
+  #archive-print-area {
     position: absolute;
     inset: 0;
     display: block !important;
@@ -1383,12 +1495,27 @@ footer {
   }
 
   #letter-print-area .print-body,
-  #report-print-area .print-body {
+  #report-print-area .print-body,
+  #archive-print-area .print-body {
     white-space: pre-wrap;
     word-wrap: break-word;
     font-family: Georgia, "Times New Roman", serif;
     font-size: 12pt;
     line-height: 1.7;
+  }
+
+  /* Paket 15: the archived letter prints with the same formal layout as its
+     on-screen preview sheet (kop + meta + signature). */
+  #archive-print-area .print-kop-gov,
+  #archive-print-area .print-kop-office,
+  #archive-print-area .print-meta-key,
+  #archive-print-area .print-meta-val,
+  #archive-print-area .print-sign-inner p {
+    color: #000;
+  }
+
+  #archive-print-area .print-sign {
+    margin-top: 32px;
   }
 }
 
