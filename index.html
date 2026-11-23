@@ -34,7 +34,7 @@
         /* storage unavailable — light theme by default */
       }
     </script>
-    <script type="module" crossorigin src="./assets/index-DX4va6bo.js"></script>
+    <script type="module" crossorigin src="./assets/index-DrNbqX6M.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-UhtlRvsX.css">
   </head>
   <body>
@@ -849,6 +849,7 @@
             <span data-i18n="kegStat21Total">Total pegawai</span>:
             <strong id="keg-stat21-total">0</strong>
           </p>
+          <p id="keg-stat21-filter-note" class="hint" hidden></p>
           <div class="stat21-cols">
             <div>
               <h4 data-i18n="kegStat21Jabatan">Per jabatan</h4>
@@ -925,6 +926,9 @@
           </table>
         </div>
         <p id="keg-count" class="hint"></p>
+        <p id="keg-no-result" class="hint" hidden data-i18n="kegNoResult">
+          Tidak ada pegawai yang cocok.
+        </p>
 
         <dialog id="keg-detail" class="detail-dialog">
           <h3 id="keg-detail-title"></h3>
