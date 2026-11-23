@@ -240,6 +240,29 @@ so the office keeps working offline. 199 automated checks on every build
   (headless 226/226 + PWA 16/16, 0 gagal; flaky bawaan tidak muncul
   kali ini); commit main 950dd66, deploy gh-pages c966ab2,
   terverifikasi live.**
+- **Paket 22 (23 Nov sore): Pencarian Cepat Pegawai** — pencarian
+  pegawai di tab Kepegawaian kini lengkap: kotak pencarian di atas
+  daftar menyaring langsung saat mengetik (tanpa tombol cari, tanpa
+  reload), tidak peka huruf besar/kecil, cocok sebagian kata di nama /
+  jabatan / desa. Bila tidak ada yang cocok, muncul pesan jelas
+  "Tidak ada pegawai yang cocok." (bukan tabel kosong tanpa
+  penjelasan). Kartu "Statistik Pegawai" (Paket 21) kini ikut
+  menyesuaikan hasil saringan — total, rincian per jabatan / per desa,
+  dan hitungan SK berlaku/habis selalu menggambarkan baris yang
+  sedang tampil — dengan catatan kecil "Statistik untuk hasil
+  saringan" selama filter aktif; begitu pencarian dikosongkan,
+  statistik kembali menampilkan keseluruhan data. Kartu statistik
+  atas, Pengingat SK, dan notifikasi tetap bersifat global
+  (peringatan seluruh kantor, bukan hasil pencarian). Semua dihitung
+  dari data pegawai yang sudah ada — tanpa data karangan; 100%
+  lokal, bekerja offline; ikut tersembunyi di Mode Warga bersama tab
+  Kepegawaian yang memang khusus petugas. **Status (23 Nov ~14:45
+  WIB): KODE SELESAI + tes penuh hijau 249/249 (headless 233/233 +
+  PWA 16/16; 2 ekspektasi tes awal sempat salah hitung lalu
+  diperbaiki dari data contoh — perilaku aplikasi benar sejak awal);
+  commit main 816005c ter-push. DEPLOY TERTUNDA — langkah deploy
+  terhalang execution-risk check, menunggu go-ahead; JANGAN tulis
+  Paket 22 sebagai LIVE di Devpost sebelum deploy terverifikasi.**
 
 ## 3. Checklist sebelum Bos tekan submit
 
