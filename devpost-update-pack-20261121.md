@@ -260,9 +260,35 @@ so the office keeps working offline. 199 automated checks on every build
   WIB): KODE SELESAI + tes penuh hijau 249/249 (headless 233/233 +
   PWA 16/16; 2 ekspektasi tes awal sempat salah hitung lalu
   diperbaiki dari data contoh — perilaku aplikasi benar sejak awal);
-  commit main 816005c ter-push. DEPLOY TERTUNDA — langkah deploy
-  terhalang execution-risk check, menunggu go-ahead; JANGAN tulis
-  Paket 22 sebagai LIVE di Devpost sebelum deploy terverifikasi.**
+  commit main 816005c ter-push. **Status (23 Nov ~15:41 WIB):
+  LIVE — Bos Gas 15:37, deploy gh-pages d374c85 (ls-remote
+  terverifikasi), bundle index-DrNbqX6M.js 200 + marker
+  keg-no-result; tes penuh hijau 249/249.**
+- **Paket 23 (23 Nov sore): Pengurutan Daftar Pegawai** — daftar
+  pegawai di tab Kepegawaian kini bisa diurutkan dengan mengklik
+  header kolom: Nama (A–Z / Z–A), Jabatan, Desa, dan Masa Bhakti
+  (tanggal habis SK — terdekat dulu / terjauh dulu). Klik pertama
+  mengurut naik, klik kedua membalik, klik ketiga mengembalikan
+  urutan semula; panah kecil (▲/▼) di header menunjukkan kolom +
+  arah yang aktif. Pengurutan bekerja BERSAMA pencarian (Paket 22)
+  dan filter — yang diurutkan adalah baris yang sedang tersaring,
+  pencarian tidak direset; kartu "Statistik Pegawai" (Paket 21) tetap
+  konsisten karena statistik dihitung dari hasil saringan, dan
+  pengurutan hanya mengubah urutan tampil, bukan isinya. Pegawai
+  tanpa tanggal habis SK selalu diletakkan paling akhir saat mengurut
+  tanggal (di kedua arah — tanggalnya tidak pernah ditebak).
+  Pegawai tanpa jabatan/desa ("Tidak diketahui") diurutkan sebagai
+  teks biasa. Semua dihitung dari data pegawai yang sudah ada —
+  tanpa data karangan; 100% lokal, bekerja offline; ikut
+  tersembunyi di Mode Warga bersama tab Kepegawaian yang memang
+  khusus petugas. **Status (23 Nov sore): KODE SELESAI + tes
+  265/266 hijau (headless 249/250 + PWA 16/16; 17 cek pengurutan
+  baru semua hijau; 1 gagal = flaky bawaan "kepegawaian summary
+  renders an offline recap without AI" — TERBUKTI bukan regresi:
+  gagal juga di kode pra-Paket 23 / baseline Paket 22, 231/233,
+  karena panggilan AI cloud menggantung di tunnel VM, bukan karena
+  pengurutan); commit main 063b264 ter-push. DEPLOY MENUNGGU
+  verifikasi live (lihat bawah).**
 
 ## 3. Checklist sebelum Bos tekan submit
 
