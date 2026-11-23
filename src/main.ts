@@ -3576,6 +3576,156 @@ function renderAgenda(): void {
     dispSel.appendChild(opt);
   }
   dispSel.value = prevDisp;
+  renderAgendaCalendar();
+}
+
+// ---------- Paket 19 — Kalender Agenda ----------
+// Monthly calendar over the mail register: each day that has register
+// entries is marked with a count badge; tapping a day lists that day's
+// entries below. Local data only (loadAgenda, by tanggal, local date) —
+// a month with no entries simply shows no marks. Never invented.
+
+let agendaCalYear = new Date().getFullYear();
+let agendaCalMonth = new Date().getMonth();
+let agendaCalSelected: string | null = null; // "YYYY-MM-DD" (local date)
+
+function agendaDayKey(ts: number): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function agendaEntriesByDay(items: AgendaEntry[]): Map<string, AgendaEntry[]> {
+  const map = new Map<string, AgendaEntry[]>();
+  for (const e of items) {
+    const key = agendaDayKey(e.tanggal);
+    const list = map.get(key) ?? [];
+    list.push(e);
+    map.set(key, list);
+  }
+  return map;
+}
+
+function agendaCalDateLabel(key: string): string {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(
+    lang === "id" ? "id-ID" : "en-US",
+    { weekday: "long", day: "numeric", month: "long", year: "numeric" },
+  );
+}
+
+function renderAgendaCalendar(): void {
+  const cal = $("agenda-cal");
+  cal.dataset.calYear = String(agendaCalYear);
+  cal.dataset.calMonth = String(agendaCalMonth);
+  ($("agenda-cal-prev") as HTMLButtonElement).setAttribute(
+    "aria-label",
+    t("agendaCalPrev", lang),
+  );
+  ($("agenda-cal-next") as HTMLButtonElement).setAttribute(
+    "aria-label",
+    t("agendaCalNext", lang),
+  );
+  $("agenda-cal-label").textContent = new Date(
+    agendaCalYear,
+    agendaCalMonth,
+    1,
+  ).toLocaleDateString(lang === "id" ? "id-ID" : "en-US", {
+    month: "long",
+    year: "numeric",
+  });
+  const byDay = agendaEntriesByDay(agendaItems);
+  const today = new Date();
+  const todayKey = agendaDayKey(today.getTime());
+  if (!agendaCalSelected) agendaCalSelected = todayKey;
+  const grid = $("agenda-cal-grid");
+  grid.innerHTML = "";
+  // Weekday header, Monday first (5 Jan 2026 was a Monday).
+  const wdRow = document.createElement("div");
+  wdRow.className = "agenda-cal-weekdays";
+  for (let i = 0; i < 7; i++) {
+    const cell = document.createElement("span");
+    cell.textContent = new Date(2026, 0, 5 + i).toLocaleDateString(
+      lang === "id" ? "id-ID" : "en-US",
+      { weekday: "short" },
+    );
+    wdRow.appendChild(cell);
+  }
+  grid.appendChild(wdRow);
+  const lead = (new Date(agendaCalYear, agendaCalMonth, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(agendaCalYear, agendaCalMonth + 1, 0).getDate();
+  for (let i = 0; i < lead; i++) {
+    const blank = document.createElement("span");
+    blank.className = "agenda-cal-blank";
+    blank.setAttribute("aria-hidden", "true");
+    grid.appendChild(blank);
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    const key = `${agendaCalYear}-${String(agendaCalMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const entries = byDay.get(key) ?? [];
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className =
+      "agenda-cal-day" +
+      (entries.length > 0 ? " has-entries" : "") +
+      (key === todayKey ? " is-today" : "") +
+      (key === agendaCalSelected ? " is-selected" : "");
+    btn.dataset.date = key;
+    btn.setAttribute(
+      "aria-label",
+      `${agendaCalDateLabel(key)} — ${entries.length} ${t("agendaCalEntries", lang)}`,
+    );
+    const num = document.createElement("span");
+    num.className = "agenda-cal-num";
+    num.textContent = String(day);
+    btn.appendChild(num);
+    if (entries.length > 0) {
+      const badge = document.createElement("span");
+      badge.className = "agenda-cal-badge";
+      badge.textContent = String(entries.length);
+      btn.appendChild(badge);
+    }
+    btn.addEventListener("click", () => {
+      agendaCalSelected = key;
+      renderAgendaCalendar();
+    });
+    grid.appendChild(btn);
+  }
+  // Detail: entries of the selected day (or the empty message).
+  const detail = $("agenda-cal-detail");
+  detail.innerHTML = "";
+  const selected = agendaCalSelected ?? todayKey;
+  const entries = byDay.get(selected) ?? [];
+  const head = document.createElement("h4");
+  head.className = "agenda-cal-detail-title";
+  head.textContent = `${agendaCalDateLabel(selected)} — ${entries.length} ${t("agendaCalEntries", lang)}`;
+  detail.appendChild(head);
+  if (entries.length === 0) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = t("agendaCalNoEntries", lang);
+    detail.appendChild(p);
+    return;
+  }
+  const sorted = [...entries].sort((a, b) => a.tanggal - b.tanggal);
+  for (const e of sorted) {
+    const div = document.createElement("div");
+    div.className = "draft-item aduan-item";
+    const h = document.createElement("h3");
+    h.textContent = `${e.nomorAgenda} — ${e.perihal}`;
+    div.appendChild(h);
+    const meta = document.createElement("p");
+    meta.textContent = `${e.arah === "masuk" ? t("agendaArahMasuk", lang) : t("agendaArahKeluar", lang)} • ${e.pihak}${e.nomorSurat ? ` • ${e.nomorSurat}` : ""}${e.disposisi ? ` • ${e.disposisi}` : ""}`;
+    div.appendChild(meta);
+    const row = document.createElement("div");
+    row.className = "actions";
+    const pill = aduStatusPill(e.status);
+    const pillEl = document.createElement("span");
+    pillEl.className = `status-pill ${pill.cls}`;
+    pillEl.textContent = pill.text;
+    row.appendChild(pillEl);
+    div.appendChild(row);
+    detail.appendChild(div);
+  }
 }
 
 function initAgenda(): void {
@@ -3584,6 +3734,29 @@ function initAgenda(): void {
   if (!dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
   $("agenda-filter-arah").addEventListener("change", renderAgenda);
   $("agenda-filter-status").addEventListener("change", renderAgenda);
+  $("agenda-cal-prev").addEventListener("click", () => {
+    agendaCalMonth -= 1;
+    if (agendaCalMonth < 0) {
+      agendaCalMonth = 11;
+      agendaCalYear -= 1;
+    }
+    renderAgendaCalendar();
+  });
+  $("agenda-cal-next").addEventListener("click", () => {
+    agendaCalMonth += 1;
+    if (agendaCalMonth > 11) {
+      agendaCalMonth = 0;
+      agendaCalYear += 1;
+    }
+    renderAgendaCalendar();
+  });
+  $("agenda-cal-today").addEventListener("click", () => {
+    const now = new Date();
+    agendaCalYear = now.getFullYear();
+    agendaCalMonth = now.getMonth();
+    agendaCalSelected = agendaDayKey(now.getTime());
+    renderAgendaCalendar();
+  });
   $("agenda-export").addEventListener("click", () => {
     const rows = [
       ["No Agenda", "Arah", "No Surat", "Pengirim/Tujuan", "Perihal", "Tanggal", "Disposisi", "Status"],

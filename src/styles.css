@@ -2151,3 +2151,113 @@ body.mode-warga #home-followup-card {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- Paket 19: kalender agenda ---------- */
+
+.agenda-cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 10px;
+}
+
+.agenda-cal-label {
+  flex: 1;
+  margin: 0;
+  text-align: center;
+  font-size: 1rem;
+  text-transform: capitalize;
+}
+
+.agenda-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.agenda-cal-weekdays {
+  display: contents;
+}
+
+.agenda-cal-weekdays > span {
+  padding: 4px 0;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.agenda-cal-blank {
+  min-height: 44px;
+}
+
+.agenda-cal-day {
+  position: relative;
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.agenda-cal-day:hover {
+  border-color: var(--green);
+}
+
+.agenda-cal-day.has-entries {
+  border-color: var(--green);
+  background: var(--green-soft);
+  font-weight: 700;
+}
+
+.agenda-cal-day.is-today {
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+}
+
+.agenda-cal-day.is-selected {
+  background: var(--green);
+  border-color: var(--green-dark);
+  color: #ffffff;
+}
+
+.agenda-cal-day.is-selected .agenda-cal-badge {
+  background: #ffffff;
+  color: var(--green-dark);
+}
+
+.agenda-cal-num {
+  display: block;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda-cal-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--green);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.agenda-cal-detail {
+  margin-top: 12px;
+}
+
+.agenda-cal-detail-title {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  text-transform: capitalize;
+}

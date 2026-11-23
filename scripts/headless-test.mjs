@@ -2121,6 +2121,192 @@ async function main() {
       agsStats.items === 4 && agsStats.masuk === 2 && agsStats.keluar === 2 && agsStats.belum === 2,
       `items=${agsStats.items} masuk=${agsStats.masuk} keluar=${agsStats.keluar} belum=${agsStats.belum}`,
     );
+    // Paket 19: Kalender Agenda — monthly view over the register.
+    // (Runs while the register still holds only the 4 seed entries.)
+    const calState = () =>
+      page.evaluate(() => {
+        const cal = document.getElementById("agenda-cal");
+        return {
+          year: Number(cal?.dataset.calYear ?? 0),
+          month: Number(cal?.dataset.calMonth ?? 0),
+          label: document.getElementById("agenda-cal-label")?.textContent ?? "",
+          marked: [...document.querySelectorAll("#agenda-cal-grid .agenda-cal-day.has-entries")].map(
+            (el) => el.dataset.date,
+          ),
+          days: document.querySelectorAll("#agenda-cal-grid .agenda-cal-day").length,
+          weekdays: document.querySelectorAll("#agenda-cal-grid .agenda-cal-weekdays span").length,
+        };
+      });
+    const calExpectedFor = (year, month) =>
+      page.evaluate(
+        (ym) => {
+          const agenda = JSON.parse(localStorage.getItem("desaai-agenda-v1") ?? "[]");
+          const key = (ts) => {
+            const d = new Date(ts);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          };
+          const marked = [
+            ...new Set(
+              agenda
+                .filter((e) => {
+                  const d = new Date(e.tanggal);
+                  return d.getFullYear() === ym.year && d.getMonth() === ym.month;
+                })
+                .map((e) => key(e.tanggal)),
+            ),
+          ].sort();
+          return {
+            marked,
+            daysInMonth: new Date(ym.year, ym.month + 1, 0).getDate(),
+          };
+        },
+        { year, month },
+      );
+    const calGoTo = async (year, month) => {
+      for (let i = 0; i < 24; i++) {
+        const s = await calState();
+        if (s.year === year && s.month === month) return true;
+        await page.click(
+          s.year * 12 + s.month < year * 12 + month ? "#agenda-cal-next" : "#agenda-cal-prev",
+        );
+        await sleep(150);
+      }
+      return false;
+    };
+    // Seed month = month of the earliest register entry (Nov 2026 today).
+    const seedYM = await page.evaluate(() => {
+      const agenda = JSON.parse(localStorage.getItem("desaai-agenda-v1") ?? "[]");
+      const first = agenda.reduce((a, b) => (a.tanggal < b.tanggal ? a : b));
+      const d = new Date(first.tanggal);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    });
+    await calGoTo(seedYM.year, seedYM.month);
+    const cal0 = await calState();
+    const exp0 = await calExpectedFor(seedYM.year, seedYM.month);
+    check(
+      "agenda calendar renders the month with marked entry days",
+      cal0.year === seedYM.year && cal0.month === seedYM.month &&
+        cal0.days === exp0.daysInMonth && cal0.weekdays === 7 &&
+        JSON.stringify(cal0.marked) === JSON.stringify(exp0.marked) &&
+        cal0.marked.length === 4,
+      `label=${cal0.label} days=${cal0.days} marked=${cal0.marked.join(",")}`,
+    );
+    // Clicking a marked day lists that day's entries below the calendar.
+    const dayToOpen = cal0.marked[0];
+    const dayEntries = await page.evaluate((dateKey) => {
+      const agenda = JSON.parse(localStorage.getItem("desaai-agenda-v1") ?? "[]");
+      const key = (ts) => {
+        const d = new Date(ts);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      };
+      return agenda.filter((e) => key(e.tanggal) === dateKey).map((e) => e.perihal);
+    }, dayToOpen);
+    await page.click(`#agenda-cal-grid [data-date="${dayToOpen}"]`);
+    await sleep(300);
+    const calDetail = await page.$eval("#agenda-cal-detail", (el) => el.textContent ?? "");
+    const calSelected = await page.$eval(
+      `#agenda-cal-grid [data-date="${dayToOpen}"]`,
+      (el) => el.classList.contains("is-selected"),
+    );
+    check(
+      "clicking a marked calendar day shows that day's entries",
+      calSelected && dayEntries.length > 0 && dayEntries.every((p) => calDetail.includes(p)),
+      `day=${dayToOpen} detail=${calDetail.slice(0, 120)}`,
+    );
+    // Clicking a day without entries shows the empty message.
+    const emptyDay = await page.evaluate((marked) => {
+      const days = [...document.querySelectorAll("#agenda-cal-grid .agenda-cal-day")];
+      const free = days.find((el) => !marked.includes(el.dataset.date));
+      return free?.dataset.date ?? "";
+    }, cal0.marked);
+    await page.click(`#agenda-cal-grid [data-date="${emptyDay}"]`);
+    await sleep(300);
+    const calDetailEmpty = await page.$eval("#agenda-cal-detail", (el) => el.textContent ?? "");
+    check(
+      "clicking an empty calendar day shows the no-entries message",
+      /Tidak ada agenda|No register entries/i.test(calDetailEmpty),
+      `day=${emptyDay} detail=${calDetailEmpty.slice(0, 80)}`,
+    );
+    // Month navigation moves forward/back; "Hari ini" returns to now.
+    await page.click("#agenda-cal-next");
+    await sleep(200);
+    const calNext = await calState();
+    await page.click("#agenda-cal-prev");
+    await sleep(200);
+    await page.click("#agenda-cal-prev");
+    await sleep(200);
+    const calPrev = await calState();
+    await page.click("#agenda-cal-today");
+    await sleep(200);
+    const calToday = await calState();
+    const nowYM = { year: new Date().getFullYear(), month: new Date().getMonth() };
+    const monthAfter = (seedYM.year * 12 + seedYM.month + 1) % 12;
+    const yearAfter = seedYM.year + Math.floor((seedYM.month + 1) / 12);
+    check(
+      "calendar month navigation moves forward and back, Today returns to now",
+      calNext.month === monthAfter && calNext.year === yearAfter &&
+        calPrev.month === (seedYM.month + 11) % 12 &&
+        calToday.year === nowYM.year && calToday.month === nowYM.month,
+      `next=${calNext.year}-${calNext.month} prev=${calPrev.year}-${calPrev.month} today=${calToday.year}-${calToday.month}`,
+    );
+    // A month without entries shows no marks at all.
+    const emptyOffset = await page.evaluate(() => {
+      const agenda = JSON.parse(localStorage.getItem("desaai-agenda-v1") ?? "[]");
+      const now = new Date();
+      for (let off = 1; off <= 6; off++) {
+        const d = new Date(now.getFullYear(), now.getMonth() + off, 1);
+        const has = agenda.some((e) => {
+          const dd = new Date(e.tanggal);
+          return dd.getFullYear() === d.getFullYear() && dd.getMonth() === d.getMonth();
+        });
+        if (!has) return off;
+      }
+      return 0;
+    });
+    const emptyYM = new Date(nowYM.year, nowYM.month + emptyOffset, 1);
+    await calGoTo(emptyYM.getFullYear(), emptyYM.getMonth());
+    const calEmpty = await calState();
+    check(
+      "a month without entries shows no marked days",
+      emptyOffset > 0 && calEmpty.marked.length === 0,
+      `offset=${emptyOffset} marked=${calEmpty.marked.length}`,
+    );
+    await page.click("#agenda-cal-today");
+    await sleep(200);
+    // Offline: the calendar still renders from local data.
+    await page.setOfflineMode(true);
+    await page.click('[data-tab="home"]');
+    await sleep(200);
+    await page.click('[data-tab="agenda"]');
+    await sleep(300);
+    await calGoTo(seedYM.year, seedYM.month);
+    const calOffline = await calState();
+    await page.setOfflineMode(false);
+    check(
+      "agenda calendar renders offline (local data only)",
+      JSON.stringify(calOffline.marked) === JSON.stringify(exp0.marked),
+      `marked=${calOffline.marked.join(",")}`,
+    );
+    // Mode Warga: the agenda tab is officer-only, so the calendar goes with it.
+    await page.click("#mode-toggle");
+    await sleep(200);
+    const calWarga = await page.evaluate(() => ({
+      tabHidden:
+        getComputedStyle(document.querySelector('[data-tab="agenda"]')).display === "none",
+      panelHidden: document.getElementById("panel-agenda").hidden,
+    }));
+    await page.click("#mode-toggle");
+    await sleep(200);
+    const calBack = await page.evaluate(
+      () => getComputedStyle(document.querySelector('[data-tab="agenda"]')).display !== "none",
+    );
+    await page.click('[data-tab="agenda"]');
+    await sleep(300);
+    check(
+      "agenda calendar is hidden in Mode Warga with the officer-only agenda tab",
+      calWarga.tabHidden && calWarga.panelHidden && calBack,
+      JSON.stringify(calWarga),
+    );
     await page.click("#agenda-submit");
     await sleep(300);
     const agsEmptyStatus = await page.$eval("#agenda-form-status", (el) => el.textContent);

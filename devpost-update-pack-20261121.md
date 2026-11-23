@@ -190,6 +190,20 @@ so the office keeps working offline. 199 automated checks on every build
   konsisten dengan laporan itu sendiri. Tes: headless 199 → **204
   cek** (5 cek baru, semua hijau), PWA tetap **16/16** (total
   220/221 — 1 cek flaky bawaan, lihat §4).
+- **Paket 19 (23 Nov siang): Kalender Agenda** — tampilan kalender
+  bulanan baru di tab Agenda Surat, di atas formulir pencatatan: bulan
+  berjalan dengan navigasi bulan sebelum/sesudah + tombol "Hari ini",
+  tiap tanggal yang punya entri agenda ditandai badge jumlah; ketuk
+  tanggal → daftar entri tanggal itu (nomor agenda, perihal,
+  pengirim/tujuan, status) tampil di bawah kalender, atau pesan "Tidak
+  ada agenda pada tanggal ini" bila kosong. Daftar register seperti
+  semula tetap ada (kalender adalah tampilan tambahan, bukan pengganti).
+  Semua dihitung dari data agenda lokal yang sudah ada (tanggal entri),
+  tanpa entri karangan; bulan tanpa entri tampil tanpa tanda. 100%
+  lokal, bekerja offline; ikut tersembunyi di Mode Warga bersama tab
+  Agenda yang memang khusus petugas. Tes: headless 204 → **211
+  cek** (7 cek baru, semua hijau), PWA tetap **16/16** (total
+  227/228 — 1 cek flaky bawaan, lihat §4).
 
 ## 3. Checklist sebelum Bos tekan submit
 
@@ -231,3 +245,5 @@ so the office keeps working offline. 199 automated checks on every build
   timing, bukan regresi — kode prefill tidak disentuh Paket 17).**
   **Update Paket 18: cek flaky itu GAGAL lagi di run terakhir (204/205 headless) —
   total 220/221; 5 cek tren-bulanan baru semua hijau, PWA 16/16.**
+  **Update Paket 19: cek flaky itu GAGAL lagi di run terakhir (211/212 headless) —
+  total 227/228; 7 cek kalender-agenda baru semua hijau, PWA 16/16.**

@@ -182,6 +182,13 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   agendaExported: { en: "Register exported.", id: "Agenda diekspor." },
   agendaConfirmDelete: { en: "Delete this agenda entry?", id: "Hapus entri agenda ini?" },
   agendaStatusChanged: { en: "Status updated.", id: "Status diperbarui." },
+  // Paket 19 — Kalender Agenda
+  agendaCalTitle: { en: "Agenda calendar", id: "Kalender agenda" },
+  agendaCalToday: { en: "Today", id: "Hari ini" },
+  agendaCalPrev: { en: "Previous month", id: "Bulan sebelumnya" },
+  agendaCalNext: { en: "Next month", id: "Bulan berikutnya" },
+  agendaCalEntries: { en: "entries", id: "entri" },
+  agendaCalNoEntries: { en: "No register entries on this date.", id: "Tidak ada agenda pada tanggal ini." },
   briefingAgendaMasuk: { en: "incoming letters today", id: "surat masuk hari ini" },
   homeSearchAgenda: { en: "Mail register", id: "Agenda surat" },
   cmdNewAgenda: { en: "Record a letter", id: "Catat surat" },
