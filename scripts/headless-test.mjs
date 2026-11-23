@@ -178,8 +178,8 @@ async function main() {
     }));
     const monthName = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
     check(
-      "bento shows 12 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
-      bento.cards === 12 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
+      "bento shows 13 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
+      bento.cards === 13 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
         bento.lettersToday === "0" && bento.aduanBaru === "3" &&
         bento.monthIkm === "12" && bento.monthAduan === "6" && bento.monthLetters === "0" &&
         bento.monthName === monthName,
@@ -213,6 +213,120 @@ async function main() {
       "home lists 3 oldest unresolved complaints with waiting time",
       homeAduan.items === 3 && /Biaya tidak sesuai/.test(homeAduan.first) && /waiting|menunggu/.test(homeAduan.first),
       `items=${homeAduan.items} first=${homeAduan.first.slice(0, 60)}`,
+    );
+    // Paket 16: "Perlu Ditindaklanjuti" — open complaints + register
+    // items, oldest first; tap jumps to the tab; empty state; offline.
+    const readFollowup = () =>
+      page.evaluate(() => ({
+        count: document.getElementById("home-followup-count")?.textContent ?? "",
+        summary: document.getElementById("home-followup-summary")?.textContent ?? "",
+        items: [...document.querySelectorAll("#home-followup-list li")].map(
+          (li) => li.textContent ?? "",
+        ),
+        emptyHidden: document.getElementById("home-followup-empty").hidden,
+      }));
+    const followup = await readFollowup();
+    check(
+      "follow-up card lists 7 open items, oldest first (Biaya tidak sesuai, 14 Nov)",
+      followup.count === "7" &&
+        /5 complaints/.test(followup.summary) &&
+        /2 register items/.test(followup.summary) &&
+        followup.items.length === 7 &&
+        /Biaya tidak sesuai/.test(followup.items[0]) &&
+        /Permohonan rekomendasi bantuan sosial/.test(followup.items[6]) &&
+        followup.emptyHidden,
+      `count=${followup.count} summary=${followup.summary} first=${followup.items[0]?.slice(0, 50)} last=${followup.items[6]?.slice(0, 50)}`,
+    );
+    // Tap the first item (a complaint) -> complaints tab opens.
+    await page.click("#home-followup-list li");
+    await sleep(300);
+    check(
+      "tapping a follow-up complaint opens the complaints tab",
+      await page.$eval('[data-tab="pengaduan"]', (el) => el.classList.contains("active")),
+    );
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    // Tap a register item -> mail register tab opens.
+    await page.evaluate(() => {
+      const li = [...document.querySelectorAll("#home-followup-list li")].find((el) =>
+        (el.textContent ?? "").includes("Permohonan rekomendasi bantuan sosial"),
+      );
+      li?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await sleep(300);
+    check(
+      "tapping a follow-up register item opens the mail register tab",
+      await page.$eval('[data-tab="agenda"]', (el) => el.classList.contains("active")),
+    );
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    // Incoming letter without a disposition is flagged, not duplicated.
+    const seedAgsRaw = await page.evaluate(() => localStorage.getItem("desaai-agenda-v1"));
+    await page.evaluate(() => {
+      const items = JSON.parse(localStorage.getItem("desaai-agenda-v1") ?? "[]");
+      items[0].disposisi = "";
+      localStorage.setItem("desaai-agenda-v1", JSON.stringify(items));
+    });
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await sleep(400);
+    const followupDisp = await readFollowup();
+    await page.evaluate((raw) => {
+      if (raw) localStorage.setItem("desaai-agenda-v1", raw);
+    }, seedAgsRaw);
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await sleep(400);
+    check(
+      "incoming letter without disposition is flagged once (not duplicated)",
+      followupDisp.count === "7" &&
+        /1 not yet dispositioned/.test(followupDisp.summary) &&
+        followupDisp.items.filter((t) => /not yet dispositioned/.test(t)).length === 1,
+      `count=${followupDisp.count} summary=${followupDisp.summary}`,
+    );
+    // Empty state: everything resolved -> positive message, badge 0.
+    const seedAduRaw = await page.evaluate(() => localStorage.getItem("desaai-pengaduan-v1"));
+    const seedAgsRaw2 = await page.evaluate(() => localStorage.getItem("desaai-agenda-v1"));
+    await page.evaluate(() => {
+      const adu = JSON.parse(localStorage.getItem("desaai-pengaduan-v1") ?? "[]");
+      adu.forEach((a) => (a.status = "selesai"));
+      localStorage.setItem("desaai-pengaduan-v1", JSON.stringify(adu));
+      const ags = JSON.parse(localStorage.getItem("desaai-agenda-v1") ?? "[]");
+      ags.forEach((e) => (e.status = "selesai"));
+      localStorage.setItem("desaai-agenda-v1", JSON.stringify(ags));
+    });
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await sleep(400);
+    const followupEmpty = await readFollowup();
+    await page.evaluate(
+      ({ adu, ags }) => {
+        if (adu) localStorage.setItem("desaai-pengaduan-v1", adu);
+        if (ags) localStorage.setItem("desaai-agenda-v1", ags);
+      },
+      { adu: seedAduRaw, ags: seedAgsRaw2 },
+    );
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await sleep(400);
+    const followupRestored = await readFollowup();
+    check(
+      "follow-up card shows the all-clear message when nothing is open",
+      followupEmpty.count === "0" &&
+        followupEmpty.items.length === 0 &&
+        !followupEmpty.emptyHidden &&
+        followupRestored.count === "7",
+      `empty count=${followupEmpty.count} items=${followupEmpty.items.length} restored=${followupRestored.count}`,
+    );
+    // Offline: the card still renders from local data (no reload — the
+    // network is off, so re-render by leaving and returning to Home).
+    await page.setOfflineMode(true);
+    await page.click('[data-tab="ikm"]');
+    await sleep(200);
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    const followupOffline = await readFollowup();
+    await page.setOfflineMode(false);
+    check(
+      "follow-up card renders offline (local data only)",
+      followupOffline.count === "7" && followupOffline.items.length === 7,
+      `count=${followupOffline.count} items=${followupOffline.items.length}`,
     );
     // Paket 10 — Briefing Pagi: date, summary counts, focus list, copy, nav.
     const briefing = await page.evaluate(() => ({
@@ -1982,12 +2096,14 @@ async function main() {
         getComputedStyle(document.getElementById("home-briefing")).display === "none",
       backupHidden:
         getComputedStyle(document.getElementById("home-backup-card")).display === "none",
+      followupHidden:
+        getComputedStyle(document.getElementById("home-followup-card")).display === "none",
       agendaHidden:
         getComputedStyle(document.querySelector('[data-tab="agenda"]')).display === "none",
     }));
     check(
-      "citizen mode hides officer tabs + briefing + agenda + backup card and shows resident card",
-      warga.bodyWarga && warga.lettersHidden && warga.cardVisible && warga.briefingHidden && warga.agendaHidden && warga.backupHidden,
+      "citizen mode hides officer tabs + briefing + agenda + backup + follow-up cards and shows resident card",
+      warga.bodyWarga && warga.lettersHidden && warga.cardVisible && warga.briefingHidden && warga.agendaHidden && warga.backupHidden && warga.followupHidden,
       JSON.stringify(warga),
     );
     await page.click("#warga-go-ikm");

@@ -152,6 +152,18 @@ so the office keeps working offline. 199 automated checks on every build
   memang khusus petugas). Tes: headless 173 → **183 cek** (10 cek
   cetak-surat baru, semua hijau), PWA tetap **16/16** (total 199/200
   — 1 cek flaky bawaan, lihat §4).
+- **Paket 16 (23 Nov sore): Kartu "Perlu Ditindaklanjuti" di Beranda** —
+  satu daftar semua yang masih butuh tindakan petugas, dari yang
+  terlama: pengaduan berstatus Baru/Diproses + agenda berstatus
+  Baru/Diproses (surat masuk tanpa disposisi ditandai "Belum
+  didisposisi", bukan diduplikasi). Tiap item menampilkan jenis,
+  status, tanggal, dan umur ("… hari menunggu"); ketuk item →
+  lompat ke tab Pengaduan/Agenda Surat. Bila tidak ada yang terbuka,
+  kartu menampilkan "Semua sudah ditindaklanjuti ✓" (bukan kartu
+  kosong). Badge jumlah di judul kartu + ringkasan per jenis;
+  100% data lokal, bekerja offline, disembunyikan di Mode Warga.
+  Tes: headless 183 → **189 cek** (6 cek kartu baru, semua hijau),
+  PWA tetap **16/16** (total 205/206 — 1 cek flaky bawaan, lihat §4).
 
 ## 3. Checklist sebelum Bos tekan submit
 
@@ -184,4 +196,6 @@ so the office keeps working offline. 199 automated checks on every build
   (173/174 headless) — total 189/190; 10 cek backup/restore baru semua
   hijau, PWA 16/16.** **Update Paket 15: cek flaky itu GAGAL lagi di
   run terakhir (183/184 headless) — total 199/200; 10 cek cetak-surat
-  baru semua hijau, PWA 16/16.**
+  baru semua hijau, PWA 16/16.** **Update Paket 16: cek flaky itu
+  GAGAL lagi di run terakhir (189/190 headless) — total 205/206;
+  6 cek kartu follow-up baru semua hijau, PWA 16/16.**

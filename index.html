@@ -351,6 +351,23 @@
             </div>
             <div id="home-backup-status" class="status" aria-live="polite"></div>
           </div>
+
+          <!-- Paket 16 — Perlu Ditindaklanjuti: open complaints + register items, oldest first. -->
+          <div class="bento-card bento-followup" id="home-followup-card">
+            <p class="bento-label">
+              <span data-i18n="homeFollowupTitle">Needs follow-up</span>
+              <span class="followup-badge" id="home-followup-count">0</span>
+            </p>
+            <p class="hint" data-i18n="homeFollowupHint">
+              Open complaints and mail-register items, oldest first — tap an
+              item to open it.
+            </p>
+            <p class="followup-summary" id="home-followup-summary"></p>
+            <ul class="followup-list" id="home-followup-list"></ul>
+            <p class="hint" id="home-followup-empty" hidden data-i18n="homeFollowupEmpty">
+              All followed up ✓
+            </p>
+          </div>
         </div>
         <!-- Print-only rendering of the monthly report (filled in by JS before window.print()). -->
         <div id="report-print-area" class="print-only" aria-hidden="true">

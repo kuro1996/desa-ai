@@ -614,6 +614,88 @@ function renderReportPreview(): void {
   }
 }
 
+// ---------- Paket 16 — "Perlu Ditindaklanjuti" ----------
+// One list of everything still needing officer action, oldest first:
+// open complaints + open mail-register items. A register entry for an
+// incoming letter without a disposition is flagged "Belum didisposisi"
+// (the disposition itself is the missing action). Local data only, so
+// it works fully offline — same sources as the monthly report.
+
+interface FollowUpItem {
+  kind: "pengaduan" | "agenda";
+  id: string;
+  title: string;
+  date: number; // createdAt (complaint) / tanggal (register)
+  status: AduanStatus | AgendaStatus;
+  needDisposisi: boolean;
+}
+
+function followUpItems(): FollowUpItem[] {
+  const items: FollowUpItem[] = [];
+  for (const a of loadAduan()) {
+    if (a.status === "selesai") continue;
+    items.push({
+      kind: "pengaduan",
+      id: a.id,
+      title: `${a.nama || t("ikmAnon", lang)} — ${a.jenis}`,
+      date: a.createdAt,
+      status: a.status,
+      needDisposisi: false,
+    });
+  }
+  for (const e of loadAgenda()) {
+    if (e.status === "selesai") continue;
+    items.push({
+      kind: "agenda",
+      id: e.id,
+      title: `${e.nomorAgenda} — ${e.perihal}`,
+      date: e.tanggal,
+      status: e.status,
+      needDisposisi: e.arah === "masuk" && e.disposisi === "",
+    });
+  }
+  return items.sort((a, b) => a.date - b.date);
+}
+
+function renderFollowUp(): void {
+  const items = followUpItems();
+  const nAduan = items.filter((i) => i.kind === "pengaduan").length;
+  const nAgenda = items.length - nAduan;
+  const nDisp = items.filter((i) => i.needDisposisi).length;
+  $("home-followup-count").textContent = String(items.length);
+  $("home-followup-summary").textContent =
+    `${nAduan} ${t("homeFollowupAduan", lang)} · ${nAgenda} ${t("homeFollowupAgenda", lang)}` +
+    (nDisp > 0 ? ` · ${nDisp} ${t("homeFollowupNoDisposisi", lang)}` : "");
+  const list = $("home-followup-list");
+  list.innerHTML = "";
+  $("home-followup-empty").hidden = items.length > 0;
+  for (const item of items) {
+    const li = document.createElement("li");
+    li.className = "notif-item followup-item";
+    li.dataset.tab = item.kind;
+    li.dataset.id = item.id;
+    const strong = document.createElement("strong");
+    strong.textContent = item.title;
+    li.appendChild(strong);
+    const days = Math.max(
+      0,
+      Math.floor((Date.now() - item.date) / 86_400_000),
+    );
+    const detail = document.createElement("span");
+    const statusLabel =
+      item.status === "baru"
+        ? t("aduStatusBaru", lang)
+        : t("aduStatusDiproses", lang);
+    detail.textContent =
+      `${item.kind === "pengaduan" ? t("tabPengaduan", lang) : t("tabAgenda", lang)} · ` +
+      statusLabel +
+      (item.needDisposisi ? ` · ${t("homeFollowupNoDisposisi", lang)}` : "") +
+      ` · ${days} ${t("homeAduanWaiting", lang)} (${new Date(item.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })})`;
+    li.appendChild(detail);
+    list.appendChild(li);
+  }
+}
+
 function printMonthlyReport(): void {
   const d = monthlyReportData();
   $("report-print-title").textContent = `Laporan Bulanan — ${d.monthLabel}`;
@@ -1190,6 +1272,7 @@ function renderHome(): void {
   renderTrend();
   renderAduanChart();
   renderReportPreview();
+  renderFollowUp();
   renderBriefing();
   renderHomeSearch();
   renderQuickStats();
@@ -1215,6 +1298,14 @@ function initHome(): void {
   $("home-aduan-list").addEventListener("click", () =>
     document.querySelector<HTMLButtonElement>('[data-tab="pengaduan"]')?.click(),
   );
+  // Paket 16 — tapping a follow-up item jumps to its tab.
+  $("home-followup-list").addEventListener("click", (ev) => {
+    const li = (ev.target as HTMLElement).closest<HTMLElement>("li[data-tab]");
+    if (!li) return;
+    document
+      .querySelector<HTMLButtonElement>(`[data-tab="${li.dataset.tab}"]`)
+      ?.click();
+  });
   $("home-go-keg").addEventListener("click", () =>
     document.querySelector<HTMLButtonElement>('[data-tab="kepegawaian"]')?.click(),
   );

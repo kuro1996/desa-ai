@@ -92,6 +92,16 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     id: "File backup tidak bisa dibaca — tidak ada yang diubah.",
   },
   cmdBackup: { en: "Backup data", id: "Backup data" },
+  // Paket 16 — "Perlu Ditindaklanjuti" (needs follow-up)
+  homeFollowupTitle: { en: "Needs follow-up", id: "Perlu Ditindaklanjuti" },
+  homeFollowupHint: {
+    en: "Open complaints and mail-register items, oldest first — tap an item to open it.",
+    id: "Pengaduan dan agenda yang belum selesai, dari yang terlama — ketuk item untuk membukanya.",
+  },
+  homeFollowupEmpty: { en: "All followed up ✓", id: "Semua sudah ditindaklanjuti ✓" },
+  homeFollowupAduan: { en: "complaints", id: "pengaduan" },
+  homeFollowupAgenda: { en: "register items", id: "agenda" },
+  homeFollowupNoDisposisi: { en: "not yet dispositioned", id: "belum didisposisi" },
   // Paket 10 — morning briefing (Briefing Pagi)
   briefingTitle: { en: "Morning briefing", id: "Briefing Pagi" },
   briefingFocus: { en: "Today's focus", id: "Fokus hari ini" },
