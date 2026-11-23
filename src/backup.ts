@@ -9,6 +9,11 @@ import { listDrafts, listLocalDrafts, type Draft } from "./drafts";
 import type { FirebaseServices } from "./firebase";
 import { loadAgenda, type AgendaEntry } from "./agenda";
 import { loadIkm, type IkmResponse } from "./ikm";
+import {
+  isValidLetterheadSettings,
+  loadLetterhead,
+  type LetterheadSettings,
+} from "./letterhead";
 import { loadAduan, type Aduan } from "./pengaduan";
 import { loadPerangkat, type Perangkat } from "./kepegawaian";
 import type { Lang } from "./i18n";
@@ -24,6 +29,9 @@ export interface BackupCounts {
   ikm: number;
   pengaduan: number;
   agenda: number;
+  /** Paket 17 — a single settings record, not a list. Optional so v1
+   * backups made before Paket 17 stay valid. */
+  pengaturan?: number;
 }
 
 export interface DesaaiBackup {
@@ -37,16 +45,14 @@ export interface DesaaiBackup {
     ikm: IkmResponse[];
     pengaduan: Aduan[];
     agenda: AgendaEntry[];
+    /** Paket 17 — optional, same reason as counts.pengaturan. */
+    pengaturan?: LetterheadSettings;
   };
 }
 
-const COLLECTION_KEYS: Array<keyof BackupCounts> = [
-  "surat",
-  "pegawai",
-  "ikm",
-  "pengaduan",
-  "agenda",
-];
+const COLLECTION_KEYS: Array<
+  "surat" | "pegawai" | "ikm" | "pengaduan" | "agenda"
+> = ["surat", "pegawai", "ikm", "pengaduan", "agenda"];
 
 const COUNT_LABELS: Record<Lang, Record<keyof BackupCounts, string>> = {
   en: {
@@ -55,6 +61,7 @@ const COUNT_LABELS: Record<Lang, Record<keyof BackupCounts, string>> = {
     ikm: "IKM",
     pengaduan: "Complaints",
     agenda: "Register",
+    pengaturan: "Settings",
   },
   id: {
     surat: "Surat",
@@ -62,13 +69,19 @@ const COUNT_LABELS: Record<Lang, Record<keyof BackupCounts, string>> = {
     ikm: "IKM",
     pengaduan: "Pengaduan",
     agenda: "Agenda",
+    pengaturan: "Pengaturan",
   },
 };
 
-/** "Surat 12 · Pegawai 23 · IKM 14 · Pengaduan 6 · Agenda 4". */
+/** "Surat 12 · Pegawai 23 · IKM 14 · Pengaduan 6 · Agenda 4 · Pengaturan 1".
+ * The settings entry is appended only when the backup carries it. */
 export function backupCountsLine(counts: BackupCounts, lang: Lang): string {
   const labels = COUNT_LABELS[lang] ?? COUNT_LABELS.id;
-  return COLLECTION_KEYS.map((k) => `${labels[k]} ${counts[k]}`).join(" · ");
+  const parts = COLLECTION_KEYS.map((k) => `${labels[k]} ${counts[k]}`);
+  if (counts.pengaturan !== undefined) {
+    parts.push(`${labels.pengaturan} ${counts.pengaturan}`);
+  }
+  return parts.join(" · ");
 }
 
 /** Gather every collection into one backup object (demo data included
@@ -84,6 +97,7 @@ export async function collectBackup(
   const ikm = loadIkm();
   const pengaduan = loadAduan();
   const agenda = loadAgenda();
+  const pengaturan = loadLetterhead();
   return {
     app: BACKUP_APP_ID,
     formatVersion: BACKUP_FORMAT_VERSION,
@@ -94,8 +108,9 @@ export async function collectBackup(
       ikm: ikm.length,
       pengaduan: pengaduan.length,
       agenda: agenda.length,
+      pengaturan: 1,
     },
-    collections: { surat, pegawai, ikm, pengaduan, agenda },
+    collections: { surat, pegawai, ikm, pengaduan, agenda, pengaturan },
   };
 }
 
@@ -306,7 +321,7 @@ function validateAgenda(r: unknown, path: string, errors: string[], msg: (typeof
 }
 
 const VALIDATORS: Record<
-  keyof BackupCounts,
+  "surat" | "pegawai" | "ikm" | "pengaduan" | "agenda",
   (r: unknown, path: string, errors: string[], msg: (typeof MSG)["id"]) => void
 > = {
   surat: validateDraft,
@@ -344,6 +359,15 @@ export function validateBackup(value: unknown, lang: Lang = "id"): BackupValidat
   ) {
     errors.push(msg.badCounts);
   }
+  // Paket 17 — the settings count is a single record, and it is optional
+  // (backups made before Paket 17 have none).
+  if (
+    isObj(countsRaw) &&
+    countsRaw.pengaturan !== undefined &&
+    countsRaw.pengaturan !== 1
+  ) {
+    errors.push(msg.badCounts);
+  }
   if (!isObj(value.collections)) {
     errors.push(msg.badCollections);
     return fail();
@@ -360,6 +384,15 @@ export function validateBackup(value: unknown, lang: Lang = "id"): BackupValidat
       if (errors.length > 40) return; // cap the noise, still a failure
       VALIDATORS[key](rec, `collections.${key}[${i}]`, errors, msg);
     });
+  }
+  // Paket 17 — letterhead settings are optional; when present they must
+  // be a plain object of strings.
+  const pengaturan = (value.collections as Record<string, unknown>).pengaturan;
+  if (
+    pengaturan !== undefined &&
+    !isValidLetterheadSettings(pengaturan)
+  ) {
+    errors.push(`collections.pengaturan ${msg.badField}`);
   }
   if (errors.length > 0) return fail();
   return { ok: true, backup: value as unknown as DesaaiBackup };

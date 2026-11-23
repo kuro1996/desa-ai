@@ -43,6 +43,14 @@ import {
 } from "./ikm";
 import { KB, kbEntryToText, matchKb, type KbEntry } from "./kb";
 import {
+  DEFAULT_LETTERHEAD,
+  LETTERHEAD_FIELDS,
+  letterheadContactLine,
+  loadLetterhead,
+  saveLetterhead,
+  type LetterheadSettings,
+} from "./letterhead";
+import {
   AGAMA_LIST,
   buildKepegawaianSummary,
   computeNotifications,
@@ -250,6 +258,19 @@ function paletteCommands(): PaletteCmd[] {
       run: () => {
         activateTab("home");
         document.getElementById("home-backup-export")?.click();
+      },
+    },
+    {
+      id: "cmd-letterhead",
+      label: () => t("cmdLetterhead", lang),
+      run: () => {
+        activateTab("home");
+        document
+          .getElementById("home-letterhead-card")
+          ?.scrollIntoView({ block: "start" });
+        (
+          document.getElementById("home-lh-camat-nama") as HTMLInputElement | null
+        )?.focus();
       },
     },
     {
@@ -812,6 +833,44 @@ function renderBackupCard(): void {
   if (el) el.textContent = backupCountsLine(backupCounts(), lang);
 }
 
+// ---------- Paket 17 — Pengaturan Kop Surat ----------
+
+const LETTERHEAD_INPUT_IDS: Record<keyof LetterheadSettings, string> = {
+  instansi1: "home-lh-instansi1",
+  instansi2: "home-lh-instansi2",
+  alamat: "home-lh-alamat",
+  telepon: "home-lh-telepon",
+  email: "home-lh-email",
+  camatNama: "home-lh-camat-nama",
+  camatNip: "home-lh-camat-nip",
+  sekretarisNama: "home-lh-sekretaris-nama",
+};
+
+function renderLetterheadForm(): void {
+  const lh = loadLetterhead();
+  for (const key of LETTERHEAD_FIELDS) {
+    const input = document.getElementById(
+      LETTERHEAD_INPUT_IDS[key],
+    ) as HTMLInputElement | null;
+    if (input) input.value = lh[key];
+  }
+}
+
+function saveLetterheadForm(): void {
+  const next: LetterheadSettings = { ...DEFAULT_LETTERHEAD };
+  for (const key of LETTERHEAD_FIELDS) {
+    const input = document.getElementById(
+      LETTERHEAD_INPUT_IDS[key],
+    ) as HTMLInputElement | null;
+    if (input) next[key] = input.value;
+  }
+  saveLetterhead(next);
+  setStatus($("home-letterhead-status"), t("homeLetterheadSaved", lang));
+  // A print preview already open on the drafts tab re-renders with the
+  // new kop right away — no need to reopen it.
+  if (currentPrintDraft) renderArchiveSheet();
+}
+
 async function exportBackup(): Promise<void> {
   const status = $("home-backup-status");
   try {
@@ -891,6 +950,12 @@ async function applyBackup(backup: DesaaiBackup): Promise<void> {
   saveIkm(backup.collections.ikm);
   saveAduan(backup.collections.pengaduan);
   savePerangkat(backup.collections.pegawai);
+  // Paket 17 — letterhead settings travel with the backup when present
+  // (older v1 backups simply have none — the current settings stay).
+  if (backup.collections.pengaturan) {
+    saveLetterhead(backup.collections.pengaturan);
+    renderLetterheadForm();
+  }
   // Letters: replace the local archive, but skip drafts that already
   // exist in Firestore — otherwise the merged library would show them
   // twice. On a fresh browser (different anonymous uid) nothing is
@@ -1277,6 +1342,7 @@ function renderHome(): void {
   renderHomeSearch();
   renderQuickStats();
   renderBackupCard();
+  renderLetterheadForm();
 }
 
 function initHome(): void {
@@ -1337,6 +1403,10 @@ function initHome(): void {
     resetBackupFileInput();
     setStatus($("home-backup-status"), t("homeBackupCancelled", lang));
   });
+  // Paket 17 — Pengaturan Kop Surat.
+  $("home-letterhead-save").addEventListener("click", () =>
+    saveLetterheadForm(),
+  );
 }
 
 // ---------- status chips ----------
@@ -2103,11 +2173,28 @@ function printSignBlock(tanggal: string): HTMLElement {
   title.textContent = t("printSignerTitle", lang);
   const name = document.createElement("p");
   name.className = "print-sign-name";
-  // No Camat name on file — a clear placeholder, never an invented name.
-  name.textContent = "—";
+  // Paket 17 — the name comes from the officer's letterhead settings.
+  // Empty stays a clear placeholder, never an invented name.
+  const lh = loadLetterhead();
+  name.textContent = lh.camatNama.trim() || "—";
   const nip = document.createElement("p");
-  nip.textContent = "NIP. —";
+  nip.textContent = lh.camatNip.trim() ? `NIP. ${lh.camatNip.trim()}` : "NIP. —";
   sign.append(place, title, name, nip);
+  return sign;
+}
+
+/** Second signature block, only when the officer filled in a secretary. */
+function printSecretaryBlock(): HTMLElement | null {
+  const lh = loadLetterhead();
+  if (!lh.sekretarisNama.trim()) return null;
+  const sign = document.createElement("div");
+  sign.className = "print-sign-inner print-sign-secretary";
+  const title = document.createElement("p");
+  title.textContent = t("printSignerSecretary", lang);
+  const name = document.createElement("p");
+  name.className = "print-sign-name";
+  name.textContent = lh.sekretarisNama.trim();
+  sign.append(title, name);
   return sign;
 }
 
@@ -2122,13 +2209,23 @@ function renderArchiveSheet(): void {
   logo.alt = "";
   const kopText = document.createElement("div");
   kopText.className = "print-kop-text";
+  // Paket 17 — institution lines from the officer's letterhead settings
+  // (pre-filled with the values Paket 15 already used); empty prints "—".
+  const lh = loadLetterhead();
   const gov = document.createElement("p");
   gov.className = "print-kop-gov";
-  gov.textContent = t("printKopGov", lang);
+  gov.textContent = lh.instansi1.trim() || "—";
   const office = document.createElement("p");
   office.className = "print-kop-office";
-  office.textContent = t("printKopOffice", lang);
+  office.textContent = lh.instansi2.trim() || "—";
   kopText.append(gov, office);
+  const contact = letterheadContactLine(lh);
+  if (contact) {
+    const contactEl = document.createElement("p");
+    contactEl.className = "print-kop-contact";
+    contactEl.textContent = contact;
+    kopText.appendChild(contactEl);
+  }
   kop.append(logo, kopText);
   sheet.appendChild(kop);
   sheet.appendChild(document.createElement("hr"));
@@ -2147,7 +2244,13 @@ function renderArchiveSheet(): void {
   sheet.appendChild(body);
   const sign = document.createElement("div");
   sign.className = "print-sign";
-  sign.appendChild(printSignBlock(printForm.tanggal));
+  const secretary = printSecretaryBlock();
+  if (secretary) {
+    sign.classList.add("print-sign-dual");
+    sign.append(secretary, printSignBlock(printForm.tanggal));
+  } else {
+    sign.appendChild(printSignBlock(printForm.tanggal));
+  }
   sheet.appendChild(sign);
 }
 

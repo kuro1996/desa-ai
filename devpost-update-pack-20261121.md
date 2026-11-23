@@ -164,6 +164,20 @@ so the office keeps working offline. 199 automated checks on every build
   100% data lokal, bekerja offline, disembunyikan di Mode Warga.
   Tes: headless 183 → **189 cek** (6 cek kartu baru, semua hijau),
   PWA tetap **16/16** (total 205/206 — 1 cek flaky bawaan, lihat §4).
+- **Paket 17 (23 Nov siang): Pengaturan Kop Surat** — kartu baru di
+  Beranda tempat petugas mengisi identitas kantor yang tercetak di kop
+  dan blok tanda tangan surat resmi (Paket 15): instansi baris 1 & 2
+  (sudah terisi "Pemerintah Kabupaten Bangka Tengah" / "Kecamatan
+  Simpangkatis"), alamat, telepon, email, nama + NIP Camat, dan nama
+  Sekretaris (opsional, muncul sebagai blok tanda tangan kedua bila
+  diisi). Tidak ada data yang dikarang: field kosong tercetak "—" dan
+  baris kontak kop dihilangkan bila kosong. Pengaturan ikut dalam
+  backup JSON Paket 14 sebagai koleksi keenam (format tetap v1 — backup
+  lama tanpa pengaturan tetap valid dan tetap bisa dipulihkan). 100%
+  data lokal, bekerja offline, disembunyikan di Mode Warga; ada juga
+  perintah di command palette (Ctrl+K). Tes: headless 189 → **199
+  cek** (10 cek baru, semua hijau), PWA tetap **16/16** (total
+  215/216 — 1 cek flaky bawaan, lihat §4).
 
 ## 3. Checklist sebelum Bos tekan submit
 
@@ -198,4 +212,8 @@ so the office keeps working offline. 199 automated checks on every build
   run terakhir (183/184 headless) — total 199/200; 10 cek cetak-surat
   baru semua hijau, PWA 16/16.** **Update Paket 16: cek flaky itu
   GAGAL lagi di run terakhir (189/190 headless) — total 205/206;
-  6 cek kartu follow-up baru semua hijau, PWA 16/16.**
+  6 cek kartu follow-up baru semua hijau, PWA 16/16.** **Update Paket
+  17: cek flaky itu GAGAL lagi di run terakhir (199/200 headless) —
+  total 215/216; 10 cek kop-surat baru semua hijau, PWA 16/16; satu
+  cek "Buat SK" sempat gagal di 2 run lalu lolos di run ke-3 (flaky
+  timing, bukan regresi — kode prefill tidak disentuh Paket 17).**

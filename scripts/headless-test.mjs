@@ -178,8 +178,8 @@ async function main() {
     }));
     const monthName = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
     check(
-      "bento shows 13 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
-      bento.cards === 13 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
+      "bento shows 14 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
+      bento.cards === 14 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
         bento.lettersToday === "0" && bento.aduanBaru === "3" &&
         bento.monthIkm === "12" && bento.monthAduan === "6" && bento.monthLetters === "0" &&
         bento.monthName === monthName,
@@ -789,6 +789,128 @@ async function main() {
         offlineParsed.app === "desaai" &&
         offlineParsed.counts.agenda === groundTruth.agenda.length,
       offlineBackupJson.slice(0, 80),
+    );
+    // Paket 17: Pengaturan Kop Surat — officer fills the office identity
+    // used by the letterhead; nothing is ever invented.
+    const lhCard = await page.$("#home-letterhead-card");
+    const lhValues = await page.evaluate(() => {
+      const v = (id) => document.getElementById(id)?.value ?? null;
+      return {
+        instansi1: v("home-lh-instansi1"),
+        instansi2: v("home-lh-instansi2"),
+        alamat: v("home-lh-alamat"),
+        telepon: v("home-lh-telepon"),
+        email: v("home-lh-email"),
+        camatNama: v("home-lh-camat-nama"),
+        camatNip: v("home-lh-camat-nip"),
+        sekretarisNama: v("home-lh-sekretaris-nama"),
+      };
+    });
+    check(
+      "letterhead card exists with 8 fields prefilled with the office defaults, no invented names",
+      !!lhCard &&
+        Object.values(lhValues).every((v) => v !== null) &&
+        lhValues.instansi1 === "Pemerintah Kabupaten Bangka Tengah" &&
+        lhValues.instansi2 === "Kecamatan Simpangkatis" &&
+        lhValues.camatNama === "" &&
+        lhValues.camatNip === "" &&
+        lhValues.sekretarisNama === "",
+      JSON.stringify(lhValues),
+    );
+    const setLhField = (id, value) =>
+      page.$eval(id, (el, val) => {
+        el.value = val;
+      }, value);
+    await setLhField("#home-lh-camat-nama", "CAMAT-UJI-17");
+    await setLhField("#home-lh-camat-nip", "NIP-UJI-17");
+    await setLhField("#home-lh-alamat", "Jl. Uji No. 17");
+    await setLhField("#home-lh-sekretaris-nama", "SEKRETARIS-UJI-17");
+    await page.click("#home-letterhead-save");
+    await sleep(300);
+    const lhSaved = await page.evaluate(() => ({
+      status: document.getElementById("home-letterhead-status")?.textContent ?? "",
+      stored: JSON.parse(localStorage.getItem("desaai-letterhead-v1") ?? "{}"),
+    }));
+    check(
+      "letterhead settings save to localStorage and report success",
+      /(disimpan|saved)/i.test(lhSaved.status) &&
+        lhSaved.stored.camatNama === "CAMAT-UJI-17" &&
+        lhSaved.stored.camatNip === "NIP-UJI-17" &&
+        lhSaved.stored.alamat === "Jl. Uji No. 17" &&
+        lhSaved.stored.sekretarisNama === "SEKRETARIS-UJI-17",
+      `${lhSaved.status} ${JSON.stringify(lhSaved.stored)}`,
+    );
+    // Offline: saving still works (localStorage only).
+    await page.setOfflineMode(true);
+    await setLhField("#home-lh-telepon", "(0717) 000000");
+    await page.click("#home-letterhead-save");
+    await sleep(300);
+    const lhOffline = await page.evaluate(
+      () => JSON.parse(localStorage.getItem("desaai-letterhead-v1") ?? "{}").telepon,
+    );
+    await page.setOfflineMode(false);
+    check(
+      "letterhead settings save offline",
+      lhOffline === "(0717) 000000",
+      `telepon=${lhOffline}`,
+    );
+    // Backup export carries the settings as a sixth collection.
+    await page.click("#home-backup-export");
+    await sleep(300);
+    const backupWithLh = await readLastBlobText();
+    let backupLhParsed = null;
+    try {
+      backupLhParsed = JSON.parse(backupWithLh);
+    } catch {
+      backupLhParsed = null;
+    }
+    check(
+      "backup export includes the letterhead settings",
+      !!backupLhParsed &&
+        backupLhParsed.collections?.pengaturan?.camatNama === "CAMAT-UJI-17" &&
+        backupLhParsed.counts?.pengaturan === 1,
+      backupLhParsed ? JSON.stringify(backupLhParsed.counts) : "unparsed",
+    );
+    // Restore a backup carrying different settings replaces them, then
+    // restoring the original backup returns the defaults.
+    const lhRestorePath = join(tmpDir, "desaai-backup-lh-20261123.json");
+    const lhModified = JSON.parse(JSON.stringify(backupLhParsed));
+    lhModified.collections.pengaturan.camatNama = "CAMAT-RESTORE-17";
+    writeFileSync(lhRestorePath, JSON.stringify(lhModified, null, 2));
+    await backupFileInput.uploadFile(lhRestorePath);
+    await sleep(500);
+    const lhConfirm = await page.$eval(
+      "#home-backup-confirm-text",
+      (el) => el.textContent ?? "",
+    );
+    check(
+      "restore confirmation lists the settings collection",
+      /(Pengaturan 1|Settings 1)/.test(lhConfirm),
+      lhConfirm,
+    );
+    await page.click("#home-backup-confirm-yes");
+    await sleep(800);
+    const lhAfterRestore = await page.evaluate(() => ({
+      stored: JSON.parse(localStorage.getItem("desaai-letterhead-v1") ?? "{}"),
+      form: document.getElementById("home-lh-camat-nama")?.value ?? "",
+    }));
+    check(
+      "restore replaces the letterhead settings",
+      lhAfterRestore.stored.camatNama === "CAMAT-RESTORE-17" &&
+        lhAfterRestore.form === "CAMAT-RESTORE-17",
+      JSON.stringify(lhAfterRestore),
+    );
+    await backupFileInput.uploadFile(originalPath);
+    await sleep(500);
+    await page.click("#home-backup-confirm-yes");
+    await sleep(800);
+    const lhAfterRevert = await page.evaluate(
+      () => JSON.parse(localStorage.getItem("desaai-letterhead-v1") ?? "{}").camatNama,
+    );
+    check(
+      "restoring the original backup returns the default (empty) signatory",
+      lhAfterRevert === "",
+      `camatNama=${lhAfterRevert}`,
     );
     // Dark mode: toggles, persists across reload, toggles back to light.
     await page.click("#theme-toggle");
@@ -1470,6 +1592,93 @@ async function main() {
       cssFiles.join(","),
     );
 
+    // Paket 17: the kop + signature follow the letterhead settings.
+    const openPrintPreview = async () => {
+      await page.evaluate(() => {
+        const items = [...document.querySelectorAll("#drafts-list .draft-item")];
+        const target = items.find(
+          (d) => d.querySelector("h3")?.textContent === "Surat Undangan",
+        );
+        const btns = [...(target?.querySelectorAll(".actions .btn") ?? [])];
+        btns.find((b) => b.textContent.trim() === "Print letter")?.click();
+      });
+      await sleep(400);
+    };
+    const readSheet = () =>
+      page.evaluate(() => ({
+        sheet: document.getElementById("archive-print-sheet")?.textContent ?? "",
+        // The Camat block is the one WITHOUT the secretary class — with a
+        // second signatory present, the first .print-sign-name belongs to
+        // the secretary.
+        signName:
+          document.querySelector(
+            "#archive-print-sheet .print-sign-inner:not(.print-sign-secretary) .print-sign-name",
+          )?.textContent ?? "",
+        contact:
+          document.querySelector("#archive-print-sheet .print-kop-contact")?.textContent ?? "",
+        secretary:
+          document.querySelector("#archive-print-sheet .print-sign-secretary")
+            ?.textContent ?? "",
+      }));
+    await openPrintPreview();
+    const sheetDefault = await readSheet();
+    check(
+      "kop with default settings shows the office lines, no contact line, placeholder signatory",
+      /Pemerintah Kabupaten Bangka Tengah/.test(sheetDefault.sheet) &&
+        /Kecamatan Simpangkatis/.test(sheetDefault.sheet) &&
+        sheetDefault.contact === "" &&
+        sheetDefault.signName === "—" &&
+        /NIP\. —/.test(sheetDefault.sheet) &&
+        sheetDefault.secretary === "",
+      `sign=${sheetDefault.signName} contact=${sheetDefault.contact}`,
+    );
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    await setLhField("#home-lh-camat-nama", "CAMAT-UJI-17");
+    await setLhField("#home-lh-camat-nip", "NIP-UJI-17");
+    await setLhField("#home-lh-alamat", "Jl. Uji No. 17");
+    await setLhField("#home-lh-telepon", "(0717) 000000");
+    await setLhField("#home-lh-sekretaris-nama", "SEKRETARIS-UJI-17");
+    await page.click("#home-letterhead-save");
+    await sleep(300);
+    await page.click('[data-tab="drafts"]');
+    await sleep(300);
+    await openPrintPreview();
+    const sheetFilled = await readSheet();
+    check(
+      "kop uses the saved settings: Camat name + NIP, contact line, secretary block",
+      sheetFilled.signName === "CAMAT-UJI-17" &&
+        /NIP\. NIP-UJI-17/.test(sheetFilled.sheet) &&
+        /Jl\. Uji No\. 17/.test(sheetFilled.contact) &&
+        /Telp\. \(0717\) 000000/.test(sheetFilled.contact) &&
+        /(Sekretaris|Secretary)/.test(sheetFilled.secretary) &&
+        /SEKRETARIS-UJI-17/.test(sheetFilled.secretary),
+      `sign=${sheetFilled.signName} contact=${sheetFilled.contact} secretary=${sheetFilled.secretary}`,
+    );
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    await setLhField("#home-lh-camat-nama", "");
+    await setLhField("#home-lh-camat-nip", "");
+    await setLhField("#home-lh-alamat", "");
+    await setLhField("#home-lh-telepon", "");
+    await setLhField("#home-lh-sekretaris-nama", "");
+    await page.click("#home-letterhead-save");
+    await sleep(300);
+    await page.click('[data-tab="drafts"]');
+    await sleep(300);
+    await openPrintPreview();
+    const sheetCleared = await readSheet();
+    check(
+      "clearing the settings returns the kop to placeholders (no invented name left behind)",
+      sheetCleared.signName === "—" &&
+        /NIP\. —/.test(sheetCleared.sheet) &&
+        sheetCleared.contact === "" &&
+        sheetCleared.secretary === "",
+      `sign=${sheetCleared.signName}`,
+    );
+    await page.click("#archive-print-close");
+    await sleep(200);
+
     // 5b. Drafts search + delete + data backup export
     await page.type("#drafts-search", "Undangan");
     await sleep(400);
@@ -2096,14 +2305,16 @@ async function main() {
         getComputedStyle(document.getElementById("home-briefing")).display === "none",
       backupHidden:
         getComputedStyle(document.getElementById("home-backup-card")).display === "none",
+      letterheadHidden:
+        getComputedStyle(document.getElementById("home-letterhead-card")).display === "none",
       followupHidden:
         getComputedStyle(document.getElementById("home-followup-card")).display === "none",
       agendaHidden:
         getComputedStyle(document.querySelector('[data-tab="agenda"]')).display === "none",
     }));
     check(
-      "citizen mode hides officer tabs + briefing + agenda + backup + follow-up cards and shows resident card",
-      warga.bodyWarga && warga.lettersHidden && warga.cardVisible && warga.briefingHidden && warga.agendaHidden && warga.backupHidden && warga.followupHidden,
+      "citizen mode hides officer tabs + briefing + agenda + backup + letterhead + follow-up cards and shows resident card",
+      warga.bodyWarga && warga.lettersHidden && warga.cardVisible && warga.briefingHidden && warga.agendaHidden && warga.backupHidden && warga.letterheadHidden && warga.followupHidden,
       JSON.stringify(warga),
     );
     await page.click("#warga-go-ikm");

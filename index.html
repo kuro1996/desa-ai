@@ -352,6 +352,56 @@
             <div id="home-backup-status" class="status" aria-live="polite"></div>
           </div>
 
+          <!-- Paket 17 — Pengaturan Kop Surat: officer fills the office identity used by the letterhead. -->
+          <div class="bento-card bento-letterhead" id="home-letterhead-card">
+            <p class="bento-label" data-i18n="homeLetterheadTitle">Pengaturan Kop Surat</p>
+            <p class="hint" data-i18n="homeLetterheadHint">
+              Identitas kantor yang tercetak di kop dan blok tanda tangan surat
+              resmi. Isi yang sesuai — field kosong tercetak "—", tidak ada
+              yang dikarang.
+            </p>
+            <div class="form-grid" id="home-letterhead-form">
+              <label class="field">
+                <span data-i18n="lhInstansi1">Instansi baris 1</span>
+                <input id="home-lh-instansi1" type="text" autocomplete="off" />
+              </label>
+              <label class="field">
+                <span data-i18n="lhInstansi2">Instansi baris 2</span>
+                <input id="home-lh-instansi2" type="text" autocomplete="off" />
+              </label>
+              <label class="field field-wide">
+                <span data-i18n="lhAlamat">Alamat kantor</span>
+                <input id="home-lh-alamat" type="text" autocomplete="off" />
+              </label>
+              <label class="field">
+                <span data-i18n="lhTelepon">Telepon</span>
+                <input id="home-lh-telepon" type="text" autocomplete="off" />
+              </label>
+              <label class="field">
+                <span data-i18n="lhEmail">Email</span>
+                <input id="home-lh-email" type="email" autocomplete="off" />
+              </label>
+              <label class="field">
+                <span data-i18n="lhCamatNama">Nama Camat (penandatangan)</span>
+                <input id="home-lh-camat-nama" type="text" autocomplete="off" />
+              </label>
+              <label class="field">
+                <span data-i18n="lhCamatNip">NIP Camat</span>
+                <input id="home-lh-camat-nip" type="text" autocomplete="off" />
+              </label>
+              <label class="field">
+                <span data-i18n="lhSekretarisNama">Nama Sekretaris (opsional)</span>
+                <input id="home-lh-sekretaris-nama" type="text" autocomplete="off" />
+              </label>
+            </div>
+            <div class="actions">
+              <button id="home-letterhead-save" class="btn btn-primary" type="button">
+                <span data-i18n="homeLetterheadSave">Simpan kop surat</span>
+              </button>
+            </div>
+            <div id="home-letterhead-status" class="status" aria-live="polite"></div>
+          </div>
+
           <!-- Paket 16 — Perlu Ditindaklanjuti: open complaints + register items, oldest first. -->
           <div class="bento-card bento-followup" id="home-followup-card">
             <p class="bento-label">
