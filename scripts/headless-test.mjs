@@ -1916,6 +1916,179 @@ async function main() {
       `first=${await kegFirstName()}`,
     );
 
+    // Paket 24 — Filter Cepat Pegawai: the Desa/Jabatan filter options
+    // are derived from the values actually present in the loaded records
+    // (24 records here: 23 demo + "Tes Tambah"), and a reset button
+    // clears the four dropdowns without touching the search or the sort.
+    const kegFilterOptions = (sel) =>
+      page.$$eval(`${sel} option`, (els) => els.map((e) => e.value));
+    const kegResetHidden = () =>
+      page.$eval("#keg-filter-reset", (el) => el.hidden);
+    const p24DesaOpts = await kegFilterOptions("#keg-filter-desa");
+    check(
+      "kepegawaian desa filter options come from the loaded records",
+      p24DesaOpts.length === 12 && p24DesaOpts.includes("Kecamatan Simpangkatis"),
+      `${p24DesaOpts.length} options: ${p24DesaOpts.join(" | ")}`,
+    );
+    const p24JabOpts = await kegFilterOptions("#keg-filter-jabatan");
+    check(
+      "kepegawaian jabatan filter options come from the loaded records",
+      p24JabOpts.length === 17 && p24JabOpts.includes("Camat") && p24JabOpts.includes("Staf Desa"),
+      `${p24JabOpts.length} options: ${p24JabOpts.join(" | ")}`,
+    );
+    await page.select("#keg-filter-desa", "Kecamatan Simpangkatis");
+    await sleep(300);
+    const p24KecRows = await page.$$eval("#keg-table-body tr", (els) => els.length);
+    check(
+      "kepegawaian filter by Kecamatan Simpangkatis shows the 8 office staff",
+      p24KecRows === 8,
+      `${p24KecRows} rows`,
+    );
+    await page.select("#keg-filter-desa", "");
+    await page.select("#keg-filter-jabatan", "Camat");
+    await sleep(300);
+    const p24CamatRows = await page.$$eval("#keg-table-body tr", (els) => els.length);
+    check(
+      "kepegawaian filter by position Camat",
+      p24CamatRows === 1,
+      `${p24CamatRows} rows`,
+    );
+    await page.select("#keg-filter-desa", "Katis");
+    await page.select("#keg-filter-jabatan", "Kepala Desa");
+    await sleep(300);
+    const p24Combo = await kegSearchState();
+    check(
+      "kepegawaian village + position filters combine",
+      p24Combo.rows === 1 && (await kegFirstName()) === "Dedi Kurniawan",
+      `rows=${p24Combo.rows} first=${await kegFirstName()}`,
+    );
+    await page.select("#keg-filter-jabatan", "");
+    await page.select("#keg-filter-desa", "Terak");
+    await setKegSearch("tes");
+    const p24FilterSearch = await kegSearchState();
+    check(
+      "kepegawaian filter works together with search",
+      p24FilterSearch.rows === 1 && p24FilterSearch.statTotal === "1",
+      `rows=${p24FilterSearch.rows} statTotal=${p24FilterSearch.statTotal}`,
+    );
+    await setKegSearch("");
+    await page.select("#keg-filter-desa", "Katis");
+    await clickKegSort("nama");
+    const p24FilterSort = await kegSearchState();
+    check(
+      "kepegawaian filter works together with sort",
+      p24FilterSort.rows === 3 && (await kegFirstName()) === "Citra Dewi",
+      `rows=${p24FilterSort.rows} first=${await kegFirstName()}`,
+    );
+    check(
+      "kepegawaian reset button appears while a filter is active",
+      (await kegResetHidden()) === false,
+      `resetHidden=${await kegResetHidden()}`,
+    );
+    await page.click("#keg-filter-reset");
+    await sleep(300);
+    check(
+      "kepegawaian reset filter keeps the active sort",
+      (await kegSearchState()).rows === 24 &&
+        (await kegFirstName()) === "Agus Setiawan" &&
+        (await kegSortArrow("nama")) === "▲" &&
+        (await kegResetHidden()) === true,
+      `rows=${(await kegSearchState()).rows} first=${await kegFirstName()} arrow=${await kegSortArrow("nama")}`,
+    );
+    await clickKegSort("nama");
+    await clickKegSort("nama");
+    await setKegSearch("tes");
+    await page.select("#keg-filter-desa", "Terak");
+    await sleep(300);
+    await page.click("#keg-filter-reset");
+    await sleep(300);
+    const p24ResetSearch = await page.evaluate(() => ({
+      search: document.getElementById("keg-search").value,
+      desa: document.getElementById("keg-filter-desa").value,
+      rows: document.querySelectorAll("#keg-table-body tr").length,
+    }));
+    check(
+      "kepegawaian reset filter keeps the search text",
+      p24ResetSearch.search === "tes" && p24ResetSearch.desa === "" && p24ResetSearch.rows === 1,
+      `search=${p24ResetSearch.search} desa=${p24ResetSearch.desa} rows=${p24ResetSearch.rows}`,
+    );
+    await setKegSearch("");
+    // A position that only exists in the data appears as a filter option
+    // (the add form cannot create it — blank it in storage, reload, and
+    // restore it afterwards, like the Paket 23 missing-date check).
+    await page.evaluate(() => {
+      const raw = localStorage.getItem("desaai-perangkat-v1");
+      const items = JSON.parse(raw);
+      items.find((p) => p.nama === "Tes Tambah").jabatan = "Kepala Seksi Baru";
+      localStorage.setItem("desaai-perangkat-v1", JSON.stringify(items));
+    });
+    await page.reload({ waitUntil: "load" });
+    await sleep(500);
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(300);
+    const p24NewOpts = await kegFilterOptions("#keg-filter-jabatan");
+    check(
+      "kepegawaian new position appears as a filter option",
+      p24NewOpts.length === 18 && p24NewOpts.includes("Kepala Seksi Baru"),
+      `${p24NewOpts.length} options`,
+    );
+    await page.evaluate(() => {
+      const raw = localStorage.getItem("desaai-perangkat-v1");
+      const items = JSON.parse(raw);
+      items.find((p) => p.nama === "Tes Tambah").jabatan = "Staf Desa";
+      localStorage.setItem("desaai-perangkat-v1", JSON.stringify(items));
+    });
+    await page.reload({ waitUntil: "load" });
+    await sleep(500);
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(300);
+    const p24RestoredOpts = await kegFilterOptions("#keg-filter-jabatan");
+    check(
+      "kepegawaian removed position disappears from the filter options",
+      p24RestoredOpts.length === 17 && !p24RestoredOpts.includes("Kepala Seksi Baru"),
+      `${p24RestoredOpts.length} options`,
+    );
+    // Filtering is local: it works offline, and the reset button hides
+    // with the rest of the tab in Mode Warga.
+    await page.setOfflineMode(true);
+    await page.select("#keg-filter-desa", "Katis");
+    await sleep(300);
+    const p24OfflineRows = await page.$$eval("#keg-table-body tr", (els) => els.length);
+    await page.setOfflineMode(false);
+    check(
+      "kepegawaian filter works offline",
+      p24OfflineRows === 3,
+      `${p24OfflineRows} rows for Katis`,
+    );
+    await page.select("#keg-filter-desa", "");
+    await sleep(200);
+    await page.click("#mode-toggle");
+    await sleep(200);
+    const p24Warga = await page.evaluate(
+      () =>
+        document.body.classList.contains("mode-warga") &&
+        document.getElementById("keg-filter-reset")?.offsetParent === null,
+    );
+    await page.click("#mode-toggle");
+    await sleep(200);
+    check(
+      "kepegawaian reset button hidden in Mode Warga",
+      p24Warga,
+      `hidden=${p24Warga}`,
+    );
+    // Leave the table in its default view for the checks below.
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(300);
+    const p24Clean = await kegSearchState();
+    check(
+      "kepegawaian filters cleared after the Paket 24 checks",
+      p24Clean.rows === 24 &&
+        p24Clean.statTotal === "24" &&
+        (await kegFirstName()) === "Ahmad Fauzi" &&
+        (await kegResetHidden()) === true,
+      `rows=${p24Clean.rows} first=${await kegFirstName()}`,
+    );
+
     // Village filter: Katis has 3 demo records
     await page.select("#keg-filter-desa", "Katis");
     await sleep(300);

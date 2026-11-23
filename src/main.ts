@@ -2552,6 +2552,52 @@ function kegFillSelect(
   }
 }
 
+// ---------- Paket 24 — Filter Cepat Pegawai ----------
+// The Desa/Jabatan filter options are derived from the values actually
+// present in the loaded records — never from a fixed list. The old static
+// lists could not offer "Kecamatan Simpangkatis" as a village (the 8
+// subdistrict staff carry it as their desa) and could never offer a
+// position typed in later. Options refresh on every render, so adding or
+// deleting a record updates them; the current choice is kept when its
+// value still exists, and falls back to "Semua" when it no longer does.
+// Rebuilding is skipped when the option list is unchanged, so typing in
+// the search box never disturbs a focused filter select.
+function kegRefreshFilterOptions(items: Perangkat[]): void {
+  const uniqueSorted = (pick: (p: Perangkat) => string): string[] =>
+    [...new Set(items.map(pick).map((v) => (v ?? "").trim()).filter((v) => v !== ""))].sort(
+      (a, b) => a.localeCompare(b, "id"),
+    );
+  const refresh = (el: HTMLSelectElement, values: string[], allLabel: string): void => {
+    const current = el.value;
+    const wanted = ["", ...values];
+    const existing = [...el.options].map((o) => o.value);
+    if (
+      existing.length === wanted.length &&
+      existing.every((v, i) => v === wanted[i])
+    ) {
+      return;
+    }
+    el.innerHTML = "";
+    for (const v of wanted) {
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = v === "" ? allLabel : v;
+      el.appendChild(opt);
+    }
+    el.value = wanted.includes(current) ? current : "";
+  };
+  refresh(
+    $("keg-filter-desa") as HTMLSelectElement,
+    uniqueSorted((p) => p.desa),
+    t("kegFilterDesa", lang),
+  );
+  refresh(
+    $("keg-filter-jabatan") as HTMLSelectElement,
+    uniqueSorted((p) => p.jabatan),
+    t("kegFilterJabatan", lang),
+  );
+}
+
 function kegStatusPill(p: Perangkat): { text: string; cls: string } {
   const s = masaStatus(p);
   if (s === "aktif") return { text: t("kegStatusAktif", lang), cls: "aktif" };
@@ -2562,6 +2608,9 @@ function kegStatusPill(p: Perangkat): { text: string; cls: string } {
 function renderKepegawaian(): void {
   kegItems = loadPerangkat();
   const items = kegItems;
+  // Paket 24 — refresh the Desa/Jabatan filter options from the records
+  // actually loaded, before reading the current filter choices.
+  kegRefreshFilterOptions(items);
   const stats = computeStats(items);
   $("keg-stat-total").textContent = String(stats.total);
   $("keg-stat-desa").textContent = String(stats.desaCount);
@@ -2753,6 +2802,9 @@ function renderKepegawaian(): void {
   $("keg-stat21-sk-tanpa-wrap").hidden = bd.skTanpaTanggal === 0;
   const filterNote = $("keg-stat21-filter-note");
   filterNote.hidden = !filterActive;
+  // Paket 24 — the reset button only shows while a filter is active; it
+  // clears the four dropdowns, never the search box or the table sort.
+  $("keg-filter-reset").hidden = !filterActive;
   if (filterActive) {
     filterNote.textContent =
       `${t("kegStat21Filtered", lang)}: ${t("kegShowing", lang)} ${filtered.length} ${t("kegOf", lang)} ${items.length} ${t("kegRecords", lang)}`;
@@ -2938,17 +2990,17 @@ function initKepegawaian(): void {
     unitFilter.appendChild(opt);
   }
   kegSetUnit("desa");
-  kegFillSelect(
-    $("keg-filter-desa") as HTMLSelectElement,
-    DESA_LIST,
-    t("kegFilterDesa", lang),
-  );
-  kegFillSelect(
-    $("keg-filter-jabatan") as HTMLSelectElement,
-    [...new Set([...JABATAN_LIST, ...JABATAN_KECAMATAN])],
-    t("kegFilterJabatan", lang),
-  );
   renderKepegawaian();
+
+  // Paket 24 — reset only the four filter dropdowns to "Semua"; the
+  // search text and the active column sort are deliberately left alone.
+  $("keg-filter-reset").addEventListener("click", () => {
+    ($("keg-filter-desa") as HTMLSelectElement).value = "";
+    ($("keg-filter-unit") as HTMLSelectElement).value = "";
+    ($("keg-filter-jabatan") as HTMLSelectElement).value = "";
+    ($("keg-filter-status") as HTMLSelectElement).value = "";
+    renderKepegawaian();
+  });
 
   unitSel.addEventListener("change", () => {
     kegSetUnit(unitSel.value as "kecamatan" | "desa");

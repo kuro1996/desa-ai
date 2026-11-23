@@ -393,6 +393,7 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   kegSearchPh: { en: "Search name, position, village, or unit…", id: "Cari nama, jabatan, desa, atau unit…" },
   kegFilterDesa: { en: "All villages", id: "Semua desa" },
   kegFilterJabatan: { en: "All positions", id: "Semua jabatan" },
+  kegFilterReset: { en: "Reset filters", id: "Reset filter" },
   kegShowing: { en: "Showing", id: "Menampilkan" },
   kegOf: { en: "of", id: "dari" },
   kegRecords: { en: "records", id: "data" },
