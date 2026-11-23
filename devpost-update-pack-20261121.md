@@ -50,7 +50,7 @@ by a human officer before use.
 
 **Tech:** Vite + TypeScript, Firebase AI Logic (Gemini Nano 4 on-device +
 Gemini cloud fallback), Firestore mirror (best-effort), localStorage-first
-so the office keeps working offline. 142 automated headless-Chrome checks
+so the office keeps working offline. 152 automated headless-Chrome checks
 green on every build.
 
 ## 2. Yang baru sejak submit (untuk kolom "What's new" / pembaruan deskripsi)
@@ -92,6 +92,16 @@ green on every build.
   **Salin briefing** yang menyalin teks WhatsApp siap tempel untuk grup
   staf/Camat (disembunyikan di Mode Warga). Tes headless 138 → **142
   cek, semua hijau**.
+- **Paket 11 (23 Nov siang): Buku Agenda Surat** — tab ke-9, register
+  surat masuk/keluar lengkap: nomor agenda otomatis (001/AGS/2026…),
+  nomor surat, pengirim/tujuan, perihal, tanggal, disposisi (Camat,
+  Sekretaris, Kasi, Arsip), status (baru/diproses/selesai), statistik
+  (masuk/keluar/belum ditindaklanjuti), filter arah + status, ekspor
+  CSV, dan pencarian global menemukannya. Jumlah surat masuk hari ini
+  juga masuk ke ringkasan Briefing Pagi. Disembunyikan di Mode Warga.
+  Bonus: ringkasan kepegawaian kini **fail-soft** — bila AI gagal,
+  rekap offline tetap tampil, bukan panel kosong (memperbaiki cek
+  headless yang flaky). Tes headless 142 → **152 cek, semua hijau**.
 
 ## 3. Checklist sebelum Bos tekan submit
 
