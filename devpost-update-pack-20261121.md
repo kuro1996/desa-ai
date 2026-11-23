@@ -287,8 +287,10 @@ so the office keeps working offline. 199 automated checks on every build
   renders an offline recap without AI" — TERBUKTI bukan regresi:
   gagal juga di kode pra-Paket 23 / baseline Paket 22, 231/233,
   karena panggilan AI cloud menggantung di tunnel VM, bukan karena
-  pengurutan); commit main 063b264 ter-push. DEPLOY MENUNGGU
-  verifikasi live (lihat bawah).**
+  pengurutan); commit main 063b264 ter-push. **Status (23 Nov sore):
+  LIVE — deploy gh-pages 86b0dab (ls-remote terverifikasi), index
+  200, bundle index-ByQJR_qq.js 200 + marker data-sort-key /
+  keg-table; secret check bersih.**
 
 ## 3. Checklist sebelum Bos tekan submit
 
