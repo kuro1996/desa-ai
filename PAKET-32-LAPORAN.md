@@ -168,3 +168,14 @@ Rencana di `PAKET-32-RENCANA.md` (tidak di-commit, seperti paket lalu).
 - **Tidak deploy** ke gh-pages — menunggu Gas Bos.
 - **Tidak ada WhatsApp / backend / server** — tetap di luar Paket 32.
 - Tidak menyentuh kredensial/API key; tidak mengubah data contoh.
+
+## Addendum — perbaikan tes SK reminder (28 Nov ~00:55 WIB, verifikasi ulang Kuro)
+Verifikasi independen Kuro menemukan 1 cek gagal (358/359): "SK reminder
+picks up a +10-day record…" — penyebabnya BUG TES, bukan bug aplikasi:
+manipulasi tes memakai `toISOString()` (UTC) untuk membangun tanggal
++10 hari, sementara aplikasi + ekspektasi tes menghitung hari dari
+tengah malam LOKAL (WIB). Lewat tengah malam WIB, UTC masih tanggal
+lama, jadi +10 hari UTC = 9 hari lokal dan aplikasi benar menampilkan
+"SK expires in 9 days". Perbaikan: tanggal dibangun dari komponen lokal
+(`getFullYear/getMonth/getDate`). Tes ulang: **359/359**, PWA 16/16,
+secrets bersih. Commit perbaikan tes: `ad6d4b8`.

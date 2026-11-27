@@ -1394,7 +1394,12 @@ async function main() {
     const skManip = await page.evaluate(() => {
       const items = JSON.parse(localStorage.getItem("desaai-perangkat-v1") ?? "[]");
       const today = new Date();
-      const in10 = new Date(today.getTime() + 10 * 86400000).toISOString().slice(0, 10);
+      const in10d = new Date(today.getTime() + 10 * 86400000);
+      // Tanggal LOKAL (bukan toISOString/UTC): aplikasi + skExpected
+      // menghitung hari dari tengah malam lokal; toISOString menggeser
+      // sehari saat WIB sudah tanggal baru tapi UTC masih tanggal lama
+      // (mis. 00:45 WIB = 17:45 UTC) sehingga +10 hari jadi 9 hari.
+      const in10 = `${in10d.getFullYear()}-${String(in10d.getMonth() + 1).padStart(2, "0")}-${String(in10d.getDate()).padStart(2, "0")}`;
       const far = items.find((p) => p.masaSelesai === "2027-12-31");
       const inList = items.find((p) => p.masaSelesai === "2026-06-30");
       if (far) far.masaSelesai = in10;
