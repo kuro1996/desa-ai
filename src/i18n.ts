@@ -552,9 +552,12 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   statusSavedLocal: { en: "Draft saved locally (Firebase not connected).", id: "Draf tersimpan lokal (Firebase belum terhubung)." },
   statusDeleted: { en: "Draft deleted.", id: "Draf dihapus." },
   statusError: { en: "Something went wrong: ", id: "Terjadi kesalahan: " },
+  // Paket 32 (perbaikan 28 Nov 00:13) — JANGAN PERNAH menampilkan error
+  // mentah / instruksi npx ke pengguna. Pesan ini ramah dan umum; detail
+  // teknis hanya masuk console.error, bukan layar warga.
   statusAiError: {
-    en: "AI call failed. If this is a fresh Firebase project, run `npx -y firebase-tools@latest init ailogic` and enable App Check, then try again.",
-    id: "Panggilan AI gagal. Jika ini proyek Firebase baru, jalankan `npx -y firebase-tools@latest init ailogic` dan aktifkan App Check, lalu coba lagi.",
+    en: "The AI can't be reached right now — please try again later, or ask Anin (the guide button at the bottom right).",
+    id: "AI sedang tidak bisa dihubungi — coba lagi nanti, atau tanyakan Anin (tombol pemandu di kanan bawah).",
   },
   // Paket 30 — draf offline: AI gagal, isi dibuat dari formulir.
   statusDraftOffline: {
@@ -680,6 +683,292 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     en: "Anin: the form is still empty — write one sentence in Surat Cepat above, or fill in the subject first, then press Generate draft.",
     id: "Anin: formulirnya masih kosong — tulis satu kalimat di Surat Cepat di atas, atau isi perihal dulu, lalu tekan Buat draf.",
   },
+  // Paket 32 — Anin chat: the in-app agent. "%d" / "%s" filled by main.ts.
+  aninChatAsk: { en: "Ask Anin", id: "Tanya Anin" },
+  aninChatWelcomeBody: {
+    en: "I can answer questions about this app and help fill in letters — try a command like “Draft an invitation to the village meeting”.",
+    id: "Saya bisa menjawab pertanyaan tentang aplikasi ini dan membantu mengisi surat — coba perintah seperti “Buatkan surat undangan musyawarah desa”.",
+  },
+  aninChatPh: {
+    en: "Ask Anin about this app…",
+    id: "Tanya Anin tentang aplikasi ini…",
+  },
+  aninChatSend: { en: "Send", id: "Kirim" },
+  aninChatStatusReady: { en: "Ready to help", id: "Siap membantu" },
+  aninChatStatusTyping: { en: "Anin is typing…", id: "Anin mengetik…" },
+  aninChatStatusOffline: {
+    en: "Answered from the offline guide",
+    id: "Dijawab dari panduan offline",
+  },
+  aninChatStatusDevice: {
+    en: "Answered by on-device AI",
+    id: "Dijawab AI perangkat",
+  },
+  aninChatStatusCloud: { en: "Answered by cloud AI", id: "Dijawab AI cloud" },
+  // Paket 32 (standar "DIMAKSIMALKAN" 28 Nov 00:20) — Anin tidak boleh
+  // buntu: bila tidak paham, ia menyebut apa saja yang bisa dibantunya.
+  aninChatNoUnderstand: {
+    en: "Sorry, I don't understand that question yet — but I can help with: drafting a letter (“Draft an invitation to the village meeting”), procedure requirements (“What do I need for a KTP?”), Personnel Data, IKM, complaints, the Mail Register, and trend analysis (“What is the top complaint this month?”). Try one of those, or tap a suggestion below.",
+    id: "Maaf, saya belum paham pertanyaan itu — tapi saya bisa membantu soal: membuat draf surat (“Buatkan surat undangan musyawarah desa”), syarat prosedur (“Syarat KTP apa saja?”), Data Kepegawaian, IKM, pengaduan, Buku Agenda, dan analisis tren (“Keluhan terbanyak bulan ini apa?”). Coba salah satu contoh itu, atau ketuk salah satu saran di bawah.",
+  },
+  // Paket 32 — Anin mengambil alih Tanya Prosedur saat AI gagal (28 Nov 00:13).
+  aninChatAiFailed: {
+    en: "The cloud AI can't be reached, so I answered from the built-in procedure guide below — the guide works offline.",
+    id: "AI cloud sedang tidak bisa dihubungi, jadi saya menjawab dari panduan prosedur bawaan di bawah ini — panduan ini bekerja offline.",
+  },
+  aninChatLetterDone: {
+    en: "Done! I filled in the letter form (%d fields) — please check it in the Draft Letters tab before pressing “Generate draft”.",
+    id: "Baik! Formulir surat sudah saya isi (%d kolom) — silakan periksa di tab Draf Surat sebelum menekan “Buat draf”.",
+  },
+  aninChatLetterNeed: {
+    en: "Which letter? Tell me the type — invitation, SKTM, cover letter, or decree — plus the date, place, and names if you have them. For example: “Draft an invitation to the village meeting on Friday, 28 November 2026 at 09.00 at the village hall”.",
+    id: "Surat apa yang mau dibuat? Sebutkan jenisnya — undangan, SKTM, pengantar, atau surat keputusan — plus tanggal, tempat, dan nama bila ada. Contoh: “Buatkan surat undangan musyawarah desa hari Jumat, 28 November 2026 jam 09.00 di Balai Desa”.",
+  },
+  aninChatNavDone: { en: "Sure — opening %s.", id: "Baik, saya bukakan %s." },
+  aninChatThanks: {
+    en: "You're welcome! Anything else I can help with?",
+    id: "Sama-sama! Ada lagi yang bisa saya bantu?",
+  },
+  aninChipLetter: { en: "Draft an invitation letter", id: "Buatkan surat undangan" },
+  aninChipKtp: { en: "What do I need for a KTP?", id: "Syarat KTP apa saja?" },
+  aninChipSk: {
+    en: "How do I make an appointment decree?",
+    id: "Cara buat SK pengangkatan",
+  },
+  aninChipKeg: { en: "Open Personnel Data", id: "Buka Data Kepegawaian" },
+  aninFaqSurat: {
+    en: "Open the Draft Letters tab, choose a letter type, fill in the form, then press “Generate draft”. Always check the draft before using it. Or just tell me: “Draft an invitation…” and I'll fill in the form for you.",
+    id: "Buka tab Draf Surat, pilih jenis surat, isi formulir, lalu tekan “Buat draf”. Selalu periksa drafnya sebelum dipakai. Atau perintahkan saya: “Buatkan surat undangan…” — saya isi formulirnya.",
+  },
+  aninFaqCepat: {
+    en: "Surat Cepat (in the Draft Letters tab) fills in the form from one sentence — for example “Invitation to the village meeting on Friday, 28 November 2026 at 09.00 at the village hall”. It works offline.",
+    id: "Surat Cepat (di tab Draf Surat) mengisi formulir dari satu kalimat — contoh: “Undangan musyawarah desa hari Jumat, 28 November 2026 jam 09.00 di Balai Desa”. Berfungsi offline.",
+  },
+  aninFaqSimpan: {
+    en: "Press “Save draft” after generating a letter — it is stored in the Archive & Drafts tab (in this browser, and in Firestore when signed in).",
+    id: "Tekan “Simpan draf” setelah draf dibuat — tersimpan di tab Arsip & Draf (di browser ini, dan di Firestore bila sudah masuk).",
+  },
+  aninFaqCetak: {
+    en: "Press “Print” on a draft — the letter prints with the official kop. Choose “Save as PDF” in the print dialog to save it as PDF.",
+    id: "Tekan “Cetak” pada draf — surat tercetak dengan kop resmi. Pilih “Save as PDF” di dialog cetak untuk menyimpan sebagai PDF.",
+  },
+  aninFaqWord: {
+    en: "Honest note: the “Export Word” button in Personnel Data currently downloads a CSV file (not a .docx yet) — open it in a spreadsheet. A real .docx export is still on the to-do list.",
+    id: "Jujur saja: tombol “Export Word” di Data Kepegawaian saat ini mengunduh berkas CSV (bukan .docx) — buka di spreadsheet. Ekspor .docx asli masih dalam daftar perbaikan.",
+  },
+  aninFaqIkm: {
+    en: "IKM is the satisfaction survey: residents answer it in the Satisfaction (IKM) tab, and the score appears on the home dashboard. Share the survey link or QR code at the counter to collect more answers.",
+    id: "IKM adalah survei kepuasan: warga mengisinya di tab Kepuasan (IKM), dan skornya tampil di beranda. Bagikan tautan atau QR survei di loket untuk mengumpulkan lebih banyak jawaban.",
+  },
+  aninFaqAduan: {
+    en: "Open the Complaints tab and press “New complaint” — fill in the reporter's name, category, and the complaint. New complaints appear on the home dashboard until followed up.",
+    id: "Buka tab Pengaduan lalu tekan “Pengaduan baru” — isi nama pelapor, kategori, dan isi pengaduan. Pengaduan baru tampil di beranda sampai ditindaklanjuti.",
+  },
+  aninFaqWarga: {
+    en: "Citizen mode (Mode Warga) is for residents: no login needed — they can fill in the IKM survey, file a complaint, or ask about procedures.",
+    id: "Mode Warga untuk warga: tanpa login — warga bisa mengisi survei IKM, membuat pengaduan, atau bertanya prosedur.",
+  },
+  aninFaqOffline: {
+    en: "Your data stays in this browser (and in your Firestore account when signed in) — letters and survey answers are saved even without internet, and nothing is sent anywhere without your action.",
+    id: "Data Anda tersimpan di browser ini (dan di akun Firestore bila sudah masuk) — surat dan jawaban survei tersimpan walau tanpa internet, dan tidak ada yang dikirim ke mana pun tanpa tindakan Anda.",
+  },
+  aninFaqAgenda: {
+    en: "The Mail Register tab lists all incoming and outgoing letters — search by subject, sender, or number, and export the list as CSV.",
+    id: "Tab Buku Agenda mencatat semua surat masuk dan keluar — cari dari perihal, pihak, atau nomor, dan ekspor daftarnya sebagai CSV.",
+  },
+  aninFaqSk: {
+    en: "For an appointment decree, open the Draft Letters tab and choose “SK Pengangkatan Perangkat Desa” — fill in the officer's name, position, village, and term. Or tell me: “Draft an appointment decree for Ahmad Fauzi as village head”.",
+    id: "Untuk SK pengangkatan, buka tab Draf Surat lalu pilih “SK Pengangkatan Perangkat Desa” — isi nama perangkat, jabatan, desa, dan masa bhakti. Atau perintahkan saya: “Buatkan SK pengangkatan Ahmad Fauzi sebagai Kepala Desa”.",
+  },
+  aninFaqRingkasan: {
+    en: "Open the Summarize tab, paste a long text, and press “Summarize” — Anin shortens it while keeping the main points. It works offline for short texts.",
+    id: "Buka tab Ringkasan, tempel teks yang panjang, lalu tekan “Ringkas” — Anin memendekkannya tanpa menghilangkan poin utama. Berfungsi offline untuk teks pendek.",
+  },
+  aninFaqArsip: {
+    en: "Open the Archive & Drafts tab to see saved letters — press “Open” to continue one, or “Delete” to remove it. Drafts are saved in this browser.",
+    id: "Buka tab Arsip & Draf untuk melihat surat tersimpan — tekan “Buka” untuk melanjutkan, atau “Hapus” untuk membuangnya. Draf tersimpan di browser ini.",
+  },
+  aninFaqKeg: {
+    en: "Open the Personnel Data tab to add village officers, record their term of office, and make an appointment decree (SK) — Anin warns you 90 days before a term ends.",
+    id: "Buka tab Data Kepegawaian untuk menambah perangkat desa, mencatat masa bhakti, dan membuat SK pengangkatan — Anin mengingatkan 90 hari sebelum masa bhakti habis.",
+  },
+  aninFaqKop: {
+    en: "Open the letterhead settings (home page, “Pengaturan Kop Surat”) to change the office name, address, and the Camat's name/NIP printed on letters. DesaAI never invents a Camat name — an empty field prints “—”.",
+    id: "Buka pengaturan kop surat (beranda, “Pengaturan Kop Surat”) untuk mengubah nama instansi, alamat, dan nama/NIP Camat yang tercetak di surat. DesaAI tidak pernah mengarang nama Camat — kolom kosong tercetak “—”.",
+  },
+  aninFaqBahasa: {
+    en: "Press the language button in the page head to switch between Indonesian and English.",
+    id: "Tekan tombol bahasa di kepala halaman untuk beralih antara Bahasa Indonesia dan English.",
+  },
+  aninFaqTema: {
+    en: "Press the sun/moon button in the page head to switch between light and dark mode — your choice is remembered.",
+    id: "Tekan tombol matahari/bulan di kepala halaman untuk beralih mode terang dan gelap — pilihan Anda diingat.",
+  },
+  aninFaqBackup: {
+    en: "Open the Data & backup card on the home page — “Download backup” saves all your data as a file, and “Restore” loads it back on any device.",
+    id: "Buka kartu Data & cadangan di beranda — “Unduh backup” menyimpan semua data sebagai berkas, dan “Pulihkan” memuatnya kembali di perangkat mana pun.",
+  },
+  aninFaqAiGagal: {
+    en: "If the AI fails, DesaAI still makes the draft from your form (offline draft) — check that the form is filled in. If the “AI can't be reached” message keeps appearing, the cloud AI is not active yet in this Firebase project.",
+    id: "Bila AI gagal, DesaAI tetap membuat draf dari formulir (draf offline) — periksa formulirnya sudah terisi. Bila pesan “AI tidak bisa dihubungi” terus muncul, AI cloud belum aktif di proyek Firebase ini.",
+  },
+  aninFaqQr: {
+    en: "In the Satisfaction (IKM) tab you can copy the survey link or show its QR code — print it at the counter so residents can scan it with their phones.",
+    id: "Di tab Kepuasan (IKM) Anda bisa menyalin tautan survei atau menampilkan kode QR-nya — cetak di loket supaya warga bisa memindainya dengan HP.",
+  },
+  aninFaqNomor: {
+    en: "In the letter form, press “Nomor otomatis” — Anin fills in the next letter number for that letter type automatically.",
+    id: "Di formulir surat, tekan “Nomor otomatis” — Anin mengisi nomor surat berikutnya untuk jenis surat itu secara otomatis.",
+  },
+  aninFaqSuara: {
+    en: "You can talk to Anin: press the microphone button in the chat and speak in Indonesian — Anin types what you said. Press “Bacakan” on any of my answers and I'll read it aloud.",
+    id: "Anda bisa bicara dengan Anin: tekan tombol mikrofon di chat lalu ucapkan dalam Bahasa Indonesia — Anin mengetik apa yang Anda ucapkan. Tekan “Bacakan” pada jawaban saya, saya akan membacakannya.",
+  },
+  // Paket 32 — KB dimaksimalkan (28 Nov 00:20): beranda, Tanya Prosedur,
+  // dan Paket Adopsi Desa Lain juga tercakup, tanpa celah.
+  aninFaqBeranda: {
+    en: "The Home tab shows the office at a glance: quick stats (letters, residents' satisfaction, complaints), Anin's tip of the day, the letterhead settings, data backup, and the adoption pack for other villages.",
+    id: "Tab Beranda menampilkan kantor sekilas: statistik cepat (surat, kepuasan warga, pengaduan), tips Anin hari ini, pengaturan kop surat, cadangan data, dan paket adopsi untuk desa lain.",
+  },
+  aninFaqTanya: {
+    en: "Open the “Ask about Procedures” tab and type your question — for example “What do I need for a new KK?”. Anin answers from the built-in procedure guide (KTP, KK, SKTM, and more), and the guide itself works fully offline. You can also press “Bacakan” to hear the answer, or “Lanjutkan dengan Anin” to keep asking in the chat.",
+    id: "Buka tab “Tanya Prosedur” lalu ketik pertanyaan — contoh “Bagaimana cara mengurus KK baru?”. Anin menjawab dari panduan prosedur bawaan (KTP, KK, SKTM, dan lainnya), dan panduannya sendiri bekerja penuh offline. Anda juga bisa menekan “Bacakan” untuk mendengar jawabannya, atau “Lanjutkan dengan Anin” untuk bertanya lanjut di chat.",
+  },
+  aninFaqAdopsi: {
+    en: "Yes — another village office can use this app: on the Home tab, press “Download adoption pack” to get a file with the letterhead, the letter templates, and a 5-step adoption checklist. No office data is included in the pack.",
+    id: "Bisa — kantor desa lain bisa memakai aplikasi ini: di tab Beranda, tekan “Unduh paket adopsi” untuk mendapatkan berkas berisi kop surat, templat surat, dan checklist adopsi 5 langkah. Tidak ada data kantor yang ikut dalam paket itu.",
+  },
+  // Paket 32 — Anin bicara (voice): gratis, tanpa server.
+  aninVoiceMic: { en: "Speak", id: "Bicara" },
+  aninVoiceListening: { en: "Listening… speak now", id: "Mendengarkan… silakan bicara" },
+  aninVoiceNoMic: {
+    en: "Sorry — voice input is not supported by this browser. Please type your question instead.",
+    id: "Maaf — pengenalan suara tidak didukung browser ini. Silakan ketik pertanyaannya.",
+  },
+  aninVoiceNoVoice: {
+    en: "This device has no voice available, so I can't read it aloud here — try on your phone and I'll read the answer.",
+    id: "Perangkat ini belum menyediakan suara, jadi saya belum bisa membacakan di sini — coba di HP, saya akan membacakan jawabannya.",
+  },
+  aninVoiceRead: { en: "Read aloud", id: "Bacakan" },
+  aninVoiceMicError: {
+    en: "The microphone couldn't be used (%s) — please type your question instead.",
+    id: "Mikrofon tidak bisa dipakai (%s) — silakan ketik pertanyaannya.",
+  },
+  // Paket 32 — Anin mengambil alih Tanya Prosedur (28 Nov 00:13): wajah +
+  // suara Anin di bagian Tanya; AI gagal = jawab dari panduan offline.
+  aninQaAninTitle: {
+    en: "Answered by Anin — your in-app guide",
+    id: "Dijawab Anin — pemandu aplikasi",
+  },
+  aninQaAninHint: {
+    en: "Ask about any village procedure — Anin answers from the official guide below. When the cloud AI is unavailable, she still answers from the guide (offline), and can read the answer aloud or keep helping you in the chat.",
+    id: "Tanyakan prosedur apa pun — Anin menjawab dari panduan resmi di bawah. Saat AI cloud tidak bisa dihubungi, Anin tetap menjawab dari panduan (offline), dan bisa membacakan jawabannya atau membantu lanjut di chat.",
+  },
+  aninQaAiFailed: {
+    en: "Anin: the cloud AI can't be reached right now — the answer above comes from the built-in procedure guide (offline). Once the cloud AI is active, I can answer in more detail.",
+    id: "Anin: AI cloud sedang tidak bisa dihubungi — jawaban di atas dari panduan prosedur bawaan (offline). Bila AI cloud sudah aktif, saya bisa menjawab lebih lengkap.",
+  },
+  aninQaNoGuide: {
+    en: "Sorry — I couldn't find a matching guide for that question. Try other keywords, for example “KTP”, “KK”, “SKTM”, or “domisili” — or ask Anin directly with the guide button at the bottom right.",
+    id: "Maaf — saya belum menemukan panduan yang cocok untuk pertanyaan itu. Coba kata kunci lain, misalnya “KTP”, “KK”, “SKTM”, atau “domisili” — atau tanyakan langsung ke Anin lewat tombol pemandu di kanan bawah.",
+  },
+  aninQaAskAnin: { en: "Continue with Anin", id: "Lanjutkan dengan Anin" },
+  // Paket 32 — Anin analis: jawaban berisi agregat saja, bukan data mentah.
+  aninChatStatusAnalis: { en: "Analyzed on this device", id: "Dianalisis di perangkat ini" },
+  aninAnalisIkm: {
+    en: "Average IKM is %s from %d responses — category %s. Highest element: %s (%s). Lowest element: %s (%s).",
+    id: "Rata-rata IKM %s dari %d jawaban — kategori %s. Unsur tertinggi: %s (%s). Unsur terendah: %s (%s).",
+  },
+  aninAnalisIkmNone: {
+    en: "No IKM responses yet — share the survey link so residents can answer.",
+    id: "Belum ada jawaban IKM — bagikan tautan survei supaya warga bisa menjawab.",
+  },
+  aninAnalisKeluhanMonth: {
+    en: "In %s: %d complaints recorded (%d new, %d in progress, %d resolved). Most common: %s (%d complaints).",
+    id: "Bulan %s: %d pengaduan tercatat (%d baru, %d diproses, %d selesai). Terbanyak: %s (%d pengaduan).",
+  },
+  aninAnalisKeluhanAll: {
+    en: "No complaints this month yet — across all %d recorded complaints, the most common is: %s (%d complaints).",
+    id: "Bulan ini belum ada pengaduan baru — dari keseluruhan %d pengaduan yang tercatat, terbanyak: %s (%d pengaduan).",
+  },
+  aninAnalisKeluhanNone: {
+    en: "No complaints recorded yet.",
+    id: "Belum ada pengaduan yang tercatat.",
+  },
+  aninAnalisPerbaikiHead: {
+    en: "What most needs improving:",
+    id: "Yang paling perlu diperbaiki:",
+  },
+  aninAnalisPerbaikiUnsur: {
+    en: "• %s — score %s (lowest of the 9 IKM elements). Suggestion: %s",
+    id: "• %s — skor %s (terendah dari 9 unsur IKM). Saran: %s",
+  },
+  aninAnalisPerbaikiJenis: {
+    en: "• Complaints about %s (%d complaints). Suggestion: %s",
+    id: "• Keluhan %s (%d pengaduan). Saran: %s",
+  },
+  aninAnalisNoData: {
+    en: "No IKM or complaint data to analyze yet — fill in the IKM survey or record a complaint first.",
+    id: "Belum ada data IKM atau pengaduan yang bisa dianalisis — isi survei IKM atau catat pengaduan dulu.",
+  },
+  aninSaranPersyaratan: {
+    en: "Post the requirements list on the notice board and share it via Anin, so residents arrive with complete documents.",
+    id: "Pasang daftar syarat di papan pengumuman dan bagikan lewat Anin, supaya warga datang dengan berkas lengkap.",
+  },
+  aninSaranProsedur: {
+    en: "Write the steps on the notice board — Anin can also explain them when residents ask.",
+    id: "Tulis langkah pengurusan di papan pengumuman — Anin juga bisa menjelaskannya bila warga bertanya.",
+  },
+  aninSaranWaktu: {
+    en: "Speed up the slowest service — check the Mail Register for piled-up letters.",
+    id: "Percepat layanan yang paling lama antre — cek Buku Agenda untuk surat yang menumpuk.",
+  },
+  aninSaranBiaya: {
+    en: "Make sure the fee board matches what the counter asks — residents complain when they differ.",
+    id: "Pastikan papan informasi biaya sesuai dengan yang diminta di loket — warga mengeluh bila berbeda.",
+  },
+  aninSaranProduk: {
+    en: "Clarify the service result (letter form, validity) up front, so residents know what they receive.",
+    id: "Perjelas hasil layanan (bentuk surat, masa berlaku) di awal, supaya warga tahu apa yang diterima.",
+  },
+  aninSaranKompetensi: {
+    en: "Run a short training for staff on the newest procedures — Anin can be the training material.",
+    id: "Adakan latihan singkat untuk petugas tentang prosedur terbaru — Anin bisa jadi bahan latihannya.",
+  },
+  aninSaranPerilaku: {
+    en: "Remind staff to greet residents warmly — a kind greeting raises the behavior score.",
+    id: "Ingatkan petugas untuk menyapa warga dengan ramah — sapaan yang baik menaikkan skor perilaku.",
+  },
+  aninSaranPenanganan: {
+    en: "Follow up complaints still marked “New” in the Complaints tab — residents judge by response speed.",
+    id: "Tindaklanjuti pengaduan yang masih “Baru” di tab Pengaduan — warga menilai dari kecepatan tanggapan.",
+  },
+  aninSaranSarana: {
+    en: "Fix the facilities residents complain about — waiting room, chairs, and fans are mentioned most.",
+    id: "Perbaiki sarana yang dikeluhkan warga — ruang tunggu, kursi, dan kipas angin adalah yang paling sering disebut.",
+  },
+  aninSaranLambat: {
+    en: "Set a clear completion schedule for each letter and announce it to residents.",
+    id: "Buat jadwal penyelesaian yang jelas untuk tiap surat dan umumkan ke warga.",
+  },
+  aninSaranSyarat: {
+    en: "Post the requirements list at the counter and notice board so the requirements are the same every time.",
+    id: "Tempel daftar syarat di loket dan papan pengumuman supaya syaratnya sama setiap kali ditanyakan.",
+  },
+  aninSaranRamah: {
+    en: "Remind counter staff to answer in a friendly tone — Anin can help answer procedural questions.",
+    id: "Ingatkan petugas loket untuk menjawab dengan nada ramah — Anin bisa membantu menjawab pertanyaan prosedural.",
+  },
+  aninSaranBiayaAduan: {
+    en: "Match the fee charged to the information board — if it is free, write “Free” clearly.",
+    id: "Samakan biaya yang diminta dengan papan informasi — bila gratis, tulis “Gratis” dengan jelas.",
+  },
+  aninSaranLainnya: {
+    en: "Read the complaints one by one in the Complaints tab and group the most frequent ones.",
+    id: "Baca isi pengaduan satu per satu di tab Pengaduan dan kelompokkan mana yang paling sering muncul.",
+  },
+  aninChipIkm: { en: "What is the average IKM?", id: "IKM rata-rata berapa?" },
+  aninChipKeluhan: { en: "Most common complaints?", id: "Keluhan terbanyak bulan ini?" },
   cepatTitle: { en: "Surat Cepat — one sentence is enough", id: "Surat Cepat — cukup satu kalimat" },
   cepatHint: {
     en: "Describe the letter in one sentence — Anin guesses the type and fills in the form. Always check the fields before generating the draft. Works offline.",

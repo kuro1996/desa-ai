@@ -23,7 +23,19 @@ import {
   type DesaaiBackup,
 } from "./backup";
 import { buildAdoptionPack } from "./adopsi";
-import { parseCepat } from "./cepat";
+import {
+  analyzeAduan,
+  analyzeIkm,
+  lowestElementId,
+  saranJenisKey,
+  saranUnsurKey,
+} from "./anin-analis";
+import {
+  ANIN_FACE_FILE,
+  classifyAninText,
+  type AninExpression,
+} from "./anin-chat";
+import { parseCepat, type CepatResult } from "./cepat";
 import { aninGreetingKey, aninRotatingTipKey, aninTipKind } from "./anin";
 import {
   generateStream,
@@ -126,6 +138,13 @@ function applyLang(): void {
   renderLetterFields();
   renderKbList();
   renderQaSuggestions();
+  renderAninChips();
+  // Paket 32 — keep the Anin mic button label in the current language.
+  const micBtn = document.getElementById("anin-mic") as HTMLButtonElement | null;
+  if (micBtn) {
+    micBtn.title = t("aninVoiceMic", lang);
+    micBtn.setAttribute("aria-label", t("aninVoiceMic", lang));
+  }
   renderKepegawaian();
   renderIkm();
   renderPengaduan();
@@ -2197,6 +2216,22 @@ function renderLetterSheet(): void {
   sheet.appendChild(sign);
 }
 
+// Shared by Surat Cepat and Anin: apply a parsed one-sentence request to
+// the letter form (template + prefilled fields). The officer still reviews
+// every field before pressing Generate draft.
+function applyCepatResult(parsed: CepatResult): void {
+  const sel = $("letter-template") as HTMLSelectElement;
+  sel.value = parsed.templateId;
+  currentTemplate = TEMPLATES.find((tp) => tp.id === parsed.templateId) ?? TEMPLATES[0];
+  renderLetterFields();
+  for (const [key, value] of Object.entries(parsed.fields)) {
+    const field = document.getElementById(
+      `letter-field-${key}`,
+    ) as HTMLInputElement | HTMLTextAreaElement | null;
+    if (field) field.value = value;
+  }
+}
+
 function initLetters(): void {
   const sel = $("letter-template") as HTMLSelectElement;
   sel.addEventListener("change", () => {
@@ -2353,16 +2388,7 @@ function initLetters(): void {
       setStatus(status, t("cepatNotFound", lang), true);
       return;
     }
-    const sel = $("letter-template") as HTMLSelectElement;
-    sel.value = parsed.templateId;
-    currentTemplate = TEMPLATES.find((tp) => tp.id === parsed.templateId) ?? TEMPLATES[0];
-    renderLetterFields();
-    for (const [key, value] of Object.entries(parsed.fields)) {
-      const field = document.getElementById(
-        `letter-field-${key}`,
-      ) as HTMLInputElement | HTMLTextAreaElement | null;
-      if (field) field.value = value;
-    }
+    applyCepatResult(parsed);
     const tplName = lang === "id" ? currentTemplate.nameId : currentTemplate.nameEn;
     setStatus(
       status,
@@ -2438,7 +2464,8 @@ function initSummarizer(): void {
       setStatus(status, "");
     } catch (e) {
       console.error("DesaAI: summarization failed", e);
-      setStatus(status, t("statusAiError", lang), true);
+      // Pesan ramah saja — tidak pernah error mentah / instruksi npx.
+      setStatus(status, t("statusAiError", lang));
     } finally {
       btn.disabled = false;
     }
@@ -2568,6 +2595,9 @@ function initQa(): void {
   renderKbList();
   renderQaSuggestions();
 
+  // Pertanyaan terakhir — dipakai tombol "Lanjutkan dengan Anin".
+  let lastQuestion = "";
+
   $("qa-ask").addEventListener("click", async () => {
     const btn = $("qa-ask") as HTMLButtonElement;
     const status = $("qa-status");
@@ -2576,27 +2606,40 @@ function initQa(): void {
       setStatus(status, t("statusNeedQuestion", lang), true);
       return;
     }
+    lastQuestion = question;
     const matches = matchKb(question);
     const output = $("qa-output");
     const sources = $("qa-sources");
+    const badge = $("qa-badge");
     $("qa-output-wrap").hidden = false;
 
-    // Demo mode / no Firebase: answer straight from the offline guide.
-    if (!svc || svc.status !== "ready") {
-      if (matches.length === 0) {
-        setStatus(status, t("statusNeedConfig", lang), true);
-        output.textContent = "";
-        sources.textContent = "";
-        return;
-      }
+    // Paket 32 — Anin mengambil alih Tanya Prosedur (perintah Bos 28 Nov
+    // 00:13): bila AI tidak bisa dipakai (belum siap ATAU panggilannya
+    // gagal), Anin menjawab dari panduan prosedur bawaan (offline).
+    // Error teknis hanya masuk console — layar warga TIDAK PERNAH
+    // menampilkan error mentah / instruksi npx lagi.
+    const answerFromGuide = (): boolean => {
+      if (matches.length === 0) return false;
       output.textContent = formatKbAnswer(matches);
       sources.textContent =
         `${t("sourcesLabel", lang)}${matches.map((m) => m.titleId).join(", ")} — ${t("kbOfflineNote", lang)}`;
-      const badge = $("qa-badge");
       badge.textContent = t("badgeDevice", lang);
       badge.className = "badge badge-device";
       $("qa-reason").textContent = t("kbOfflineNote", lang);
-      setStatus(status, "");
+      return true;
+    };
+    const answerNoneFound = (): void => {
+      output.textContent = t("aninQaNoGuide", lang);
+      sources.textContent = "";
+      badge.textContent = "";
+      badge.className = "badge";
+      $("qa-reason").textContent = "";
+    };
+
+    // Demo mode / no Firebase: answer straight from the offline guide.
+    if (!svc || svc.status !== "ready") {
+      if (!answerFromGuide()) answerNoneFound();
+      setStatus(status, t("aninQaAiFailed", lang));
       return;
     }
 
@@ -2634,11 +2677,515 @@ function initQa(): void {
       setStatus(status, "");
     } catch (e) {
       console.error("DesaAI: Q&A failed", e);
-      setStatus(status, t("statusAiError", lang), true);
+      // AI gagal — inilah yang terjadi di HP Bos: Firebase siap, tapi
+      // panggilan cloud gagal. Anin mengambil alih dengan panduan offline.
+      if (!answerFromGuide()) answerNoneFound();
+      setStatus(status, t("aninQaAiFailed", lang));
     } finally {
       btn.disabled = false;
     }
   });
+
+  // Bacakan jawaban Anin (suara, gratis, tanpa server). Bila perangkat
+  // tidak punya suara, tampilkan pesan yang jelas — bukan diam.
+  $("qa-read").addEventListener("click", async () => {
+    const text = $("qa-output").textContent ?? "";
+    if (!text.trim()) return;
+    const ok = await speakText(text);
+    if (!ok) setStatus($("qa-status"), t("aninVoiceNoVoice", lang));
+  });
+
+  // Lanjutkan dengan Anin: buka panel chat dengan pertanyaan yang sama —
+  // Anin menjawabnya di sana dan bisa ditanyai lanjut.
+  $("qa-ask-anin").addEventListener("click", () => {
+    document.dispatchEvent(
+      new CustomEvent("desaai:open-anin", { detail: { text: lastQuestion } }),
+    );
+  });
+}
+
+// ---------- Anin chat (Paket 32) ----------
+// Floating button + panel on every tab: Anin answers app/procedure
+// questions, fills the letter form on command, navigates, analyses IKM +
+// complaint trends (on-device aggregates only), and talks — voice input
+// via the browser SpeechRecognition API, read-aloud via speechSynthesis.
+// No server, no WhatsApp (deferred by Bos). All controls stay manual.
+
+const ANIN_CHIP_KEYS = [
+  "aninChipLetter",
+  "aninChipKtp",
+  "aninChipSk",
+  "aninChipKeg",
+  "aninChipIkm",
+  "aninChipKeluhan",
+];
+
+const ANIN_TAB_I18N: Record<string, string> = {
+  home: "tabHome",
+  letters: "tabLetters",
+  summarize: "tabSummarize",
+  qa: "tabQa",
+  drafts: "tabDrafts",
+  kepegawaian: "tabKepegawaian",
+  ikm: "tabIkm",
+  pengaduan: "tabPengaduan",
+  agenda: "tabAgenda",
+};
+
+/** Suggestion chips under the chat input (rebuilt on language change). */
+function renderAninChips(): void {
+  const row = document.getElementById("anin-chips");
+  if (!row) return;
+  row.innerHTML = "";
+  for (const key of ANIN_CHIP_KEYS) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "anin-chip";
+    b.textContent = t(key, lang);
+    b.addEventListener("click", () => {
+      const input = document.getElementById("anin-input") as HTMLInputElement;
+      input.value = t(key, lang);
+      (document.getElementById("anin-form") as HTMLFormElement).requestSubmit();
+    });
+    row.appendChild(b);
+  }
+}
+
+interface AninRecognition {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((ev: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onerror: ((ev: { error?: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+type AninRecognitionCtor = new () => AninRecognition;
+
+/** Voices load asynchronously in some browsers; wait briefly, then decide. */
+function waitForVoices(): Promise<SpeechSynthesisVoice[]> {
+  const synth = window.speechSynthesis;
+  if (!synth || typeof synth.getVoices !== "function") return Promise.resolve([]);
+  const have = synth.getVoices();
+  if (have.length > 0) return Promise.resolve(have);
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve(synth.getVoices());
+    };
+    synth.addEventListener("voiceschanged", finish, { once: true });
+    window.setTimeout(finish, 600);
+  });
+}
+
+/**
+ * Read a text aloud (free, no server). Returns true when the device spoke,
+ * false when it has no voice — callers show a clear message, never fail
+ * silently. Used by Anin's chat AND by Tanya Prosedur (Paket 32).
+ */
+async function speakText(text: string): Promise<boolean> {
+  const synth = window.speechSynthesis;
+  if (!synth || typeof synth.speak !== "function") return false;
+  const clean = text.replace(/\s+/g, " ").trim().slice(0, 600);
+  if (!clean) return false;
+  const voices = await waitForVoices();
+  if (voices.length === 0) return false;
+  try {
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang = lang === "id" ? "id-ID" : "en-US";
+    const voice = voices.find((v) =>
+      v.lang.toLowerCase().startsWith(lang === "id" ? "id" : "en"),
+    );
+    if (voice) u.voice = voice;
+    synth.speak(u);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function initAninChat(): void {
+  const fab = $("anin-fab") as HTMLButtonElement;
+  const panel = $("anin-panel");
+  const face = $("anin-panel-face") as HTMLImageElement;
+  const fabImg = $("anin-fab-img") as HTMLImageElement;
+  const statusEl = $("anin-panel-status");
+  const messagesEl = $("anin-messages");
+  const form = $("anin-form") as HTMLFormElement;
+  const input = $("anin-input") as HTMLInputElement;
+  const micBtn = $("anin-mic") as HTMLButtonElement;
+  let welcomed = false;
+  let exprTimer: number | undefined;
+
+  const setExpression = (expr: AninExpression, holdMs = 0): void => {
+    const file = `./${ANIN_FACE_FILE[expr]}`;
+    face.src = file;
+    fabImg.src = file;
+    face.alt = `Anin — ${expr}`;
+    window.clearTimeout(exprTimer);
+    if (holdMs > 0) {
+      exprTimer = window.setTimeout(() => setExpression("tersenyum"), holdMs);
+    }
+  };
+
+  const setChatStatus = (text: string): void => {
+    statusEl.textContent = text;
+  };
+
+  /** One chat bubble; returns its <p> so AI streaming can update it. */
+  const addMessage = (role: "user" | "anin", text: string): HTMLParagraphElement => {
+    const div = document.createElement("div");
+    div.className = `anin-msg anin-msg-${role}`;
+    if (role === "anin") {
+      const avatar = document.createElement("img");
+      avatar.className = "anin-msg-avatar";
+      avatar.src = `./${ANIN_FACE_FILE.tersenyum}`;
+      avatar.alt = "";
+      div.appendChild(avatar);
+      const body = document.createElement("div");
+      body.className = "anin-msg-body";
+      const p = document.createElement("p");
+      p.textContent = text;
+      body.appendChild(p);
+      const readBtn = document.createElement("button");
+      readBtn.type = "button";
+      readBtn.className = "anin-read";
+      readBtn.textContent = t("aninVoiceRead", lang);
+      readBtn.addEventListener("click", () => void speakAnin(p.textContent ?? ""));
+      body.appendChild(readBtn);
+      div.appendChild(body);
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return p;
+    }
+    const p = document.createElement("p");
+    p.textContent = text;
+    div.appendChild(p);
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return p;
+  };
+
+  /** Read a text aloud (free, no server). Clear message when the device
+   * has no voice — never silent failure. */
+  const speakAnin = async (text: string): Promise<void> => {
+    const ok = await speakText(text);
+    if (!ok) addMessage("anin", t("aninVoiceNoVoice", lang));
+  };
+
+  /** Voice input via the browser SpeechRecognition API (Chrome/Android).
+   * Clear message when the browser does not support it — never silent. */
+  const startListening = (): void => {
+    const w = window as unknown as {
+      SpeechRecognition?: AninRecognitionCtor;
+      webkitSpeechRecognition?: AninRecognitionCtor;
+    };
+    const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    if (!SR) {
+      setExpression("bingung", 2500);
+      addMessage("anin", t("aninVoiceNoMic", lang));
+      return;
+    }
+    try {
+      const rec = new SR();
+      rec.lang = lang === "id" ? "id-ID" : "en-US";
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      micBtn.classList.add("listening");
+      setChatStatus(t("aninVoiceListening", lang));
+      rec.onresult = (ev) => {
+        const said = ev.results[0]?.[0]?.transcript ?? "";
+        if (said.trim()) {
+          input.value = said.trim();
+          void handleAninMessage(said.trim());
+        }
+      };
+      rec.onerror = (ev) => {
+        addMessage("anin", t("aninVoiceMicError", lang).replace("%s", String(ev.error ?? "?")));
+      };
+      rec.onend = () => {
+        micBtn.classList.remove("listening");
+        setChatStatus(t("aninChatStatusReady", lang));
+      };
+      rec.start();
+    } catch (e) {
+      micBtn.classList.remove("listening");
+      setChatStatus(t("aninChatStatusReady", lang));
+      addMessage(
+        "anin",
+        t("aninVoiceMicError", lang).replace("%s", e instanceof Error ? e.message : "?"),
+      );
+    }
+  };
+
+  const fmtNum = (v: number, digits = 2): string => {
+    const s = v.toFixed(digits);
+    return lang === "id" ? s.replace(".", ",") : s;
+  };
+
+  /** Analyst answers — computed on-device from local IKM + complaint
+   * records; the reply holds aggregates only, never raw records. */
+  const answerAnalyst = (topic: "ikm" | "complaints" | "improve"): string => {
+    if (topic === "ikm") {
+      const items = loadIkm();
+      if (items.length === 0) return t("aninAnalisIkmNone", lang);
+      const a = analyzeIkm(items);
+      const catLabel: Record<string, string> =
+        lang === "id"
+          ? { A: "A — Sangat Baik", B: "B — Baik", C: "C — Kurang Baik", D: "D — Tidak Baik" }
+          : { A: "A — Excellent", B: "B — Good", C: "C — Fair", D: "D — Poor" };
+      const minLabel = lang === "id" ? a.minLabelId : a.minLabelEn;
+      const maxLabel = lang === "id" ? a.maxLabelId : a.maxLabelEn;
+      return t("aninAnalisIkm", lang)
+        .replace("%s", fmtNum(a.overall))
+        .replace("%d", String(a.count))
+        .replace("%s", catLabel[a.category] ?? a.category)
+        .replace("%s", maxLabel)
+        .replace("%s", fmtNum(a.maxMean))
+        .replace("%s", minLabel)
+        .replace("%s", fmtNum(a.minMean));
+    }
+    if (topic === "complaints") {
+      const a = analyzeAduan(loadAduan(), new Date());
+      if (a.scope === "none") return t("aninAnalisKeluhanNone", lang);
+      if (a.scope === "month") {
+        return t("aninAnalisKeluhanMonth", lang)
+          .replace("%s", a.monthLabel)
+          .replace("%d", String(a.monthTotal))
+          .replace("%d", String(a.monthBaru))
+          .replace("%d", String(a.monthDiproses))
+          .replace("%d", String(a.monthSelesai))
+          .replace("%s", a.topJenis)
+          .replace("%d", String(a.topCount));
+      }
+      return t("aninAnalisKeluhanAll", lang)
+        .replace("%d", String(a.total))
+        .replace("%s", a.topJenis)
+        .replace("%d", String(a.topCount));
+    }
+    // topic === "improve"
+    const ikmItems = loadIkm();
+    const aduItems = loadAduan();
+    if (ikmItems.length === 0 && aduItems.length === 0) return t("aninAnalisNoData", lang);
+    const lines = [t("aninAnalisPerbaikiHead", lang)];
+    if (ikmItems.length > 0) {
+      const a = analyzeIkm(ikmItems);
+      const minLabel = lang === "id" ? a.minLabelId : a.minLabelEn;
+      lines.push(
+        t("aninAnalisPerbaikiUnsur", lang)
+          .replace("%s", minLabel)
+          .replace("%s", fmtNum(a.minMean))
+          .replace("%s", t(saranUnsurKey(lowestElementId(ikmItems)), lang)),
+      );
+    }
+    const adu = analyzeAduan(aduItems, new Date());
+    if (adu.scope !== "none") {
+      lines.push(
+        t("aninAnalisPerbaikiJenis", lang)
+          .replace("%s", adu.topJenis)
+          .replace("%d", String(adu.topCount))
+          .replace("%s", t(saranJenisKey(adu.topJenis), lang)),
+      );
+    }
+    return lines.join("\n");
+  };
+
+  /** Same grounded AI answer as Tanya Prosedur (KB grounding + streaming),
+   * shown inside the chat bubble. Falls back to the offline KB text. */
+  const answerWithAi = async (question: string, matches: KbEntry[]): Promise<void> => {
+    if (!svc || svc.status !== "ready") {
+      if (matches.length === 0) {
+        setExpression("bingung", 2500);
+        addMessage("anin", t("aninChatNoUnderstand", lang));
+        return;
+      }
+      setChatStatus(t("aninChatStatusOffline", lang));
+      addMessage(
+        "anin",
+        `${formatKbAnswer(matches)}\n\n${t("sourcesLabel", lang)}${matches.map((m) => m.titleId).join(", ")}`,
+      );
+      setChatStatus(t("aninChatStatusReady", lang));
+      return;
+    }
+    const bubble = addMessage("anin", "…");
+    bubble.parentElement?.parentElement?.classList.add("anin-typing");
+    setChatStatus(t("aninChatStatusTyping", lang));
+    try {
+      warmUpDeviceModel(svc, (p) => setDeviceChip("downloading", p));
+      const grounding =
+        matches.length > 0
+          ? matches.map(kbEntryToText).join("\n\n")
+          : "Tidak ada entri panduan yang cocok; jawab dengan pengetahuan umum tentang administrasi desa Indonesia dan katakan bila Anda tidak yakin.";
+      const prompt = [
+        "Jawab pertanyaan warga tentang prosedur administrasi desa dalam Bahasa Indonesia yang jelas dan ringkas.",
+        "Gunakan HANYA informasi dari panduan berikut; jangan mengarang syarat atau langkah.",
+        "",
+        "PANDUAN:",
+        grounding,
+        "",
+        `PERTANYAAN: ${question}`,
+      ].join("\n");
+      let first = true;
+      const result = await generateStream(
+        svc,
+        prompt,
+        { forceCloud: false, onDevice },
+        (chunkText) => {
+          if (first) {
+            first = false;
+            bubble.parentElement?.parentElement?.classList.remove("anin-typing");
+          }
+          bubble.textContent = chunkText;
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        },
+      );
+      if (matches.length > 0) {
+        bubble.textContent += `\n\n${t("sourcesLabel", lang)}${matches.map((m) => m.titleId).join(", ")}`;
+      }
+      setChatStatus(
+        result.source === "ON_DEVICE"
+          ? t("aninChatStatusDevice", lang)
+          : result.source === "IN_CLOUD"
+            ? t("aninChatStatusCloud", lang)
+            : t("aninChatStatusOffline", lang),
+      );
+    } catch (e) {
+      console.error("DesaAI: Anin AI failed", e);
+      // Paket 32 (standar "DIMAKSIMALKAN") — AI gagal bukan jalan buntu:
+      // bila ada panduan yang cocok, Anin tetap menjawab dari panduan
+      // offline itu; hanya bila tidak ada panduan sama sekali ia mengaku
+      // belum paham dan menyebut apa saja yang bisa dibantunya.
+      bubble.parentElement?.parentElement?.classList.remove("anin-typing");
+      if (matches.length > 0) {
+        setExpression("tersenyum");
+        bubble.textContent =
+          `${formatKbAnswer(matches)}\n\n${t("sourcesLabel", lang)}${matches.map((m) => m.titleId).join(", ")}\n\n${t("aninChatAiFailed", lang)}`;
+        setChatStatus(t("aninChatStatusOffline", lang));
+      } else {
+        bubble.textContent = t("aninChatNoUnderstand", lang);
+        setExpression("bingung", 2500);
+        setChatStatus(t("aninChatStatusReady", lang));
+      }
+    }
+  };
+
+  const handleAninMessage = async (raw: string): Promise<void> => {
+    const text = raw.trim();
+    if (!text) return;
+    addMessage("user", text);
+    input.value = "";
+    const intent = classifyAninText(text);
+
+    if (intent.kind === "greet") {
+      setExpression("bersemangat", 2500);
+      addMessage(
+        "anin",
+        `${t(aninGreetingKey(new Date().getHours()), lang)} ${t("aninChatWelcomeBody", lang)}`,
+      );
+      return;
+    }
+    if (intent.kind === "thanks") {
+      setExpression("senang", 2500);
+      addMessage("anin", t("aninChatThanks", lang));
+      return;
+    }
+    if (intent.kind === "nav") {
+      activateTab(intent.tab);
+      setExpression("mengangguk", 2000);
+      addMessage(
+        "anin",
+        t("aninChatNavDone", lang).replace("%s", t(ANIN_TAB_I18N[intent.tab] ?? "tabHome", lang)),
+      );
+      return;
+    }
+    if (intent.kind === "letter") {
+      if (intent.parsed.filled.length === 0) {
+        setExpression("bingung", 2500);
+        addMessage("anin", t("aninChatLetterNeed", lang));
+        return;
+      }
+      applyCepatResult(intent.parsed);
+      renderLetterSheet();
+      activateTab("letters");
+      setExpression("senang", 3000);
+      addMessage(
+        "anin",
+        t("aninChatLetterDone", lang).replace("%d", String(intent.parsed.filled.length)),
+      );
+      return;
+    }
+    if (intent.kind === "letter-need") {
+      setExpression("bingung", 2500);
+      addMessage("anin", t("aninChatLetterNeed", lang));
+      return;
+    }
+    if (intent.kind === "analyst") {
+      setExpression("terkagum", 2000);
+      setChatStatus(t("aninChatStatusAnalis", lang));
+      addMessage("anin", answerAnalyst(intent.topic));
+      setChatStatus(t("aninChatStatusReady", lang));
+      return;
+    }
+    if (intent.kind === "appkb") {
+      setChatStatus(t("aninChatStatusOffline", lang));
+      addMessage("anin", t(intent.entry.answerKey, lang));
+      setChatStatus(t("aninChatStatusReady", lang));
+      return;
+    }
+    if (intent.kind === "kb") {
+      await answerWithAi(text, intent.entries);
+      return;
+    }
+    await answerWithAi(text, []);
+  };
+
+  const openPanel = (): void => {
+    panel.hidden = false;
+    fab.setAttribute("aria-expanded", "true");
+    if (!welcomed) {
+      welcomed = true;
+      setExpression("bersemangat", 3000);
+      addMessage(
+        "anin",
+        `${t(aninGreetingKey(new Date().getHours()), lang)} ${t("aninChatWelcomeBody", lang)}`,
+      );
+    }
+    input.focus();
+  };
+
+  const closePanel = (): void => {
+    panel.hidden = true;
+    fab.setAttribute("aria-expanded", "false");
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  };
+
+  fab.addEventListener("click", () => (panel.hidden ? openPanel() : closePanel()));
+  $("anin-panel-close").addEventListener("click", closePanel);
+  $("anin-go-chat").addEventListener("click", openPanel);
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && !panel.hidden) closePanel();
+  });
+  form.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    void handleAninMessage(input.value);
+  });
+  micBtn.addEventListener("click", startListening);
+  // Paket 32 — Tanya Prosedur bisa menyerahkan pertanyaan ke Anin di sini:
+  // buka panel dan jawab pertanyaan yang sama (Anin bisa ditanyai lanjut).
+  document.addEventListener("desaai:open-anin", (ev) => {
+    openPanel();
+    const q = (ev as CustomEvent<{ text?: string }>).detail?.text?.trim();
+    if (q) {
+      input.value = q;
+      void handleAninMessage(q);
+    }
+  });
+  renderAninChips();
 }
 
 // ---------- drafts ----------
@@ -3755,11 +4302,12 @@ function initKepegawaian(): void {
       console.error("DesaAI: kepegawaian summary failed", e);
       // Fail soft: never leave the officer with an empty panel — the
       // offline recap is always available, even when the AI call fails.
+      // Status ramah saja — tidak pernah error mentah / instruksi npx.
       output.textContent = recap;
       badge.textContent = t("badgeUnknown", lang);
       badge.className = "badge badge-unknown";
       reason.textContent = t("kegSumOfflineNote", lang);
-      setStatus(status, t("statusAiError", lang), true);
+      setStatus(status, t("statusAiError", lang));
     } finally {
       btn.disabled = false;
     }
@@ -4655,6 +5203,7 @@ async function boot(): Promise<void> {
   initLetters();
   initSummarizer();
   initQa();
+  initAninChat();
   initDrafts();
   initKepegawaian();
   initIkm();

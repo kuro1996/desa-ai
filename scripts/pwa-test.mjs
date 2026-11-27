@@ -97,6 +97,9 @@ async function main() {
     process.exit(1);
   }
   const swSrc = readFileSync(join(DIST, "sw.js"), "utf8");
+  // The worker's cache name changes when the precache list changes
+  // (Paket 32: desaai-v2) — read it from the built worker, never hardcode.
+  const cacheName = swSrc.match(/const CACHE_NAME = "([^"]+)"/)?.[1] ?? "desaai-v1";
 
   // 1. Static files shipped.
   check(
@@ -170,8 +173,22 @@ async function main() {
   const JS_URL = `${SCOPE}assets/index-DiKc4jkg.js`;
   const CSS_URL = `${SCOPE}assets/index-UtH5gVSz.css`;
   const IMG_URL = `${SCOPE}kantor.jpg`;
+  // Paket 32 — Anin faces + full body (precached by the worker).
+  const ANIN_IMGS = [
+    "anin-face-tersenyum.png",
+    "anin-face-senang.png",
+    "anin-face-terkagum.png",
+    "anin-face-sedih.png",
+    "anin-face-marah.png",
+    "anin-face-bingung.png",
+    "anin-face-takut.png",
+    "anin-face-malu.png",
+    "anin-face-bersemangat.png",
+    "anin-face-mengangguk.png",
+    "anin-depan.png",
+  ];
   const API_URL = "https://firestore.googleapis.com/v1/projects/desaai-b6b3b/databases/(default)/documents";
-  for (const url of [`${SCOPE}manifest.webmanifest`, `${SCOPE}favicon.png`, `${SCOPE}logo.png`, IMG_URL, `${SCOPE}icon-192.png`, `${SCOPE}icon-512.png`, `${SCOPE}icon-512-maskable.png`]) {
+  for (const url of [`${SCOPE}manifest.webmanifest`, `${SCOPE}favicon.png`, `${SCOPE}logo.png`, IMG_URL, `${SCOPE}icon-192.png`, `${SCOPE}icon-512.png`, `${SCOPE}icon-512-maskable.png`, ...ANIN_IMGS.map((f) => `${SCOPE}${f}`)]) {
     network.set(url, `static:${url.split("/").pop()}`);
   }
   network.set(JS_URL, "/* bundle v1 */");
@@ -180,11 +197,11 @@ async function main() {
 
   // 5. Install precaches exactly the PRECACHE files.
   await dispatch("install", {});
-  const cache = await fakeCaches.open("desaai-v1");
+  const cache = await fakeCaches.open(cacheName);
   const precached = [...cache.store.keys()].sort();
   check(
-    "install precaches the 7 shell files (no index.html)",
-    precached.length === 7 && precached.every((u) => !u.endsWith("index.html")),
+    "install precaches the 7 shell files + 11 Anin images (no index.html)",
+    precached.length === 18 && precached.every((u) => !u.endsWith("index.html")),
     `${precached.length} entries`,
   );
 
@@ -248,8 +265,8 @@ async function main() {
   await dispatch("activate", {});
   const keys = await fakeCaches.keys();
   check(
-    "activate deletes old caches, keeps desaai-v1, claims clients",
-    !keys.includes("desaai-v0") && keys.includes("desaai-v1") && claimed,
+    `activate deletes old caches, keeps ${cacheName}, claims clients`,
+    !keys.includes("desaai-v0") && keys.includes(cacheName) && claimed,
     `caches=${keys.join(",")}`,
   );
 

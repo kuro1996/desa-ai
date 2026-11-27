@@ -1212,8 +1212,13 @@ async function main() {
     const sumStatus = await page.$eval("#sum-status", (el) => el.textContent);
     check(
       "summarizer without live AI explains the state (no crash)",
-      /not configured|failed/i.test(sumStatus),
+      /not configured|can't be reached|tidak bisa dihubungi/i.test(sumStatus),
       sumStatus,
+    );
+    check(
+      "summarizer never shows the raw npx error (Paket 32)",
+      !/npx|Panggilan AI gagal|AI call failed/i.test(sumStatus),
+      sumStatus.slice(0, 80),
     );
 
     // 4. Q&A tab — offline KB path (works WITHOUT Firebase)
@@ -4354,6 +4359,267 @@ async function main() {
     );
     await page.setViewport({ width: 1280, height: 900 });
     await sleep(400);
+
+    // 9c. Anin chat (Paket 32): FAB + panel, KB offline, analis dari data
+    // nyata, perintah isi formulir, fallback suara, mode gelap.
+    // Re-seed the deterministic IKM sample first: the IKM section earlier
+    // in this run reset the data to a single all-1s response (score 25, D)
+    // — the analyst checks below need the 12 demo responses (90,28, A,
+    // Sarana lowest). Removing both keys makes loadIkm() re-seed on reload.
+    await page.evaluate(() => {
+      localStorage.removeItem("desaai-ikm-v1");
+      localStorage.removeItem("desaai-ikm-meta-v1");
+    });
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await sleep(1200);
+    // Beralih ke Bahasa Indonesia dulu supaya jawaban Anin bisa dicek
+    // dengan string Indonesia (aplikasi default berbahasa Inggris).
+    await page.click("#lang-toggle");
+    await sleep(300);
+    const aninLang = await page.$eval("html", (el) => el.lang);
+    check("Anin tests run in Indonesian", aninLang === "id", `lang=${aninLang}`);
+    const fabBox = await page.$eval("#anin-fab", (el) => {
+      const r = el.getBoundingClientRect();
+      return { w: r.width, h: r.height, visible: r.width > 0 && r.height > 0 };
+    });
+    const fabImgOk = await page.$eval("#anin-fab-img", (el) => el.naturalWidth > 0);
+    check(
+      "Anin FAB visible on home with a real face image",
+      fabBox.visible && fabBox.w >= 44 && fabImgOk,
+      `w=${fabBox.w} imgLoaded=${fabImgOk}`,
+    );
+    const homeAninImgOk = await page.$eval("#home-anin-img", (el) => el.naturalWidth > 0);
+    check("home Anin card shows the cropped face (not the old SVG)", homeAninImgOk);
+    await page.click('[data-tab="letters"]');
+    await sleep(200);
+    const fabOnLetters = await page.$eval("#anin-fab", (el) => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    });
+    check("Anin FAB stays visible on the letters tab", fabOnLetters);
+    await page.click("#anin-fab");
+    await sleep(400);
+    const panelOpen = await page.evaluate(() => ({
+      hidden: document.getElementById("anin-panel").hidden,
+      welcome: document.querySelector("#anin-messages .anin-msg-anin p")?.textContent ?? "",
+      chips: document.querySelectorAll("#anin-chip, .anin-chip").length,
+    }));
+    check(
+      "Anin panel opens with a welcome message and suggestion chips",
+      !panelOpen.hidden && /Anin/.test(panelOpen.welcome) && panelOpen.chips >= 4,
+      `welcome="${panelOpen.welcome.slice(0, 60)}" chips=${panelOpen.chips}`,
+    );
+    const aninCount = () =>
+      page.$$eval("#anin-messages .anin-msg-anin", (els) => els.length);
+    const lastAninText = () =>
+      page.$eval(
+        "#anin-messages .anin-msg-anin:last-of-type p",
+        (el) => el.textContent ?? "",
+      );
+    const aninAsk = async (text) => {
+      const before = await aninCount();
+      await page.type("#anin-input", text);
+      await page.click("#anin-send");
+      await page.waitForFunction((n) => document.querySelectorAll("#anin-messages .anin-msg-anin").length > n, { timeout: 10000 }, before);
+      await sleep(200);
+      return lastAninText();
+    };
+    const ktpAnswer = await aninAsk("Syarat KTP apa saja?");
+    check(
+      "Anin answers a procedure question from the offline KB",
+      /Kartu Keluarga/.test(ktpAnswer) && /17 tahun/.test(ktpAnswer),
+      ktpAnswer.slice(0, 120),
+    );
+    const ikmAnswer = await aninAsk("IKM rata-rata berapa?");
+    check(
+      "Anin analis answers the IKM average from real stored data",
+      /90,28/.test(ikmAnswer) && /12 jawaban/.test(ikmAnswer) && /kategori A/i.test(ikmAnswer),
+      ikmAnswer.slice(0, 140),
+    );
+    const keluhanAnswer = await aninAsk("Keluhan terbanyak bulan ini?");
+    check(
+      "Anin analis names the top complaint category from real data",
+      /Keterlambatan/.test(keluhanAnswer),
+      keluhanAnswer.slice(0, 140),
+    );
+    const perbaikiAnswer = await aninAsk("Apa yang harus diperbaiki?");
+    check(
+      "Anin analis suggests improvements (lowest IKM element + top complaint)",
+      /Sarana/.test(perbaikiAnswer) && /Keterlambatan/.test(perbaikiAnswer) && /Saran/.test(perbaikiAnswer),
+      perbaikiAnswer.slice(0, 160),
+    );
+    const skAnswer = await aninAsk("Cara buat SK pengangkatan");
+    check(
+      "Anin answers an app how-to from the app knowledge base",
+      /SK Pengangkatan Perangkat Desa/.test(skAnswer),
+      skAnswer.slice(0, 120),
+    );
+    // Paket 32 (standar "DIMAKSIMALKAN") — KB mencakup beranda, Tanya
+    // Prosedur, dan Paket Adopsi Desa Lain juga (tanpa celah).
+    const berandaAnswer = await aninAsk("Apa yang ada di beranda?");
+    check(
+      "Anin answers about the home dashboard (new KB entry)",
+      /statistik cepat|Beranda/.test(berandaAnswer),
+      berandaAnswer.slice(0, 120),
+    );
+    const tanyaAnswer = await aninAsk("Bagaimana cara tanya prosedur?");
+    check(
+      "Anin explains Tanya Prosedur itself (new KB entry)",
+      /Tanya Prosedur/.test(tanyaAnswer),
+      tanyaAnswer.slice(0, 120),
+    );
+    const adopsiAnswer = await aninAsk("Apakah aplikasi ini bisa dipakai desa lain?");
+    check(
+      "Anin explains the adoption pack for other villages (new KB entry)",
+      /desa lain/.test(adopsiAnswer),
+      adopsiAnswer.slice(0, 120),
+    );
+    const letterAnswer = await aninAsk(
+      "Anin, buatkan surat undangan musyawarah desa tanggal 28 November 2026 di Balai Desa Simpangkatis",
+    );
+    const letterFields = await page.evaluate(() => ({
+      template: document.getElementById("letter-template").value,
+      acara: document.getElementById("letter-field-acara")?.value ?? "",
+      hari: document.getElementById("letter-field-hari")?.value ?? "",
+      tempat: document.getElementById("letter-field-tempat")?.value ?? "",
+    }));
+    check(
+      "Anin letter command fills the form (template + fields)",
+      /sudah saya isi/.test(letterAnswer) &&
+        letterFields.template === "undangan" &&
+        letterFields.acara === "Musyawarah Desa" &&
+        letterFields.hari === "28 November 2026" &&
+        letterFields.tempat === "Balai Desa Simpangkatis",
+      `reply="${letterAnswer.slice(0, 60)}" fields=${JSON.stringify(letterFields)}`,
+    );
+    const unknownAnswer = await aninAsk("zxqv kltp 123");
+    const unknownFace = await page.$eval("#anin-panel-face", (el) => el.src);
+    check(
+      "Anin says plainly when she does not understand (Bingung face)",
+      /belum paham/.test(unknownAnswer) && /bingung/.test(unknownFace),
+      `reply="${unknownAnswer.slice(0, 60)}" face=${unknownFace.split("/").pop()}`,
+    );
+    // Paket 32 (standar "DIMAKSIMALKAN") — jawaban "belum paham" tetap
+    // membantu: menyebut apa saja yang bisa dibantu Anin.
+    check(
+      "Anin 'does not understand' reply still lists what she can do",
+      /IKM/.test(unknownAnswer) && /pengaduan/i.test(unknownAnswer) && /Buku Agenda/.test(unknownAnswer),
+      unknownAnswer.slice(0, 160),
+    );
+    // Voice: this VM's headless Chrome has no SpeechRecognition/mic and no
+    // speech voices — both buttons must answer with a clear message, never
+    // fail silently. (On a real phone the mic transcribes and Anin speaks.)
+    const micBefore = await aninCount();
+    await page.click("#anin-mic");
+    await page.waitForFunction((n) => document.querySelectorAll("#anin-messages .anin-msg-anin").length > n, { timeout: 10000 }, micBefore);
+    await sleep(200);
+    const micAnswer = await lastAninText();
+    check(
+      "mic button explains clearly when voice input is unavailable",
+      /tidak didukung|tidak bisa dipakai/.test(micAnswer),
+      micAnswer.slice(0, 120),
+    );
+    const readBefore = await aninCount();
+    await page.$$eval("#anin-messages .anin-read", (btns) => btns[btns.length - 1].click());
+    await page.waitForFunction((n) => document.querySelectorAll("#anin-messages .anin-msg-anin").length > n, { timeout: 10000 }, readBefore);
+    await sleep(200);
+    const readAnswer = await lastAninText();
+    check(
+      "read-aloud button explains clearly when no voice is available",
+      /belum menyediakan suara/.test(readAnswer),
+      readAnswer.slice(0, 120),
+    );
+    // Dark mode: panel stays readable (dark surface, light text).
+    await page.click("#theme-toggle");
+    await sleep(300);
+    const aninDark = await page.evaluate(() => {
+      const cs = (el) => getComputedStyle(el);
+      return {
+        panelBg: cs(document.getElementById("anin-panel")).backgroundColor,
+        panelText: cs(document.getElementById("anin-panel")).color,
+        theme: document.documentElement.dataset.theme,
+      };
+    });
+    check(
+      "Anin panel is truly dark in dark mode",
+      aninDark.theme === "dark" &&
+        aninDark.panelBg === "rgb(21, 24, 31)" &&
+        aninDark.panelText === "rgb(242, 245, 249)",
+      `bg=${aninDark.panelBg} text=${aninDark.panelText}`,
+    );
+    await page.click("#theme-toggle");
+    await sleep(300);
+    await page.click("#anin-panel-close");
+    await sleep(200);
+    const panelClosed = await page.$eval("#anin-panel", (el) => el.hidden);
+    check("Anin panel closes", panelClosed);
+
+    // 9d. Paket 32 — Anin mengambil alih Tanya Prosedur (28 Nov 00:13):
+    // AI gagal = jawab dari panduan offline; TIDAK PERNAH error mentah.
+    // (Masih Bahasa Indonesia dari bagian 9c.)
+    await page.click('[data-tab="qa"]');
+    await sleep(200);
+    const qaAninImgOk = await page.$eval("#qa-anin-img", (el) => el.naturalWidth > 0);
+    check("Tanya shows Anin's face (Anin answers here)", qaAninImgOk);
+    await page.$eval("#qa-input", (el) => { el.value = ""; });
+    await page.type("#qa-input", "Bagaimana cara mengurus KK baru?");
+    await page.click("#qa-ask");
+    await sleep(600);
+    const qaAninOutput = await page.$eval("#qa-output", (el) => el.textContent);
+    check(
+      "Tanya answers a KK question from the offline guide (Anin takeover)",
+      /Kartu Keluarga/.test(qaAninOutput) && /Surat pengantar/.test(qaAninOutput),
+      qaAninOutput.slice(0, 120),
+    );
+    const qaAninStatus = await page.$eval("#qa-status", (el) => el.textContent);
+    check(
+      "Tanya explains Anin answered offline (no raw AI error)",
+      /Anin/.test(qaAninStatus) && /panduan.*offline|offline/i.test(qaAninStatus),
+      qaAninStatus.slice(0, 120),
+    );
+    const qaBodyText = await page.evaluate(() => document.body.innerText);
+    check(
+      "no raw AI error text anywhere on the page (Paket 32)",
+      !/Panggilan AI gagal|npx -y firebase-tools|AI call failed/i.test(qaBodyText),
+      qaBodyText.slice(0, 80),
+    );
+    const qaBtns = await page.evaluate(() => ({
+      read: !!document.getElementById("qa-read"),
+      askAnin: !!document.getElementById("qa-ask-anin"),
+    }));
+    check(
+      "Tanya offers read-aloud + continue-with-Anin buttons",
+      qaBtns.read && qaBtns.askAnin,
+      JSON.stringify(qaBtns),
+    );
+    await page.click("#qa-read");
+    await sleep(900);
+    const qaReadStatus = await page.$eval("#qa-status", (el) => el.textContent);
+    check(
+      "Tanya read-aloud explains clearly when no voice is available",
+      /suara|Anin/i.test(qaReadStatus),
+      qaReadStatus.slice(0, 120),
+    );
+    await page.click("#qa-ask-anin");
+    await sleep(1000);
+    const qaToAnin = await page.evaluate(() => {
+      // :last-of-type is type-based, not class-based — the last div is the
+      // Anin answer, so read the last USER bubble from the full list.
+      const userMsgs = [...document.querySelectorAll("#anin-messages .anin-msg-user p")].map(
+        (el) => el.textContent ?? "",
+      );
+      return {
+        panelOpen: !document.getElementById("anin-panel").hidden,
+        userMsg: userMsgs[userMsgs.length - 1] ?? "",
+      };
+    });
+    check(
+      "'Continue with Anin' opens the chat with the same question",
+      qaToAnin.panelOpen && /KK baru/.test(qaToAnin.userMsg),
+      JSON.stringify(qaToAnin),
+    );
+    await page.click("#anin-panel-close");
+    await sleep(200);
 
     // 10. No console errors / failed requests (excluding the VM tunnel noise)
     check("0 console errors (excluding VM tunnel noise)", errors.length === 0, errors.join(" | ").slice(0, 500));

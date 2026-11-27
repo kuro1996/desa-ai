@@ -3373,3 +3373,363 @@ html[data-theme="dark"] .sidebar .tab.active {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ---------- Paket 32 — Anin chat (tombol mengambang + panel) ---------- */
+/* Wajah Anin = crop ilustrasi Bos (public/anin-face-*.png, latar krem).
+   FAB selalu terlihat di semua tab; panel menempel di kanan bawah. Warna
+   memakai token tema (--surface/--ink/--line) jadi terbaca di terang +
+   gelap; aksen pink mengikuti karakter Anin. */
+
+.anin-face img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center 18%;
+  border-radius: 50%;
+  background: #fdf3ec;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.18);
+}
+
+.anin-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 6px;
+  border-radius: 999px;
+  border: 2px solid #f472b6;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+  animation: anin-bob 4s ease-in-out infinite;
+}
+
+.anin-fab:hover {
+  transform: translateY(-2px);
+}
+
+.anin-fab img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 18%;
+  background: #fdf3ec;
+  display: block;
+  animation: anin-tilt 8s ease-in-out infinite;
+}
+
+.anin-fab-label {
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+/* Mengambang lembut; sesekali menoleh (animasi di atas crop statis). */
+@keyframes anin-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes anin-tilt {
+  0%, 88%, 100% { transform: rotate(0deg); }
+  91% { transform: rotate(-6deg); }
+  94% { transform: rotate(5deg); }
+  97% { transform: rotate(0deg); }
+}
+
+.anin-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 88px;
+  z-index: 60;
+  width: min(380px, calc(100vw - 32px));
+  height: min(560px, calc(100dvh - 120px));
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 12px 36px rgb(0 0 0 / 0.3);
+  overflow: hidden;
+}
+
+.anin-panel[hidden] {
+  display: none;
+}
+
+.anin-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #ec4899, #f472b6);
+  color: #fff;
+  flex: 0 0 auto;
+}
+
+.anin-panel-face {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 18%;
+  background: #fdf3ec;
+  border: 2px solid rgb(255 255 255 / 0.85);
+  flex: 0 0 auto;
+}
+
+.anin-panel-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.anin-panel-title strong {
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.anin-panel-status {
+  font-size: 0.8rem;
+  opacity: 0.92;
+}
+
+.anin-panel-close {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgb(255 255 255 / 0.2);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.anin-panel-close:hover {
+  background: rgb(255 255 255 / 0.35);
+}
+
+.anin-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg);
+}
+
+.anin-msg {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  max-width: 92%;
+}
+
+.anin-msg p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.93rem;
+  line-height: 1.5;
+}
+
+.anin-msg-user {
+  align-self: flex-end;
+  justify-content: flex-end;
+}
+
+.anin-msg-user p {
+  background: var(--blue-strong);
+  color: #fff;
+  border-radius: 14px 14px 4px 14px;
+  padding: 8px 12px;
+}
+
+.anin-msg-anin {
+  align-self: flex-start;
+}
+
+.anin-msg-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 18%;
+  background: #fdf3ec;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.anin-msg-body {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px 14px 14px 14px;
+  padding: 8px 12px;
+  min-width: 0;
+}
+
+.anin-read {
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.anin-read:hover {
+  opacity: 1;
+  border-color: #f472b6;
+}
+
+.anin-typing p {
+  opacity: 0.6;
+  animation: anin-typing-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes anin-typing-pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.9; }
+}
+
+.anin-chips {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+}
+
+.anin-chip {
+  flex: 0 0 auto;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.83rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.anin-chip:hover {
+  border-color: #f472b6;
+  color: #db2777;
+}
+
+.anin-form {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.anin-form input {
+  flex: 1;
+  min-width: 0;
+}
+
+.anin-mic {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.anin-mic:hover {
+  border-color: #f472b6;
+  color: #db2777;
+}
+
+.anin-mic.listening {
+  border-color: #dc2626;
+  color: #dc2626;
+  animation: anin-mic-pulse 1s ease-in-out infinite;
+}
+
+@keyframes anin-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(220 38 38 / 0.35); }
+  50% { box-shadow: 0 0 0 7px rgb(220 38 38 / 0); }
+}
+
+@media (max-width: 560px) {
+  .anin-fab {
+    padding: 5px 11px 5px 5px;
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .anin-fab img {
+    width: 38px;
+    height: 38px;
+  }
+
+  .anin-panel {
+    right: 12px;
+    bottom: 76px;
+    height: min(520px, calc(100dvh - 100px));
+  }
+}
+
+/* Paket 32 — Anin di Tanya Prosedur (28 Nov 00:13): wajah + penjelasan
+   bahwa pertanyaan dijawab Anin dari panduan resmi (offline bila perlu). */
+.qa-anin {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 12px 0 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.qa-anin-face {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: 50% 18%;
+  border: 2px solid var(--blue);
+  background: #fff;
+}
+
+.qa-anin strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--ink);
+}
+
+.qa-anin p {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
