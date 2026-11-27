@@ -599,6 +599,133 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   firebaseError: { en: "Firebase: error", id: "Firebase: error" },
   netOnline: { en: "Online", id: "Online" },
   netOffline: { en: "Offline — saved locally", id: "Offline — tersimpan lokal" },
+  // Paket 27 — Dina (pemandu DesaAI), Surat Cepat, Paket Adopsi Desa Lain.
+  // "%d" / "%s" are filled in by main.ts (counts / template name).
+  dinaTitle: { en: "Dina — your DesaAI guide", id: "Dina — pemandu DesaAI" },
+  dinaHiPagi: {
+    en: "Good morning! I'm Dina, your DesaAI guide. Shall we get today's letters done?",
+    id: "Selamat pagi! Saya Dina, pemandu DesaAI. Yuk, bereskan surat hari ini.",
+  },
+  dinaHiSiang: {
+    en: "Good afternoon! I'm Dina, your DesaAI guide. What shall we work on first?",
+    id: "Selamat siang! Saya Dina, pemandu DesaAI. Mau kerjakan apa dulu?",
+  },
+  dinaHiSore: {
+    en: "Good afternoon! I'm Dina, your DesaAI guide. Almost done for today?",
+    id: "Selamat sore! Saya Dina, pemandu DesaAI. Sudah hampir selesai hari ini?",
+  },
+  dinaHiMalam: {
+    en: "Good evening! I'm Dina, your DesaAI guide. Still a letter to finish?",
+    id: "Selamat malam! Saya Dina, pemandu DesaAI. Masih ada surat yang harus diselesaikan?",
+  },
+  dinaTipAduan: {
+    en: "%d new complaints are waiting — open the Complaints tab and I'll point you to the oldest one first.",
+    id: "Ada %d pengaduan baru menunggu — buka tab Pengaduan, saya tunjuk yang paling lama dulu.",
+  },
+  dinaTipMasa: {
+    en: "%d terms of office need attention — check the Personnel tab before they expire.",
+    id: "Ada %d masa bhakti yang perlu perhatian — cek tab Kepegawaian sebelum habis.",
+  },
+  dinaTipSurat: {
+    en: "No letters drafted today yet — write one sentence in Surat Cepat and I'll fill in the form for you.",
+    id: "Belum ada surat hari ini — tulis satu kalimat di Surat Cepat, saya bantu isi formulirnya.",
+  },
+  dinaRot1: {
+    en: "Tip: download a backup (Data & backup card) every Friday — your data never leaves this browser.",
+    id: "Tips: unduh backup (kartu Data & cadangan) tiap Jumat — data Anda tidak pernah keluar dari browser ini.",
+  },
+  dinaRot2: {
+    en: "Tip: share the IKM survey link or QR code at the counter — more answers, clearer picture of the service.",
+    id: "Tips: bagikan tautan atau QR survei IKM di loket — makin banyak jawaban, makin jelas gambaran pelayanan.",
+  },
+  dinaRot3: {
+    en: "Tip: the Auto number button fills the letter number for you — one less thing to type.",
+    id: "Tips: tombol Nomor otomatis mengisi nomor surat untuk Anda — satu hal yang tak perlu diketik.",
+  },
+  dinaRot4: {
+    en: "Tip: press Ctrl+K to jump to any menu — faster than scrolling through tabs.",
+    id: "Tips: tekan Ctrl+K untuk lompat ke menu apa pun — lebih cepat daripada menggulir tab.",
+  },
+  dinaRot5: {
+    en: "Tip: the Mail Register search finds letters by subject, sender, or number — try it in the Agenda tab.",
+    id: "Tips: pencarian Buku Agenda menemukan surat dari perihal, pihak, atau nomor — coba di tab Agenda.",
+  },
+  dinaRot6: {
+    en: "Tip: an archived letter can be printed with the official kop — open it in the Archive & Drafts tab.",
+    id: "Tips: surat arsip bisa dicetak dengan kop resmi — buka di tab Arsip & Draf.",
+  },
+  dinaRot7: {
+    en: "Tip: DesaAI works fully offline — letters, agenda, and survey answers are saved in this browser even without internet.",
+    id: "Tips: DesaAI berfungsi penuh offline — surat, agenda, dan jawaban survei tersimpan di browser ini walau tanpa internet.",
+  },
+  dinaGoLetters: { en: "Draft a letter", id: "Buat surat" },
+  dinaGoAduan: { en: "See complaints", id: "Lihat pengaduan" },
+  dinaDraftsEmpty: {
+    en: "Dina: no drafts yet — draft your first letter in the Draft Letters tab; Surat Cepat can fill in the form from one sentence.",
+    id: "Dina: belum ada draf — buat surat pertama di tab Draf Surat; Surat Cepat bisa mengisi formulir dari satu kalimat.",
+  },
+  dinaAgendaEmpty: {
+    en: "Dina: nothing found — try another keyword, or clear the search to see the whole register.",
+    id: "Dina: tidak ketemu — coba kata kunci lain, atau kosongkan pencarian untuk melihat semua agenda.",
+  },
+  dinaGenerateEmpty: {
+    en: "Dina: the form is still empty — write one sentence in Surat Cepat above, or fill in the subject first, then press Generate draft.",
+    id: "Dina: formulirnya masih kosong — tulis satu kalimat di Surat Cepat di atas, atau isi perihal dulu, lalu tekan Buat draf.",
+  },
+  cepatTitle: { en: "Surat Cepat — one sentence is enough", id: "Surat Cepat — cukup satu kalimat" },
+  cepatHint: {
+    en: "Describe the letter in one sentence — Dina guesses the type and fills in the form. Always check the fields before generating the draft. Works offline.",
+    id: "Jelaskan suratnya dalam satu kalimat — Dina menebak jenisnya dan mengisi formulir. Selalu periksa kolomnya sebelum membuat draf. Berfungsi offline.",
+  },
+  cepatLabel: { en: "What letter do you need?", id: "Surat apa yang dibutuhkan?" },
+  cepatPh: {
+    en: "e.g. Invitation to the village meeting on Friday, 20 November 2026 at 09.00 at the village hall…",
+    id: "cth: Undangan musyawarah desa hari Jumat, 20 November 2026 jam 09.00 di Balai Desa…",
+  },
+  cepatFill: { en: "Fill in the form", id: "Isi formulir" },
+  cepatFound: {
+    en: "Dina found it: %s — %d fields filled in automatically. Please check them, then press Generate draft.",
+    id: "Dina menemukan: %s — %d kolom terisi otomatis. Periksa dulu, lalu tekan Buat draf.",
+  },
+  cepatNotFound: {
+    en: "Dina: I couldn't guess the letter type yet — pick a template below and fill in the fields, or add more detail (event, date, place).",
+    id: "Dina: saya belum bisa menebak jenis suratnya — pilih template di bawah dan isi kolomnya, atau tambah detail (acara, tanggal, tempat).",
+  },
+  cepatEmpty: {
+    en: "Dina: write one sentence first — for example, an invitation with the event, day, time, and place.",
+    id: "Dina: tulis satu kalimat dulu — contohnya undangan beserta acara, hari, jam, dan tempat.",
+  },
+  adopsiTitle: { en: "Adoption Pack for Other Villages", id: "Paket Adopsi Desa Lain" },
+  adopsiHint: {
+    en: "DesaAI is free and open-source — any village office can use it. Five steps, no account, no server: download the pack, follow the checklist, and the app is ready.",
+    id: "DesaAI gratis dan open-source — kantor desa mana pun bisa memakainya. Lima langkah, tanpa akun, tanpa server: unduh paketnya, ikuti checklist, aplikasi siap dipakai.",
+  },
+  adopsiStep1: {
+    en: "1. Open the live app and set your letterhead (office name, address, Camat name).",
+    id: "1. Buka aplikasi live dan atur kop surat (nama kantor, alamat, nama Camat).",
+  },
+  adopsiStep2: {
+    en: "2. Replace the sample data with your own — sample entries are clearly marked and can be deleted.",
+    id: "2. Ganti data contoh dengan data sendiri — entri contoh ditandai jelas dan bisa dihapus.",
+  },
+  adopsiStep3: {
+    en: "3. Share the IKM survey link or QR code at the service counter.",
+    id: "3. Bagikan tautan atau QR survei IKM di loket pelayanan.",
+  },
+  adopsiStep4: {
+    en: "4. Record incoming and outgoing letters in the Mail Register every day.",
+    id: "4. Catat surat masuk dan keluar di Buku Agenda setiap hari.",
+  },
+  adopsiStep5: {
+    en: "5. Download a data backup every week — the backup file moves to a new device if needed.",
+    id: "5. Unduh backup data setiap minggu — file backup bisa dipindah ke perangkat baru bila perlu.",
+  },
+  adopsiDownload: { en: "Download adoption pack (JSON)", id: "Unduh paket adopsi (JSON)" },
+  adopsiDownloaded: { en: "Adoption pack downloaded.", id: "Paket adopsi diunduh." },
+  adopsiNote: {
+    en: "The pack contains your letterhead, the 7 letter templates, and this checklist — no office data is included.",
+    id: "Paket berisi kop surat Anda, 7 template surat, dan checklist ini — tanpa data kantor.",
+  },
 };
 
 export function t(key: string, lang: Lang): string {

@@ -329,6 +329,21 @@ so the office keeps working offline. 199 automated checks on every build
   gh-pages d58ef4b (ls-remote terverifikasi), index 200, bundle
   index-Td-wGKUP.js 200 + marker keg-export-csv; secret check
   bersih; 0 entri node_modules.**
+- **Paket 26 (23 Nov malam): Pencarian Teks di Tab Agenda** — kotak
+  "Cari di agenda…" baru di tab Agenda: pencarian substring di
+  tanggal/judul/kegiatan (tidak peka huruf besar-kecil), plus filter
+  Arah (Semua/Masuk/Keluar) dan Status (Semua/Selesai/Belum) yang
+  bekerja bersama pencarian; tombol "Reset" mengembalikan ketiganya.
+  Statistik (total agenda, masuk, keluar, belum selesai) dan kalender
+  tetap GLOBAL — tidak ikut terfilter, supaya angka di bento tidak
+  berubah saat mencari. Dina (Paket 27) menambah baris langkah
+  berikutnya saat pencarian tidak menemukan apa-apa. 100% lokal,
+  bekerja offline. **Status (23 Nov malam): KODE SELESAI + tes
+  303/303 hijau (headless 287/287 + PWA 16/16; 10 cek pencarian
+  baru semua hijau); commit main 399772f ter-push. BELUM LIVE —
+  deploy menunggu Gas Bos (bundle index-DlT97wnR.js + marker
+  agenda-search); situs live saat ini masih Paket 25
+  (index-Td-wGKUP.js).**
 
 ## 3. Checklist sebelum Bos tekan submit
 

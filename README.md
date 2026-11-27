@@ -21,7 +21,14 @@ back to **cloud Gemini**. Every answer shows a visible routing badge
    **Automatic letter numbering** fills the next number
    (`140/001/DS/XI/2026`, per-template counter, yearly reset), and saved
    letters are kept in the **letter archive** (Arsip surat) on the Archive
-   tab.
+   tab. **Surat Cepat** (one sentence is enough): describe the letter in
+   a single sentence — "Undangan musyawarah desa hari Jumat, 20 November
+   2026 jam 09.00 di Balai Desa" — and the app guesses the template and
+   pre-fills the form (date, time, place, recipient). The parser is
+   **rule-based and 100% offline** (no AI call); the officer always
+   reviews the fields before generating the draft, and a field stays
+   empty when the sentence does not state it clearly — nothing is ever
+   invented.
 2. **Summarize** — paste a long document (minutes, regulation, report) and
    get a concise summary. Long documents always route to the cloud
    (on-device inference is capped at 9,216 input tokens).
@@ -78,7 +85,24 @@ back to **cloud Gemini**. Every answer shows a visible routing badge
    (no network needed) — copy the link, download the QR as PNG to print
    and stick at the service counter, or share it via WhatsApp. Every
    tab has its own deep link too (`#beranda`, `#surat`, `#ringkas`,
-   `#tanya`, `#draf`, `#kepegawaian`, `#ikm`, `#pengaduan`).
+   `#tanya`, `#draf`, `#kepegawaian`, `#ikm`, `#pengaduan`). The
+   dashboard is also home to **Dina, the DesaAI guide** — a friendly
+   village-clerk mascot (pure inline SVG, no external assets) who greets
+   the officer by time of day and always points at the clearest next
+   step: new complaints first, then expiring terms of office, then "no
+   letters yet today — try Surat Cepat", plus one rotating daily tip
+   (backup on Fridays, share the IKM survey, Ctrl+K, …). Empty states
+   and the empty-form error carry Dina's next-step line too, so the
+   officer is never left staring at a dead end.
+10. **Adoption Pack for Other Villages** — DesaAI is free and
+    open-source (Apache-2.0), and any village office can adopt it: the
+    Home tab has a **Paket Adopsi Desa Lain** card with a 5-step
+    checklist (set the letterhead → replace the sample data → share the
+    IKM survey → record letters daily → back up weekly) and a button
+    that downloads `desaai-paket-adopsi-YYYY-MM-DD.json` — the office
+    letterhead, all 7 letter templates, and the checklist. No office
+    data is included in the pack. See
+    [Adoption in another village](#adoption-in-another-village).
    Respondents may stay anonymous; the 12 seed answers are **SAMPLE
    DATA, clearly labelled**. Each saved letter in the archive has a
    "Beri penilaian" link that opens the IKM tab.
@@ -140,6 +164,32 @@ fit a professional government office app: clean, calm, readable):
   for depth without noise, used only on the sticky tab bar.
 - **Fluid typography (clamp) + one big KPI number per card** — the 2026
   admin-dashboard idiom ("fewer, bigger numbers").
+
+## Adoption in another village
+
+DesaAI is built to outlive the hackathon: any village or subdistrict
+office can adopt it for free, with no account and no server.
+
+1. Open the live app: <https://kuro1996.github.io/desa-ai/>
+2. Set the letterhead (Home tab → Pengaturan Kop Surat): office name,
+   address, Camat name and NIP. Empty fields print as "—" — nothing is
+   ever invented.
+3. Replace the sample data with your own. Every seed record is clearly
+   labelled "DATA CONTOH — bukan data asli" and can be edited or
+   deleted; the app never treats sample data as real.
+4. Share the IKM survey (IKM tab → Bagikan Survei): copy the link or
+   print the QR code and stick it at the service counter.
+5. Record incoming and outgoing letters in the Mail Register (Agenda
+   tab) every day, and download a data backup (Home tab → Data &
+   cadangan) every week.
+
+The **Paket Adopsi Desa Lain** card on the Home tab downloads
+`desaai-paket-adopsi-YYYY-MM-DD.json` — your letterhead, the 7 letter
+templates (with their fields), and the 5-step checklist above, as a
+single file you can keep or hand to the next village. The pack contains
+no office data (no letters, personnel, survey answers, or complaints).
+The source is Apache-2.0: fork it, change the office identity, and make
+it yours — <https://github.com/kuro1996/desa-ai>.
 
 ## How hybrid inference works
 
@@ -288,6 +338,10 @@ scripts/live-cloud-test.mjs — browser probe for the cloud Gemini path
   drafts library.
 - Bilingual (EN/ID) responsive UI with no external fonts or CDNs beyond the
   Firebase SDK.
+- **Surat Cepat** (one-sentence letter drafting, offline rules),
+  **Dina** (in-app guide with contextual next steps), and the
+  **Adoption Pack for Other Villages** (in-app checklist + downloadable
+  JSON pack), so the app keeps helping offices after the hackathon ends.
 - Apache-2.0 license, this README, and a headless-Chrome verification
   script + report.
 

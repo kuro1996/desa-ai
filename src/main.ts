@@ -22,6 +22,9 @@ import {
   validateBackup,
   type DesaaiBackup,
 } from "./backup";
+import { buildAdoptionPack } from "./adopsi";
+import { parseCepat } from "./cepat";
+import { dinaGreetingKey, dinaRotatingTipKey, dinaTipKind } from "./dina";
 import {
   generateStream,
   probeOnDevice,
@@ -129,6 +132,9 @@ function applyLang(): void {
   renderHome();
   setNetChip();
   void refreshDrafts();
+  // Paket 27 — keep Dina's error tip in the current language.
+  if (!$("letter-dina-tip").hidden)
+    $("letter-dina-tip").textContent = t("dinaGenerateEmpty", lang);
   // Paket 15 — keep an open print preview (with the officer's edits) when
   // the language toggles; field values live in printForm, so rebuild is safe.
   if (currentPrintDraft) {
@@ -1491,6 +1497,28 @@ function renderHome(): void {
   renderQuickStats();
   renderBackupCard();
   renderLetterheadForm();
+  renderDina();
+}
+
+// Paket 27 — Dina, pemandu DesaAI: sapaan menurut jam + satu tips kontekstual
+// (pengaduan baru → masa bhakti mendesak → belum ada surat hari ini → tips
+// harian bergilir). Tombol "Lihat pengaduan" hanya muncul bila ada yang baru.
+function renderDina(): void {
+  const now = new Date();
+  const aduanBaru = computeAduanStats(loadAduan()).baru;
+  const masa = computeNotifications(loadPerangkat(), now).length;
+  const lettersToday = listLocalDrafts().filter(
+    (d) => d.kind === "letter" && sameDay(new Date(d.createdAt), now),
+  ).length;
+  $("dina-greeting").textContent = t(dinaGreetingKey(now.getHours()), lang);
+  const kind = dinaTipKind({ aduanBaru, masaPerluPerhatian: masa, lettersToday });
+  let tip = "";
+  if (kind === "aduan") tip = t("dinaTipAduan", lang).replace("%d", String(aduanBaru));
+  else if (kind === "masa") tip = t("dinaTipMasa", lang).replace("%d", String(masa));
+  else if (kind === "surat") tip = t("dinaTipSurat", lang);
+  else tip = t(dinaRotatingTipKey(now), lang);
+  $("dina-tip").textContent = tip;
+  $("dina-go-aduan").hidden = aduanBaru === 0;
 }
 
 function initHome(): void {
@@ -1555,6 +1583,18 @@ function initHome(): void {
   $("home-letterhead-save").addEventListener("click", () =>
     saveLetterheadForm(),
   );
+  // Paket 27 — Dina + Paket Adopsi Desa Lain.
+  $("dina-go-letters").addEventListener("click", () =>
+    document.querySelector<HTMLButtonElement>('[data-tab="letters"]')?.click(),
+  );
+  $("dina-go-aduan").addEventListener("click", () =>
+    document.querySelector<HTMLButtonElement>('[data-tab="pengaduan"]')?.click(),
+  );
+  $("home-adopsi-download").addEventListener("click", () => {
+    const { filename, text } = buildAdoptionPack(loadLetterhead());
+    downloadFile(filename, text, "application/json");
+    setStatus($("home-adopsi-status"), t("adopsiDownloaded", lang));
+  });
 }
 
 // ---------- status chips ----------
@@ -1762,8 +1802,13 @@ function renderTemplateSelect(): void {
   currentTemplate = TEMPLATES.find((t) => t.id === sel.value) ?? TEMPLATES[0];
 }
 
-function renderLetterFields(): void {
+function renderLetterFields(keepValues = true): void {
   const wrap = $("letter-fields");
+  // Paket 27 — never wipe what the officer already typed: boot() calls
+  // applyLang() after the slow Firebase/on-device probes finish, which
+  // re-renders these fields. Without preserving, a late boot would erase
+  // a Surat Cepat fill (or manual typing) made while booting.
+  const prev = keepValues ? readLetterValues() : {};
   wrap.innerHTML = "";
   for (const f of currentTemplate.fields) {
     const label = document.createElement("label");
@@ -1780,6 +1825,7 @@ function renderLetterFields(): void {
     if (input instanceof HTMLInputElement) input.type = f.type === "date" ? "text" : "text";
     if (input instanceof HTMLTextAreaElement) input.rows = 3;
     input.placeholder = f.placeholder;
+    if (prev[f.key] !== undefined) input.value = prev[f.key];
     label.appendChild(input);
     wrap.appendChild(label);
   }
@@ -1806,10 +1852,11 @@ function initLetters(): void {
   renderLetterFields();
 
   $("letter-clear").addEventListener("click", () => {
-    renderLetterFields();
+    renderLetterFields(false);
     ($("letter-extra") as HTMLInputElement).value = "";
     $("letter-output-wrap").hidden = true;
     setStatus($("letter-status"), "");
+    $("letter-dina-tip").hidden = true;
   });
 
   $("letter-autonumber").addEventListener("click", () => {
@@ -1831,6 +1878,10 @@ function initLetters(): void {
     const extra = ($("letter-extra") as HTMLInputElement).value;
     if (Object.values(values).every((v) => !v.trim()) && !extra.trim()) {
       setStatus(status, t("statusNeedInput", lang), true);
+      // Paket 27 — Dina points at the next step instead of a bare error.
+      const tip = $("letter-dina-tip");
+      tip.textContent = t("dinaGenerateEmpty", lang);
+      tip.hidden = false;
       return;
     }
     if (!svc || svc.status !== "ready") {
@@ -1897,6 +1948,40 @@ function initLetters(): void {
       $("letter-status"),
       d.source === "firestore" ? t("statusSaved", lang) : t("statusSavedLocal", lang),
     );
+  });
+
+  // Paket 27 — Surat Cepat: one sentence → template + prefilled fields
+  // (offline, rule-based). The officer still reviews every field before
+  // pressing Generate draft; nothing here calls the AI.
+  $("cepat-fill").addEventListener("click", () => {
+    const input = $("cepat-input") as HTMLTextAreaElement;
+    const status = $("cepat-status");
+    const text = input.value;
+    if (!text.trim()) {
+      setStatus(status, t("cepatEmpty", lang), true);
+      return;
+    }
+    const parsed = parseCepat(text);
+    if (!parsed) {
+      setStatus(status, t("cepatNotFound", lang), true);
+      return;
+    }
+    const sel = $("letter-template") as HTMLSelectElement;
+    sel.value = parsed.templateId;
+    currentTemplate = TEMPLATES.find((tp) => tp.id === parsed.templateId) ?? TEMPLATES[0];
+    renderLetterFields();
+    for (const [key, value] of Object.entries(parsed.fields)) {
+      const field = document.getElementById(
+        `letter-field-${key}`,
+      ) as HTMLInputElement | HTMLTextAreaElement | null;
+      if (field) field.value = value;
+    }
+    const tplName = lang === "id" ? currentTemplate.nameId : currentTemplate.nameEn;
+    setStatus(
+      status,
+      t("cepatFound", lang).replace("%s", tplName).replace("%d", String(parsed.filled.length)),
+    );
+    $("letter-dina-tip").hidden = true;
   });
 }
 
@@ -2192,6 +2277,9 @@ async function refreshDrafts(): Promise<void> {
     : all;
   list.innerHTML = "";
   empty.hidden = drafts.length > 0;
+  // Paket 27 — Dina's next-step line, shown only when the office truly has
+  // no drafts yet (not when a search simply matches nothing).
+  $("drafts-empty-dina").hidden = all.length > 0;
   empty.textContent =
     drafts.length === 0 && q ? t("draftsNoMatch", lang) : t("draftsEmpty", lang);
   const renderGroup = (title: string, group: Draft[]): void => {
@@ -3780,6 +3868,8 @@ function renderAgenda(): void {
   const wrap = $("agenda-list");
   wrap.innerHTML = "";
   $("agenda-empty").hidden = list.length > 0;
+  // Paket 27 — Dina's next-step line under the empty message.
+  $("agenda-empty-dina").hidden = list.length > 0;
   for (const e of list) {
     const div = document.createElement("div");
     div.className = "draft-item aduan-item";

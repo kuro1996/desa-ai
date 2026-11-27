@@ -173,6 +173,42 @@
             <div id="home-search-results" class="search-results" aria-live="polite"></div>
           </div>
 
+          <!-- Paket 27 — Dina, pemandu DesaAI (SVG murni, offline): sapaan +
+               satu tips kontekstual + langkah berikutnya. -->
+          <div id="home-dina" class="bento-card bento-dina">
+            <div class="dina-face" aria-hidden="true">
+              <svg viewBox="0 0 120 120" role="img" aria-label="Dina, pemandu DesaAI">
+                <path d="M34 98 Q60 84 86 98 L86 120 L34 120 Z" fill="#0f766e" />
+                <path d="M52 96 L60 104 L68 96" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="60" cy="58" r="32" fill="#ffd9a3" />
+                <path d="M30 54 Q30 24 60 24 Q90 24 90 54 L90 58 L30 58 Z" fill="#1f2937" />
+                <path d="M38 36 Q48 28 60 28" fill="none" stroke="#4b5563" stroke-width="2.5" stroke-linecap="round" />
+                <circle cx="48" cy="58" r="3.6" fill="#1f2937" />
+                <circle cx="72" cy="58" r="3.6" fill="#1f2937" />
+                <circle cx="41" cy="68" r="4" fill="#f59e0b" opacity="0.45" />
+                <circle cx="79" cy="68" r="4" fill="#f59e0b" opacity="0.45" />
+                <path d="M49 70 Q60 79 71 70" fill="none" stroke="#1f2937" stroke-width="3" stroke-linecap="round" />
+                <g transform="translate(80,88)">
+                  <rect width="28" height="19" rx="2" fill="#ffffff" stroke="#0f766e" stroke-width="2" />
+                  <path d="M2 3 L14 12 L26 3" fill="none" stroke="#0f766e" stroke-width="2" stroke-linejoin="round" />
+                </g>
+              </svg>
+            </div>
+            <div class="dina-text">
+              <p class="bento-label"><span data-i18n="dinaTitle">Dina — pemandu DesaAI</span></p>
+              <p id="dina-greeting" class="dina-greeting"></p>
+              <p id="dina-tip" class="dina-tip"></p>
+              <div class="actions">
+                <button id="dina-go-letters" class="btn btn-primary" type="button">
+                  <span data-i18n="dinaGoLetters">Buat surat</span>
+                </button>
+                <button id="dina-go-aduan" class="btn" type="button" hidden>
+                  <span data-i18n="dinaGoAduan">Lihat pengaduan</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Paket 10 — Briefing Pagi: daily digest + copy to WhatsApp -->
           <div id="home-briefing" class="bento-card bento-briefing">
             <p class="bento-label"><span data-i18n="briefingTitle">Briefing Pagi</span> — <span id="home-briefing-date"></span></p>
@@ -418,6 +454,32 @@
             <div id="home-letterhead-status" class="status" aria-live="polite"></div>
           </div>
 
+          <!-- Paket 27 — Paket Adopsi Desa Lain: checklist + unduh paket JSON -->
+          <div class="bento-card bento-adopsi" id="home-adopsi-card">
+            <p class="bento-label" data-i18n="adopsiTitle">Paket Adopsi Desa Lain</p>
+            <p class="hint" data-i18n="adopsiHint">
+              DesaAI gratis dan open-source — kantor desa mana pun bisa memakainya.
+              Lima langkah, tanpa akun, tanpa server.
+            </p>
+            <ol class="adopsi-steps">
+              <li data-i18n="adopsiStep1">1. Buka aplikasi live dan atur kop surat.</li>
+              <li data-i18n="adopsiStep2">2. Ganti data contoh dengan data sendiri.</li>
+              <li data-i18n="adopsiStep3">3. Bagikan tautan atau QR survei IKM di loket.</li>
+              <li data-i18n="adopsiStep4">4. Catat surat masuk dan keluar di Buku Agenda.</li>
+              <li data-i18n="adopsiStep5">5. Unduh backup data setiap minggu.</li>
+            </ol>
+            <p class="hint" data-i18n="adopsiNote">
+              Paket berisi kop surat Anda, 7 template surat, dan checklist ini — tanpa
+              data kantor.
+            </p>
+            <div class="actions">
+              <button id="home-adopsi-download" class="btn btn-primary" type="button">
+                <span data-i18n="adopsiDownload">Unduh paket adopsi (JSON)</span>
+              </button>
+            </div>
+            <div id="home-adopsi-status" class="status" aria-live="polite"></div>
+          </div>
+
           <!-- Paket 16 — Perlu Ditindaklanjuti: open complaints + register items, oldest first. -->
           <div class="bento-card bento-followup" id="home-followup-card">
             <p class="bento-label">
@@ -453,6 +515,29 @@
           Short drafts run on-device (private, no internet needed); longer ones fall
           back to the cloud.
         </p>
+        <!-- Paket 27 — Surat Cepat: satu kalimat → jenis surat + kolom terisi (offline) -->
+        <div class="cepat-box">
+          <p class="bento-label"><span data-i18n="cepatTitle">Surat Cepat — cukup satu kalimat</span></p>
+          <p class="hint" data-i18n="cepatHint">
+            Jelaskan suratnya dalam satu kalimat — Dina menebak jenisnya dan mengisi
+            formulir. Selalu periksa kolomnya sebelum membuat draf. Berfungsi offline.
+          </p>
+          <label class="field field-wide">
+            <span data-i18n="cepatLabel">Surat apa yang dibutuhkan?</span>
+            <textarea
+              id="cepat-input"
+              rows="2"
+              data-i18n-ph="cepatPh"
+              placeholder="cth: Undangan musyawarah desa hari Jumat, 20 November 2026 jam 09.00 di Balai Desa…"
+            ></textarea>
+          </label>
+          <div class="actions">
+            <button id="cepat-fill" class="btn btn-primary" type="button">
+              <span data-i18n="cepatFill">Isi formulir</span>
+            </button>
+          </div>
+          <div id="cepat-status" class="status" aria-live="polite"></div>
+        </div>
         <div class="form-grid">
           <label class="field">
             <span data-i18n="templateLabel">Letter type</span>
@@ -480,6 +565,7 @@
           <button id="letter-clear" class="btn" type="button" data-i18n="clear">Clear</button>
         </div>
         <div id="letter-status" class="status" aria-live="polite"></div>
+        <p id="letter-dina-tip" class="hint dina-tip-line" hidden></p>
         <div id="letter-output-wrap" class="output-wrap" hidden>
           <div class="output-head">
             <span id="letter-badge" class="badge"></span>
@@ -627,6 +713,9 @@
         <div id="drafts-list" class="drafts-list"></div>
         <p id="drafts-empty" class="hint" data-i18n="draftsEmpty">
           No drafts yet. Generate a letter or summary and press “Save draft”.
+        </p>
+        <p id="drafts-empty-dina" class="hint dina-tip-line" hidden>
+          <span data-i18n="dinaDraftsEmpty">Dina: belum ada draf — buat surat pertama di tab Draf Surat; Surat Cepat bisa mengisi formulir dari satu kalimat.</span>
         </p>
 
         <!-- Paket 15: print preview for one archived letter (filled in by JS). -->
@@ -1269,6 +1358,9 @@
         <div id="agenda-list" class="drafts-list"></div>
         <p id="agenda-empty" class="hint" hidden data-i18n="agendaEmpty">
           Tidak ada entri dengan filter ini.
+        </p>
+        <p id="agenda-empty-dina" class="hint dina-tip-line" hidden>
+          <span data-i18n="dinaAgendaEmpty">Dina: tidak ketemu — coba kata kunci lain, atau kosongkan pencarian untuk melihat semua agenda.</span>
         </p>
         <p id="agenda-count" class="hint"></p>
         <div class="actions">

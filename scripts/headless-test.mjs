@@ -178,8 +178,8 @@ async function main() {
     }));
     const monthName = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
     check(
-      "bento shows 14 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
-      bento.cards === 14 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
+      "bento shows 16 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
+      bento.cards === 16 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
         bento.lettersToday === "0" && bento.aduanBaru === "3" &&
         bento.monthIkm === "12" && bento.monthAduan === "6" && bento.monthLetters === "0" &&
         bento.monthName === monthName,
@@ -3616,6 +3616,280 @@ async function main() {
       chart.n === 5 && chart.sum > 0,
       `rows=${chart.n} sum=${chart.sum}`,
     );
+
+    // 9c. Paket 27 — Dina (guide), Surat Cepat, Paket Adopsi Desa Lain.
+    // (Runs after the 9b reload: fresh page, officer mode, lang = English.)
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    const dina = await page.evaluate(() => ({
+      visible: !document.getElementById("home-dina")?.hidden,
+      greeting: document.getElementById("dina-greeting")?.textContent ?? "",
+      tip: document.getElementById("dina-tip")?.textContent ?? "",
+      aduanBaru: Number(document.getElementById("home-aduan-baru")?.textContent ?? 0),
+      goAduanHidden: document.getElementById("dina-go-aduan")?.hidden ?? true,
+    }));
+    check(
+      "Dina guide card shows on Home with greeting + tip",
+      dina.visible && dina.greeting.length > 10 && dina.tip.length > 10,
+      `greeting="${dina.greeting.slice(0, 40)}" tip="${dina.tip.slice(0, 40)}"`,
+    );
+    // Seed data has new complaints, so the complaints tip + its button show.
+    check(
+      "Dina tip matches office state (new complaints → complaints tip + button)",
+      dina.aduanBaru > 0 && /complaint/i.test(dina.tip) && dina.goAduanHidden === false,
+      `aduanBaru=${dina.aduanBaru} tip="${dina.tip.slice(0, 60)}"`,
+    );
+    await page.click("#dina-go-aduan");
+    await sleep(300);
+    check(
+      "Dina 'See complaints' button opens the complaints tab",
+      await page.$eval("#panel-pengaduan", (el) => !el.hidden),
+    );
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    await page.click("#dina-go-letters");
+    await sleep(300);
+    check(
+      "Dina 'Draft a letter' button opens the letters tab",
+      await page.$eval("#panel-letters", (el) => !el.hidden),
+    );
+    // Surat Cepat: one sentence → template + prefilled fields (offline rules).
+    const cepatFill = async (text) => {
+      await page.$eval(
+        "#cepat-input",
+        (el, v) => {
+          el.value = v;
+        },
+        text,
+      );
+      await page.click("#cepat-fill");
+      await sleep(500);
+      return page.evaluate(() => ({
+        template: document.getElementById("letter-template")?.value ?? "",
+        status: document.getElementById("cepat-status")?.textContent ?? "",
+        fields: Object.fromEntries(
+          [...document.querySelectorAll("#letter-fields [data-field-key]")].map((el) => [
+            el.dataset.fieldKey,
+            el.value,
+          ]),
+        ),
+      }));
+    };
+    const cepat1 = await cepatFill(
+      "Buatkan undangan musyawarah desa hari Jumat, 20 November 2026 jam 09.00 WIB di Balai Desa Simpangkatis untuk Ketua RT 01 sampai RT 05",
+    );
+    check(
+      "Surat Cepat fills an invitation from one sentence",
+      cepat1.template === "undangan" &&
+        cepat1.fields.acara === "Musyawarah Desa" &&
+        cepat1.fields.hari === "Jumat, 20 November 2026" &&
+        cepat1.fields.waktu === "09.00 WIB" &&
+        cepat1.fields.tempat === "Balai Desa Simpangkatis" &&
+        cepat1.fields.tujuan === "Ketua RT 01 sampai RT 05" &&
+        /5 fields/.test(cepat1.status),
+      `template=${cepat1.template} status="${cepat1.status.slice(0, 60)}" fields=${JSON.stringify(cepat1.fields)}`,
+    );
+    // Regression (Paket 27): boot() calls applyLang() after the slow
+    // Firebase/on-device probes, which re-renders the letter fields. A
+    // Surat Cepat fill made while booting used to be wiped by that late
+    // re-render. Toggling the language twice forces the same re-render;
+    // the filled values must survive it.
+    await page.click("#lang-toggle");
+    await sleep(300);
+    await page.click("#lang-toggle");
+    await sleep(300);
+    const cepat1kept = await page.evaluate(() =>
+      Object.fromEntries(
+        [...document.querySelectorAll("#letter-fields [data-field-key]")].map((el) => [
+          el.dataset.fieldKey,
+          el.value,
+        ]),
+      ),
+    );
+    check(
+      "Surat Cepat fill survives a language re-render (boot race fix)",
+      cepat1kept.acara === "Musyawarah Desa" &&
+        cepat1kept.hari === "Jumat, 20 November 2026" &&
+        cepat1kept.tempat === "Balai Desa Simpangkatis",
+      `fields=${JSON.stringify(cepat1kept)}`,
+    );
+    const cepat2 = await cepatFill(
+      "SK pengangkatan perangkat desa atas nama Ahmad Fauzi, jabatan Kepala Desa, Desa Simpangkatis, masa bhakti 1 Januari 2021 sampai 31 Desember 2027",
+    );
+    check(
+      "Surat Cepat fills an appointment decree from one sentence",
+      cepat2.template === "sk-pengangkatan" &&
+        cepat2.fields.nama === "Ahmad Fauzi" &&
+        cepat2.fields.jabatan === "Kepala Desa" &&
+        cepat2.fields.desa === "Simpangkatis" &&
+        cepat2.fields.masaMulai === "1 Januari 2021" &&
+        cepat2.fields.masaSelesai === "31 Desember 2027",
+      `template=${cepat2.template} status=${cepat2.status.slice(0, 60)} fields=${JSON.stringify(cepat2.fields)}`,
+    );
+    const cepat3 = await cepatFill(
+      "Tolong buatkan surat keterangan tidak mampu untuk Budi Santoso, NIK 1901010101010001, penghasilan Rp800.000 per bulan, keperluan keringanan biaya pendidikan anak",
+    );
+    check(
+      "Surat Cepat fills an SKTM from one sentence",
+      cepat3.template === "sktm" &&
+        cepat3.fields.nama === "Budi Santoso" &&
+        cepat3.fields.nik === "1901010101010001" &&
+        cepat3.fields.penghasilan === "Rp800.000" &&
+        cepat3.fields.keperluan === "Keringanan biaya pendidikan anak",
+      `template=${cepat3.template} nama=${cepat3.fields.nama}`,
+    );
+    const cepatUnknown = await cepatFill("cuaca hari ini cerah sekali");
+    check(
+      "Surat Cepat says so when it cannot guess the letter type",
+      /couldn't guess/.test(cepatUnknown.status) && cepatUnknown.template === "sktm",
+      `status="${cepatUnknown.status.slice(0, 60)}" template stays ${cepatUnknown.template}`,
+    );
+    const cepatEmpty = await cepatFill("");
+    check(
+      "Surat Cepat asks for a sentence when the box is empty",
+      /write one sentence/.test(cepatEmpty.status),
+      `status="${cepatEmpty.status.slice(0, 60)}"`,
+    );
+    // Offline: Surat Cepat is rule-based, no network involved.
+    await page.setOfflineMode(true);
+    const cepatOffline = await cepatFill(
+      "Buatkan undangan musyawarah desa hari Jumat, 20 November 2026 jam 09.00 WIB di Balai Desa Simpangkatis untuk Ketua RT 01 sampai RT 05",
+    );
+    await page.setOfflineMode(false);
+    check(
+      "Surat Cepat works offline (local rules only)",
+      cepatOffline.template === "undangan" && cepatOffline.fields.acara === "Musyawarah Desa",
+      `template=${cepatOffline.template}`,
+    );
+    // Empty generate: the old error stays, and Dina points at the next step.
+    await page.click("#letter-clear");
+    await sleep(200);
+    await page.click("#letter-generate");
+    await sleep(300);
+    const genEmpty = await page.evaluate(() => ({
+      status: document.getElementById("letter-status")?.textContent ?? "",
+      tipHidden: document.getElementById("letter-dina-tip")?.hidden ?? true,
+      tip: document.getElementById("letter-dina-tip")?.textContent ?? "",
+    }));
+    check(
+      "empty Generate shows the error AND Dina's next step",
+      /fill in at least one field/.test(genEmpty.status) &&
+        genEmpty.tipHidden === false &&
+        /Surat Cepat/.test(genEmpty.tip),
+      `status="${genEmpty.status.slice(0, 50)}" tip="${genEmpty.tip.slice(0, 50)}"`,
+    );
+    // Drafts empty state carries Dina's next-step line. Earlier sections
+    // seed 2 drafts and delete only 1, so one remains — clear the drafts
+    // store and reload so the empty state is real before checking.
+    await page.evaluate(() => localStorage.removeItem("desaai-drafts-v1"));
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await sleep(1000);
+    await page.click('[data-tab="drafts"]');
+    await sleep(400);
+    const draftsDina = await page.evaluate(() => ({
+      empty: !document.getElementById("drafts-empty")?.hidden,
+      dina: !document.getElementById("drafts-empty-dina")?.hidden,
+      text: document.getElementById("drafts-empty-dina")?.textContent ?? "",
+    }));
+    check(
+      "drafts empty state shows Dina's next-step line",
+      draftsDina.empty && draftsDina.dina && /Dina:/.test(draftsDina.text),
+      draftsDina.text.trim().slice(0, 60),
+    );
+    // Agenda empty state carries Dina's next-step line.
+    await page.click('[data-tab="agenda"]');
+    await sleep(300);
+    await page.$eval("#agenda-search", (el) => {
+      el.value = "zzz-tidak-ada";
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await sleep(300);
+    const agendaDina = await page.evaluate(() => ({
+      empty: !document.getElementById("agenda-empty")?.hidden,
+      dina: !document.getElementById("agenda-empty-dina")?.hidden,
+      text: document.getElementById("agenda-empty-dina")?.textContent ?? "",
+    }));
+    check(
+      "agenda empty state shows Dina's next-step line",
+      agendaDina.empty && agendaDina.dina && /Dina:/.test(agendaDina.text),
+      agendaDina.text.slice(0, 60),
+    );
+    await page.$eval("#agenda-search", (el) => {
+      el.value = "";
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await sleep(300);
+    // Paket Adopsi Desa Lain: checklist + downloadable JSON pack.
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    const adopsiPanel = await page.evaluate(() => ({
+      visible: !document.getElementById("home-adopsi-card")?.hidden,
+      steps: document.querySelectorAll("#home-adopsi-card .adopsi-steps li").length,
+    }));
+    check(
+      "adoption pack panel shows the 5-step checklist",
+      adopsiPanel.visible && adopsiPanel.steps === 5,
+      `steps=${adopsiPanel.steps}`,
+    );
+    await page.evaluate(() => {
+      window.__adoptBlobs = [];
+      const orig = URL.createObjectURL.bind(URL);
+      URL.createObjectURL = (blob) => {
+        window.__adoptBlobs.push(blob);
+        return orig(blob);
+      };
+    });
+    await page.click("#home-adopsi-download");
+    await sleep(300);
+    const adoptJson = await page.evaluate(async () => {
+      const blobs = window.__adoptBlobs ?? [];
+      const last = blobs[blobs.length - 1];
+      return last ? await last.text() : "";
+    });
+    const adoptStatus = await page.$eval("#home-adopsi-status", (el) => el.textContent ?? "");
+    let adoptPack = null;
+    try {
+      adoptPack = JSON.parse(adoptJson);
+    } catch {
+      adoptPack = null;
+    }
+    check(
+      "adoption pack JSON has letterhead, 7 templates, 5-step checklist, no office data",
+      !!adoptPack &&
+        adoptPack.app === "DesaAI" &&
+        adoptPack.format === "desaai-adoption-pack" &&
+        Array.isArray(adoptPack.templates) &&
+        adoptPack.templates.length === 7 &&
+        adoptPack.letterhead?.instansi2 === "Kecamatan Simpangkatis" &&
+        Array.isArray(adoptPack.checklist) &&
+        adoptPack.checklist.length === 5 &&
+        !("letters" in adoptPack) &&
+        !("personnel" in adoptPack),
+      adoptPack ? `templates=${adoptPack.templates.length} checklist=${adoptPack.checklist.length}` : "no JSON",
+    );
+    check(
+      "adoption pack download reports success",
+      /Adoption pack downloaded/.test(adoptStatus),
+      adoptStatus,
+    );
+    // Indonesian toggle: Dina + Surat Cepat switch language too.
+    await page.click('[data-tab="letters"]');
+    await sleep(200);
+    await page.click("#lang-toggle");
+    await sleep(300);
+    const dinaId = await page.evaluate(() => ({
+      cepatTitle: document.querySelector('[data-i18n="cepatTitle"]')?.textContent ?? "",
+    }));
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    const dinaGreetingId = await page.$eval("#dina-greeting", (el) => el.textContent ?? "");
+    check(
+      "Dina + Surat Cepat switch to Indonesian",
+      /Surat Cepat/.test(dinaId.cepatTitle) && /Selamat (pagi|siang|sore|malam)/.test(dinaGreetingId),
+      `cepat="${dinaId.cepatTitle}" greeting="${dinaGreetingId.slice(0, 40)}"`,
+    );
+    await page.click("#lang-toggle");
+    await sleep(300);
 
     // 10. No console errors / failed requests (excluding the VM tunnel noise)
     check("0 console errors (excluding VM tunnel noise)", errors.length === 0, errors.join(" | ").slice(0, 500));
