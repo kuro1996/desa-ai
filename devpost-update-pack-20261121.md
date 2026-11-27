@@ -1,5 +1,7 @@
 # Devpost Update Pack — DesaAI (project 1305863)
-Disiapkan 2026-11-21 (Paket 6). **Bos yang edit + submit sendiri** di
+Disiapkan 2026-11-21 (Paket 6). **Diperbarui 2026-11-27 (Paket 29)** — Paket
+26–28 LIVE, Paket 29 kode selesai (tes 323/323), deploy menunggu Gas Bos.
+**Bos yang edit + submit sendiri** di
 https://devpost.com/software/desaai — batas edit **1 Des 2026 05:00 WIB**.
 Live: https://kuro1996.github.io/desa-ai/ — Repo: https://github.com/kuro1996/desa-ai
 
@@ -19,7 +21,11 @@ routed that way, so staff always know where their data went.
 - **Draft Letters** — 7 templates (Surat Dinas, SK, Undangan, Pengantar,
   Surat Keterangan, **SKTM — Surat Keterangan Tidak Mampu**, SK Pengangkatan
   Perangkat Desa), automatic per-template letter numbering, editable drafts,
-  print-ready formal layout, letter archive.
+  print-ready formal layout, letter archive. **Hasil draf kini tampil
+  sebagai lembar surat resmi** (kop + Nomor/Tanggal/Perihal + tabel rincian
+  undangan + Tembusan + tanda tangan, seperti surat dinas asli) yang langsung
+  digulir ke layar setelah Generate; kolom **Tembusan (opsional)** di Surat
+  Dinas + Undangan; teks mentah tetap bisa dibuka dan diedit.
 - **Summarize** — paste minutes, regulations, or reports; get a concise
   summary (long inputs route to cloud automatically).
 - **Procedure Q&A** — KTP, KK, domisili, SKTM, birth/death certificates,
@@ -50,8 +56,8 @@ by a human officer before use.
 
 **Tech:** Vite + TypeScript, Firebase AI Logic (Gemini Nano 4 on-device +
 Gemini cloud fallback), Firestore mirror (best-effort), localStorage-first
-so the office keeps working offline. 199 automated checks on every build
-(183 headless-Chrome + 16 PWA; 1 known flaky check, see §4).
+so the office keeps working offline. 339 automated checks on every build
+(323 headless-Chrome + 16 PWA; 1 known flaky check, see §4).
 
 ## 2. Yang baru sejak submit (untuk kolom "What's new" / pembaruan deskripsi)
 
@@ -340,10 +346,58 @@ so the office keeps working offline. 199 automated checks on every build
   berikutnya saat pencarian tidak menemukan apa-apa. 100% lokal,
   bekerja offline. **Status (23 Nov malam): KODE SELESAI + tes
   303/303 hijau (headless 287/287 + PWA 16/16; 10 cek pencarian
-  baru semua hijau); commit main 399772f ter-push. BELUM LIVE —
-  deploy menunggu Gas Bos (bundle index-DlT97wnR.js + marker
-  agenda-search); situs live saat ini masih Paket 25
-  (index-Td-wGKUP.js).**
+  baru semua hijau); commit main 399772f ter-push. **Status (27 Nov):
+  LIVE — deploy bersama Paket 27+28 (gh-pages ab335a1, bundle
+  index-BF6RU5f_.js).**
+- **Paket 27 (27 Nov): Surat Cepat + pemandu Anin** — **Surat Cepat**:
+  tulis satu kalimat ("undang RT buat musyawarah desa Jumat jam 9 di
+  balai desa") → formulir terisi otomatis (template + kolom terisi,
+  100% lokal, tanpa AI); petugas tetap memeriksa tiap kolom sebelum
+  Generate. **Pemandu Anin** (dulu "Dina"): kartu pemandu di Beranda
+  dengan sapaan + langkah berikutnya sesuai keadaan kantor (mis.
+  "3 pengaduan baru menunggu"), tombol cepat ke tab terkait; Anin juga
+  menunjuk langkah berikutnya bila Generate ditekan saat formulir masih
+  kosong. **Paket Adopsi Desa Lain**: paket JSON + checklist 5 langkah
+  untuk desa lain yang mau memakai DesaAI (kop surat, 7 template,
+  tanpa data kantor). Bonus: bug diperbaiki — boot aplikasi tidak lagi
+  menghapus isian surat yang sedang diketik (Surat Cepat aman). Tes:
+  **305/305 hijau** (headless 289/289 + PWA 16/16); commit main
+  59900db (+ rename Anin 6fe63ec). **Status (27 Nov): LIVE — deploy
+  bersama Paket 26+28 (gh-pages ab335a1).**
+- **Paket 28 (27 Nov): Redesign model SIAP AKAD** — sidebar biru royal
+  (foto kantor tetap sebagai blok merek), page-head (judul + subjudul
+  tiap tab, pill tanggal, lonceng notifikasi → tab Kepegawaian),
+  4 kartu statistik cerah (surat, skor IKM, pengaduan selesai,
+  perangkat — data live), 2 grafik Beranda (batang per desa + donat
+  jabatan, data live dari 23 perangkat), 6 kartu formulir dengan
+  header banner biru, tabel pegawai dengan Export PDF (rute cetak) /
+  Export Word (mengunduh CSV — belum ada penulis .docx offline),
+  "Keluar" di footer sidebar → Mode Warga. Tes: **318/318 hijau**
+  (headless 302/302 + PWA 16/16; sempat 316/318 — grafik gagal
+  karena 8 staf kecamatan di luar 10 desa, diperbaiki jadi bar ke-11
+  + donat memakai semua jabatan). **Status (27 Nov ~13:20 WIB):
+  LIVE — commit main 00152da, deploy gh-pages ab335a1 (ls-remote
+  terverifikasi), bundle index-BF6RU5f_.js 200 + marker agenda-search
+  / Anin / Surat Cepat; Bos melihat langsung di HP-nya.**
+- **Paket 29 (27 Nov): Perbaikan page-head + hasil draf jadi lembar
+  surat resmi** — atas permintaan Bos (page-head yang dilingkari di HP
+  terlihat jelek + hasil draf harus tampil seperti contoh surat PDF):
+  **page-head diperbaiki** — judul yang tadinya memakai ukuran default
+  browser (32px) karena nama class CSS salah ketik kini 24px +
+  subjudul muted; slab terang di balik page-head pada mode gelap
+  hilang (latar kini ikut token tema); tombol Bahasa Indonesia /
+  Citizen mode / ⌘K yang transparan + teks putih kini tampil sebagai
+  tombol gelap yang terbaca; di HP judul di atas, pill + tombol
+  membungkus rapi tanpa terpotong. **Hasil draf kini tampil sebagai
+  lembar surat resmi** (kop + Nomor/Tanggal/Perihal/Kepada Yth. +
+  tabel rincian undangan + isi + Tembusan + tanda tangan, mengikuti
+  format surat dinas pada contoh PDF Bos) dan langsung digulir ke layar
+  setelah Generate; AI kini hanya menulis tubuh surat (kop/meta/
+  tanda tangan dirender aplikasi dari formulir, tidak tercetak dua
+  kali); kolom Tembusan opsional baru; teks mentah tetap bisa dibuka
+  dan diedit. Tes: **323/323 hijau** (headless 307/307 + PWA 16/16;
+  5 cek baru); commit main 3c0ea92 ter-push. **Status (27 Nov):
+  KODE SELESAI — deploy menunggu Gas Bos.****
 
 ## 3. Checklist sebelum Bos tekan submit
 

@@ -307,21 +307,21 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     en: "DesaAI — built for #BuildHybridAI 2026. Hybrid inference: on-device Gemini Nano 4 when available, cloud Gemini fallback. AI drafts must be reviewed by a human officer before use.",
     id: "DesaAI — dibuat untuk #BuildHybridAI 2026. Inferensi hibrida: Gemini Nano 4 di perangkat bila tersedia, fallback cloud Gemini. Draf AI wajib diperiksa petugas sebelum digunakan.",
   },
-  tabKepegawaian: { en: "Personnel & Status (SIAP AKAD)", id: "Kepegawaian & Status (SIAP AKAD)" },
+  tabKepegawaian: { en: "Personnel Data", id: "Data Kepegawaian" },
   tabIkm: { en: "Satisfaction (IKM)", id: "Kepuasan (IKM)" },
   tabPengaduan: { en: "Complaints", id: "Pengaduan" },
   officeLine: {
     en: "Kecamatan Simpangkatis • Kabupaten Bangka Tengah",
     id: "Kecamatan Simpangkatis • Kabupaten Bangka Tengah",
   },
-  kegTitle: { en: "Personnel — subdistrict & village officers (sample data)", id: "Kepegawaian kecamatan & desa — data contoh" },
+  kegTitle: { en: "Simpangkatis Subdistrict Administration", id: "Administrasi Kecamatan Simpangkatis" },
   kegHint: {
-    en: "Personnel administration for the Simpangkatis subdistrict office and village officers across its 10 villages — adapted from Bos's SIAP AKAD. Track terms of office and get notified before they expire.",
-    id: "Administrasi kepegawaian kantor Kecamatan Simpangkatis dan perangkat desa di 10 desa — diadaptasi dari SIAP AKAD milik Bos. Pantau masa bhakti dan dapatkan notifikasi sebelum habis.",
+    en: "Personnel data for the subdistrict office and 10 village officers — track terms of office, get reminders before they expire, and manage staff records in one place.",
+    id: "Data kepegawaian kecamatan dan perangkat 10 desa — pantau masa bhakti, dapatkan pengingat sebelum habis, dan kelola data pegawai dalam satu tempat.",
   },
   kegDemoNote: {
-    en: "⚠️ SAMPLE DATA — not real data. The 23 records below (8 subdistrict-office staff + 15 village officers) are examples from SIAP AKAD (demo NIKs), shown to demonstrate the admin flow and term-expiry notifications. You can add, edit, or delete records; data is stored locally in this browser.",
-    id: "⚠️ DATA CONTOH — bukan data asli. 23 data di bawah ini (8 pegawai kecamatan + 15 perangkat desa) adalah contoh dari SIAP AKAD (NIK demo), ditampilkan untuk mendemokan alur admin dan notifikasi masa bhakti. Anda bisa menambah, mengubah, atau menghapus data; data tersimpan lokal di browser ini.",
+    en: "⚠️ SAMPLE DATA — not real data. The 23 records below (8 subdistrict-office staff + 15 village officers) are examples (demo NIKs) to show the admin flow and term-expiry notifications. You can add, edit, or delete records; data is stored locally in this browser.",
+    id: "⚠️ DATA CONTOH — bukan data asli. 23 data di bawah ini (8 pegawai kecamatan + 15 perangkat desa) adalah contoh (NIK demo) untuk menunjukkan alur admin dan notifikasi masa bhakti. Anda bisa menambah, mengubah, atau menghapus data; data tersimpan lokal di browser ini.",
   },
   kegStatTotal: { en: "Total officers", id: "Total pegawai" },
   kegStatDesa: { en: "Villages", id: "Jumlah desa" },
@@ -555,6 +555,11 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   statusAiError: {
     en: "AI call failed. If this is a fresh Firebase project, run `npx -y firebase-tools@latest init ailogic` and enable App Check, then try again.",
     id: "Panggilan AI gagal. Jika ini proyek Firebase baru, jalankan `npx -y firebase-tools@latest init ailogic` dan aktifkan App Check, lalu coba lagi.",
+  },
+  // Paket 30 — draf offline: AI gagal, isi dibuat dari formulir.
+  statusDraftOffline: {
+    en: "AI call failed — draft built offline from the form. Please review before use.",
+    id: "Panggilan AI gagal — draf dibuat offline dari formulir. Periksa sebelum dipakai.",
   },
   sourcesLabel: { en: "Sources: ", id: "Sumber: " },
   kbOfflineNote: {

@@ -90,7 +90,7 @@ import {
   type Aduan,
   type AduanStatus,
 } from "./pengaduan";
-import { buildLetterPrompt, TEMPLATES, type LetterTemplate } from "./templates";
+import { buildLetterPrompt, buildOfflineLetterBody, TEMPLATES, type LetterTemplate } from "./templates";
 import { makeQr } from "./qr";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
@@ -2245,7 +2245,18 @@ function initLetters(): void {
       return;
     }
     if (!svc || svc.status !== "ready") {
-      setStatus(status, t("statusNeedConfig", lang), true);
+      // Paket 30 — AI belum siap (Firebase belum dikonfigurasi / App Check
+      // belum aktif): tetap hasilkan draf offline dari formulir, jangan
+      // biarkan tombol "Buat draf" berakhir tanpa isi.
+      const fallback = buildOfflineLetterBody(currentTemplate, values, extra);
+      const output = $("letter-output") as HTMLTextAreaElement;
+      output.value = fallback;
+      lastLetterText = fallback;
+      $("letter-output-wrap").hidden = false;
+      renderLetterSheet();
+      showBadge($("letter-badge"), $("letter-reason"), "UNKNOWN", "fallback");
+      setStatus(status, t("statusDraftOffline", lang), true);
+      $("letter-sheet").scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
     btn.disabled = true;
@@ -2276,7 +2287,16 @@ function initLetters(): void {
       $("letter-sheet").scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (e) {
       console.error("DesaAI: letter generation failed", e);
-      setStatus(status, t("statusAiError", lang), true);
+      // Paket 30 — AI gagal (mis. AI Logic / App Check belum aktif): jangan
+      // biarkan draf kosong. Bangun tubuh surat offline dari formulir supaya
+      // isi tetap dibuat dan lembar surat tampil; petugas tetap memeriksa.
+      const fallback = buildOfflineLetterBody(currentTemplate, values, extra);
+      output.value = fallback;
+      lastLetterText = fallback;
+      renderLetterSheet();
+      showBadge($("letter-badge"), $("letter-reason"), "UNKNOWN", "fallback");
+      setStatus(status, t("statusDraftOffline", lang), true);
+      $("letter-sheet").scrollIntoView({ behavior: "smooth", block: "start" });
     } finally {
       btn.disabled = false;
     }

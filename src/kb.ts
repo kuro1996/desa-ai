@@ -175,7 +175,7 @@ export const KB: KbEntry[] = [
       "Seleksi administrasi dan ujian/penilaian oleh tim seleksi desa",
       "Kepala Desa menetapkan pengangkatan dengan SK; masa bhakti dicatat dan dipantau",
     ],
-    catatanId: "Masa bhakti perangkat desa dicatat di modul Kepegawaian (SIAP AKAD) — sistem memberi notifikasi bila masa bhakti habis atau akan habis dalam 90 hari. Selalu konfirmasi syarat terbaru ke Kecamatan.",
+    catatanId: "Masa bhakti perangkat desa dicatat di modul Data Kepegawaian — sistem memberi notifikasi bila masa bhakti habis atau akan habis dalam 90 hari. Selalu konfirmasi syarat terbaru ke Kecamatan.",
   },
   {
     id: "sk-pengangkatan",

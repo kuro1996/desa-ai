@@ -151,7 +151,25 @@ export function findPersonName(text: string): string {
   return m2 ? cepatTitleCase(m2[1].trim()) : "";
 }
 
+/** Paket 30 — salah ketik yang umum ("Musyawrah", "Musyawara") dinormalkan
+ * supaya Surat Cepat tetap menebak templatnya; hanya pencocokan yang memakai
+ * bentuk baku, teks asli tetap tampil apa adanya di kolom. */
+const CEPAT_TYPO: Array<[RegExp, string]> = [
+  [/\bmusyawrah\b/gi, "musyawarah"],
+  [/\bmusyawara\b/gi, "musyawarah"],
+  [/\bmusawarah\b/gi, "musyawarah"],
+  [/\bmusrenbag\b/gi, "musrenbang"],
+  [/\bundagan\b/gi, "undangan"],
+];
+
+export function normalizeCepatText(text: string): string {
+  let out = text;
+  for (const [re, fix] of CEPAT_TYPO) out = out.replace(re, fix);
+  return out;
+}
+
 function findUndanganAcara(text: string): string {
+  text = normalizeCepatText(text);
   const m = text.match(
     /\bundangan\s+([^,.;]{1,80}?)(?=\s*(hari|tanggal|jam|pukul|di\s|untuk|kepada|pada\s|,|;|\.|$))/i,
   );
@@ -217,7 +235,7 @@ const CEPAT_RULES: CepatRule[] = [
     id: "undangan",
     patterns: [
       [/\bundangan\b/i, 3],
-      [/\bmusyawarah\b/i, 2],
+      [/\bmusyawarah\b/i, 3],
       [/\bmusdes\b/i, 2],
       [/\bmusrenbang\b/i, 2],
       [/\brapat\b/i, 2],
@@ -250,6 +268,7 @@ const CEPAT_RULES: CepatRule[] = [
 
 /** Guess the letter template from one sentence, or null when unsure. */
 export function detectCepatTemplate(text: string): string | null {
+  text = normalizeCepatText(text);
   let best: string | null = null;
   let bestScore = 0;
   for (const rule of CEPAT_RULES) {
@@ -344,6 +363,7 @@ export function extractCepatFields(templateId: string, text: string): Record<str
 /** Parse one sentence into a template + prefilled fields (template fields only). */
 export function parseCepat(text: string): CepatResult | null {
   if (!text || !text.trim()) return null;
+  text = normalizeCepatText(text);
   const templateId = detectCepatTemplate(text);
   if (!templateId) return null;
   const tpl = TEMPLATES.find((t) => t.id === templateId);

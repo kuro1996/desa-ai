@@ -1,15 +1,28 @@
 /* DesaAI — modern, clean, professional. Mobile-first, public-service
-   theme for Indonesian village/subdistrict offices: emerald/teal primary
-   with a warm amber accent, white cards, soft shadows, generous spacing.
-   System fonts only; no external fonts or CDNs (the only network
-   dependency is Firebase). */
+   theme for Indonesian village/subdistrict offices: blue primary,
+   white cards, black text, soft shadows, generous spacing.
+   Font dibundel lokal (Plus Jakarta Sans, woff2 variabel) — tanpa CDN,
+   tetap offline-first; satu-satunya dependensi jaringan adalah Firebase. */
+
+/* Paket 30 — font: Plus Jakarta Sans (dirancang di Indonesia, OFL),
+   dibundel lokal sebagai woff2 variabel. Diterapkan ke semua elemen
+   lewat --font-sans. */
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("./fonts/plus-jakarta-sans-var.woff2") format("woff2");
+}
 
 :root {
-  --bg: #f2f5f1;
+  --bg: #eef2f7;
   --surface: #ffffff;
-  --ink: #17251c;
-  --muted: #5a6b5e;
-  --line: #dfe7de;
+  --ink: #111827;
+  --muted: #4b5563;
+  --line: #dbe3ea;
+  --font-sans: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system,
+    Roboto, "Helvetica Neue", Arial, sans-serif;
   --green: #0e7a4d;
   --green-dark: #0a5c38;
   --green-soft: #e3f2e9;
@@ -42,9 +55,23 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
+  font-family: var(--font-sans);
   line-height: 1.6;
+}
+
+/* Paket 30 — font yang sama di semua elemen (tombol, input, select). */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 /* ---------- hero header: office photo + emerald overlay ---------- */
@@ -234,7 +261,7 @@ main {
 
 .quick-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin: 4px 0 18px;
 }
@@ -1755,26 +1782,27 @@ html[data-theme="dark"] .theme-icon-sun {
   display: block;
 }
 
-/* ---------- dark theme: designed color tokens, not an inversion ---------- */
-
+/* Paket 30 — mode gelap: area konten TETAP putih + tulisan hitam (seperti
+   mode terang) supaya tulisan selalu jelas dibaca; sidebar tetap biru. */
 html[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #0f1a13;
-  --surface: #182420;
-  --ink: #e8f0ea;
-  --muted: #9fb3a4;
-  --line: #2c3f34;
-  --green-soft: #173d2c;
-  --teal-soft: #123c39;
-  --amber-soft: #3d2c10;
-  --blue-soft: #16294d;
-  --rose-soft: #3d1420;
-  --shadow: 0 2px 10px rgb(0 0 0 / 0.35);
-  --shadow-lg: 0 10px 28px rgb(0 0 0 / 0.4);
+  color-scheme: light;
+  --bg: #e9eef5;
+  --surface: #ffffff;
+  --ink: #111827;
+  --muted: #4b5563;
+  --line: #d7dee8;
+  --green-soft: #e3f2e9;
+  --teal-soft: #e0f2f0;
+  --amber-soft: #fef3c7;
+  --blue-soft: #e8f0fe;
+  --rose-soft: #ffe4e6;
+  --shadow: 0 2px 10px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 10px 28px rgb(0 0 0 / 0.09);
 }
 
-/* Hard-coded light surfaces, re-toned for dark mode. The QR box stays
-   white on purpose — a QR code must scan against a white background. */
+/* Paket 30 — konten selalu terang (token di atas), jadi aturan ini hanya
+   menegaskan permukaan terang + teks hitam di semua komponen. The QR box
+   stays white on purpose — a QR code must scan against a white background. */
 html[data-theme="dark"] .tab,
 html[data-theme="dark"] .btn,
 html[data-theme="dark"] input[type="text"],
@@ -1804,40 +1832,40 @@ html[data-theme="dark"] .btn:hover {
 }
 
 html[data-theme="dark"] .btn-ghost {
-  background: transparent;
-  border-color: rgb(255 255 255 / 0.5);
-  color: #fff;
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
 }
 
 html[data-theme="dark"] .btn-ghost:hover {
-  background: rgb(255 255 255 / 0.12);
+  background: var(--blue-soft);
 }
 
 html[data-theme="dark"] .share-card {
-  background: linear-gradient(180deg, #1a2b22, #152219);
+  background: linear-gradient(180deg, #ffffff, #eef2f7);
 }
 
 html[data-theme="dark"] .notif-item {
-  background: #2b2113;
+  background: #fff7ed;
 }
 
 html[data-theme="dark"] .notif-item.notif-habis {
-  background: #33161c;
+  background: #ffe4e6;
 }
 
 html[data-theme="dark"] .data-table tbody tr:hover {
-  background: #1e2f26;
+  background: var(--blue-soft);
 }
 
 html[data-theme="dark"] .badge-unknown {
-  background: #2c3f34;
+  background: #e5e7eb;
   color: var(--ink);
 }
 
 html[data-theme="dark"] .ikm-radios label:has(input:checked) {
   background: var(--green-soft);
   border-color: var(--green);
-  color: #c9ecd9;
+  color: var(--ink);
 }
 
 /* ---------- home dashboard: bento grid ---------- */
@@ -1864,7 +1892,7 @@ html[data-theme="dark"] .ikm-radios label:has(input:checked) {
 
 .bento-briefing {
   grid-column: 1 / -1;
-  border-left: 5px solid var(--teal);
+  border-left: 5px solid var(--blue-strong);
 }
 
 .briefing-summary {
@@ -1888,7 +1916,7 @@ html[data-theme="dark"] .ikm-radios label:has(input:checked) {
 .bento-ikm {
   grid-column: span 2;
   grid-row: span 2;
-  background: linear-gradient(135deg, var(--green) 0%, var(--teal) 100%);
+  background: linear-gradient(135deg, #2563eb 0%, var(--blue-dark) 100%);
   color: #fff;
   border-color: transparent;
 }
@@ -2050,7 +2078,34 @@ html[data-theme="dark"] .ikm-radios label:has(input:checked) {
   .bento-month,
   .bento-trend,
   .bento-report,
-  .bento-search {
+  .bento-search,
+  .bento-adopsi,
+  .bento-followup {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+}
+
+/* Paket 30 — di bawah 1100px (termasuk HP yang membuka tampilan desktop)
+   bento jadi satu kolom: kartu tidak lagi berdesakan tiga kolom dengan
+   tinggi tak rata. */
+@media (max-width: 1100px) {
+  .bento {
+    grid-template-columns: 1fr;
+  }
+
+  .bento-ikm,
+  .bento-kpi,
+  .bento-masa,
+  .bento-month,
+  .bento-chart,
+  .bento-desa-chart,
+  .bento-jabatan-chart,
+  .bento-trend,
+  .bento-report,
+  .bento-search,
+  .bento-adopsi,
+  .bento-followup {
     grid-column: 1 / -1;
     grid-row: auto;
   }
@@ -2418,8 +2473,8 @@ body.mode-warga #home-adopsi-card {
   display: flex;
   gap: 16px;
   align-items: flex-start;
-  border-left: 5px solid var(--amber);
-  background: var(--amber-soft);
+  border-left: 5px solid var(--blue-strong);
+  background: var(--surface);
 }
 
 .anin-face {
@@ -2465,7 +2520,7 @@ body.mode-warga #home-adopsi-card {
 }
 
 .bento-adopsi {
-  border-left: 5px solid var(--teal);
+  border-left: 5px solid var(--blue-strong);
 }
 
 .adopsi-steps {
@@ -2548,6 +2603,15 @@ body.mode-warga #home-adopsi-card {
   background: rgb(255 255 255 / 0.1);
   color: #fff;
   transform: none;
+}
+
+/* Paket 30 — label menu tidak membungkus dua baris; kepanjangan terpotong
+   rapi dengan elipsis seperti menu lain. */
+.sidebar .tab span[data-i18n] {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 /* Item aktif: pill biru lebih terang + garis putih di kiri. */
@@ -2694,6 +2758,8 @@ body.mode-warga #home-adopsi-card {
   margin: 0;
   font-size: 1.5rem;
   line-height: 1.25;
+  font-weight: 800;
+  overflow-wrap: break-word;
 }
 
 .page-head-titles p {
@@ -2854,7 +2920,10 @@ html[data-theme="dark"] .page-head .btn-ghost:hover {
   font-size: 0.82rem;
   font-weight: 600;
   opacity: 0.92;
-  overflow-wrap: break-word;
+  /* Paket 30: never break a word in half (was "Complai/nts" at 980px) —
+     wrap between words only; "Complaints" fits the text column whole. */
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .hero-stat strong {
@@ -2882,11 +2951,16 @@ html[data-theme="dark"] .page-head .btn-ghost:hover {
 
 /* Kartu grafik Home: tiga kartu grafik berdampingan (pengaduan, per desa,
    jabatan). Revisi dari rencana awal span 3: kartu pengaduan lama tidak
-   punya span (default 1), jadi ketiganya span 2 agar satu baris rapi. */
-.bento-chart,
-.bento-desa-chart,
-.bento-jabatan-chart {
-  grid-column: span 2;
+   punya span (default 1), jadi ketiganya span 2 agar satu baris rapi.
+   Paket 30 — span 2 HANYA di layar lebar (min-width 1101px): di bawah itu
+   grid bento satu kolom, dan span 2 di grid satu kolom membuat kolom
+   implisit kedua yang menjepit semua kartu lain menjadi 42px. */
+@media (min-width: 1101px) {
+  .bento-chart,
+  .bento-desa-chart,
+  .bento-jabatan-chart {
+    grid-column: span 2;
+  }
 }
 
 /* Donut komposisi jabatan (SVG murni, legenda swatch + jumlah). */

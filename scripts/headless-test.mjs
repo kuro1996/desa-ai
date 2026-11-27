@@ -1106,7 +1106,7 @@ async function main() {
     await page.select("#letter-template", "undangan");
     await sleep(200);
     const fieldCount = await page.$$eval("#letter-fields input, #letter-fields textarea", (els) => els.length);
-    check("undangan template renders fields", fieldCount === 8, `${fieldCount} fields`);
+    check("undangan template renders fields", fieldCount === 9, `${fieldCount} fields`);
     await page.type("#letter-field-acara", "Musyawarah Desa");
     await page.type("#letter-field-hari", "Jumat, 20 November 2026");
     await page.type("#letter-field-waktu", "09.00 WIB");
@@ -4067,7 +4067,7 @@ async function main() {
     }));
     check(
       "Paket 29 page-head title uses the designed size and muted subtitle",
-      p29Head.h1 === "24px" && p29Head.sub === "rgb(90, 107, 94)",
+      p29Head.h1 === "24px" && p29Head.sub === "rgb(75, 85, 99)",
       `h1=${p29Head.h1} sub=${p29Head.sub}`,
     );
     // NB: .btn mentransisikan background 0.15s — baca gaya SETELAH jeda,
@@ -4088,11 +4088,11 @@ async function main() {
       return out;
     });
     check(
-      "Paket 29 dark mode page-head is readable (dark content bg, visible buttons)",
-      p29Dark.contentBg === "rgb(15, 26, 19)" &&
-        p29Dark.title === "rgb(232, 240, 234)" &&
-        p29Dark.langBg === "rgb(24, 36, 32)" &&
-        p29Dark.langColor === "rgb(232, 240, 234)",
+      "Paket 29 dark mode page-head is readable (light content bg, dark text, visible buttons)",
+      p29Dark.contentBg === "rgb(233, 238, 245)" &&
+        p29Dark.title === "rgb(17, 24, 39)" &&
+        p29Dark.langBg === "rgb(255, 255, 255)" &&
+        p29Dark.langColor === "rgb(17, 24, 39)",
       `bg=${p29Dark.contentBg} title=${p29Dark.title} langBg=${p29Dark.langBg} langColor=${p29Dark.langColor}`,
     );
     await page.setViewport({ width: 390, height: 844 });
@@ -4164,6 +4164,162 @@ async function main() {
         p29Sheet.rawInDetails,
       `body="${p29Sheet.body.slice(0, 80)}" rawInDetails=${p29Sheet.rawInDetails}`,
     );
+
+    // 9f. Paket 30 — draf offline saat AI gagal + Surat Cepat tahan salah
+    // ketik + judul Data Kepegawaian / Administrasi Kecamatan Simpangkatis
+    // (tanpa SIAP AKAD) + font Plus Jakarta Sans + tata letak rapi + konten
+    // terang di kedua mode.
+    await page.click('[data-tab="letters"]');
+    await sleep(300);
+    await page.select("#letter-template", "surat-dinas");
+    await sleep(200);
+    await page.evaluate(() => {
+      const set = (id, v) => {
+        const el = document.getElementById(id);
+        el.value = v;
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+      };
+      set("letter-field-nomor", "140/001/DS/XI/2026");
+      set("letter-field-tanggal", "28 November 2026");
+      set("letter-field-perihal", "Undangan Musyawarah Desa");
+      set("letter-field-tujuan", "Kepala Desa Se-Kecamatan Simpangkatis");
+      set(
+        "letter-field-isi",
+        "1. Mengenai pemilihan kepala desa serentak\n2. Forum konsultasi Publik (FKP) Tahun 2026",
+      );
+      document.getElementById("letter-output").value = "";
+    });
+    await page.click("#letter-generate");
+    await page
+      .waitForFunction(
+        () => document.getElementById("letter-output")?.value.trim().length > 0,
+        { timeout: 15000 },
+      )
+      .catch(() => {});
+    await sleep(300);
+    const p30Draft = await page.evaluate(() => ({
+      out: document.getElementById("letter-output")?.value ?? "",
+      status: document.getElementById("letter-status")?.textContent ?? "",
+      sheetBody: document.querySelector("#letter-sheet .letter-body")?.textContent ?? "",
+    }));
+    check(
+      "Paket 30 offline draft appears when AI fails (Bos's exact form values)",
+      /Dengan hormat/.test(p30Draft.out) &&
+        /pemilihan kepala desa serentak/.test(p30Draft.out) &&
+        /Forum konsultasi Publik/.test(p30Draft.out) &&
+        /pemilihan kepala desa serentak/.test(p30Draft.sheetBody) &&
+        /offline/i.test(p30Draft.status),
+      `status="${p30Draft.status.slice(0, 80)}" out="${p30Draft.out.slice(0, 80)}"`,
+    );
+    // Surat Cepat: kalimat Bos dengan salah ketik "Musyawrah" (tanpa kata
+    // "Undangan") tetap tertebak sebagai undangan + acara dieja baku.
+    const p30Cepat = await page.evaluate(() => {
+      const input = document.getElementById("cepat-input");
+      input.value =
+        "Musyawrah desa tanggal 28 November 2026 di Halaman Kantor Camat Simpangkatis";
+      return input.value;
+    });
+    await page.click("#cepat-fill");
+    await sleep(300);
+    const p30CepatOut = await page.evaluate(() => ({
+      template: document.getElementById("letter-template")?.value ?? "",
+      acara: document.getElementById("letter-field-acara")?.value ?? "",
+      tempat: document.getElementById("letter-field-tempat")?.value ?? "",
+      status: document.getElementById("cepat-status")?.textContent ?? "",
+    }));
+    check(
+      "Paket 30 Surat Cepat tolerates the Musyawrah typo",
+      p30CepatOut.template === "undangan" &&
+        p30CepatOut.acara === "Musyawarah Desa" &&
+        /Halaman Kantor Camat Simpangkatis/.test(p30CepatOut.tempat),
+      `input="${p30Cepat}" template=${p30CepatOut.template} acara="${p30CepatOut.acara}" tempat="${p30CepatOut.tempat}"`,
+    );
+    // Judul + menu baru, tanpa SIAP AKAD di teks yang terlihat.
+    const p30Keg = await page.evaluate(() => {
+      const tab = document.querySelector('[data-tab="kepegawaian"] span[data-i18n="tabKepegawaian"]');
+      return {
+        tabText: tab?.textContent ?? "",
+        tabWrap: tab ? getComputedStyle(tab).whiteSpace : "",
+      };
+    });
+    check(
+      "Paket 30 menu is Data Kepegawaian on one line",
+      /Data Kepegawaian|Personnel Data/.test(p30Keg.tabText) &&
+        !/SIAP AKAD/.test(p30Keg.tabText) &&
+        p30Keg.tabWrap === "nowrap",
+      `tab="${p30Keg.tabText}" whiteSpace=${p30Keg.tabWrap}`,
+    );
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(300);
+    const p30KegPage = await page.evaluate(() => ({
+      title: document.getElementById("page-title")?.textContent ?? "",
+      sub: document.getElementById("page-subtitle")?.textContent ?? "",
+      panelHasSiap: /SIAP AKAD/.test(
+        document.getElementById("panel-kepegawaian")?.textContent ?? "",
+      ),
+    }));
+    check(
+      "Paket 30 kepegawaian title is benefit-led, no SIAP AKAD anywhere on the page",
+      /Administrasi Kecamatan Simpangkatis|Simpangkatis Subdistrict Administration/.test(
+        p30KegPage.title,
+      ) &&
+        /pantau masa bhakti|track terms of office/i.test(p30KegPage.sub) &&
+        !p30KegPage.panelHasSiap,
+      `title="${p30KegPage.title}" sub="${p30KegPage.sub.slice(0, 80)}" panelHasSiap=${p30KegPage.panelHasSiap}`,
+    );
+    // Font + tata letak HP 390px: satu kolom, tanpa overflow horizontal.
+    await page.setViewport({ width: 390, height: 844 });
+    await sleep(400);
+    await page.evaluate(() => document.fonts.ready);
+    const p30Mobile = await page.evaluate(() => {
+      const bentoCols = getComputedStyle(document.querySelector(".bento"))
+        .gridTemplateColumns.split(" ").length;
+      const qsCols = getComputedStyle(document.querySelector(".quick-stats"))
+        .gridTemplateColumns.split(" ").length;
+      return {
+        scrollW: document.documentElement.scrollWidth,
+        bentoCols,
+        qsCols,
+        bentoW: Math.round(document.querySelector(".bento").getBoundingClientRect().width),
+        searchW: Math.round(document.querySelector(".bento-search").getBoundingClientRect().width),
+        fontLoaded: document.fonts.check('700 16px "Plus Jakarta Sans"'),
+        bodyFont: getComputedStyle(document.body).fontFamily,
+      };
+    });
+    check(
+      "Paket 30 mobile layout is a single column with the new font",
+      p30Mobile.scrollW <= 390 &&
+        p30Mobile.bentoCols === 1 &&
+        p30Mobile.qsCols === 2 &&
+        p30Mobile.searchW >= p30Mobile.bentoW - 4 &&
+        p30Mobile.fontLoaded &&
+        /Plus Jakarta Sans/.test(p30Mobile.bodyFont),
+      `scrollW=${p30Mobile.scrollW} bentoCols=${p30Mobile.bentoCols} qsCols=${p30Mobile.qsCols} searchW=${p30Mobile.searchW}/${p30Mobile.bentoW} fontLoaded=${p30Mobile.fontLoaded} bodyFont="${p30Mobile.bodyFont.slice(0, 60)}"`,
+    );
+    // Mode gelap di HP: konten tetap putih + tulisan hitam.
+    await page.evaluate(() => {
+      document.documentElement.dataset.theme = "dark";
+    });
+    await sleep(300);
+    const p30DarkMobile = await page.evaluate(() => {
+      const cs = (el) => getComputedStyle(el);
+      const out = {
+        contentBg: cs(document.querySelector(".app-content")).backgroundColor,
+        title: cs(document.getElementById("page-title")).color,
+        cardBg: cs(document.querySelector(".bento-card")).backgroundColor,
+      };
+      document.documentElement.dataset.theme = "light";
+      return out;
+    });
+    check(
+      "Paket 30 dark mode on mobile keeps white content + black text",
+      p30DarkMobile.contentBg === "rgb(233, 238, 245)" &&
+        p30DarkMobile.title === "rgb(17, 24, 39)" &&
+        p30DarkMobile.cardBg === "rgb(255, 255, 255)",
+      `bg=${p30DarkMobile.contentBg} title=${p30DarkMobile.title} cardBg=${p30DarkMobile.cardBg}`,
+    );
+    await page.setViewport({ width: 1280, height: 900 });
+    await sleep(400);
 
     // 10. No console errors / failed requests (excluding the VM tunnel noise)
     check("0 console errors (excluding VM tunnel noise)", errors.length === 0, errors.join(" | ").slice(0, 500));

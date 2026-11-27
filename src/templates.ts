@@ -59,6 +59,7 @@ export const TEMPLATES: LetterTemplate[] = [
       { key: "hari", labelId: "Hari/tanggal acara", labelEn: "Event day/date", placeholder: "cth: Jumat, 20 November 2026" },
       { key: "waktu", labelId: "Waktu", labelEn: "Time", placeholder: "cth: 09.00 WIB" },
       { key: "tempat", labelId: "Tempat", labelEn: "Venue", placeholder: "cth: Balai Desa Simpangkatis" },
+      { key: "agenda", labelId: "Agenda / isi pokok (opsional)", labelEn: "Agenda / main points (optional)", placeholder: "cth: 1. Pemilihan kepala desa serentak; 2. Forum Konsultasi Publik (FKP) 2026", type: "textarea" },
       { key: "tujuan", labelId: "Ditujukan kepada", labelEn: "Addressed to", placeholder: "cth: Ketua RT 01 s.d. RT 05" },
       { key: "tembusan", labelId: "Tembusan (opsional)", labelEn: "Cc (optional)", placeholder: "cth: Camat Simpangkatis, satu per baris", type: "textarea" },
     ],
@@ -158,4 +159,63 @@ export function buildLetterPrompt(
       : "Instruksi tambahan: tidak ada.",
     "Aturan: jangan mengarang nama, nomor, tanggal, atau NIP yang tidak diberikan — tulis [NAMA], [NOMOR], atau [TANGGAL] bila datanya kosong. Keluarkan hanya isi surat, tanpa penjelasan tambahan.",
   ].join("\n");
+}
+
+/** Paket 30 — draf offline (tanpa AI): tubuh surat resmi dari kolom formulir.
+ * Dipakai saat panggilan AI gagal (mis. AI Logic / App Check belum aktif di
+ * proyek Firebase), supaya "Buat draf" tetap menghasilkan isi dan lembar
+ * surat tampil. Hanya memakai data yang diisi — tidak mengarang nama,
+ * nomor, tanggal, atau NIP. Kop, meta, dan tanda tangan dirender aplikasi
+ * dari formulir/pengaturan kop, jadi tubuh ini hanya salam + isi + penutup. */
+export function buildOfflineLetterBody(
+  tpl: LetterTemplate,
+  values: Record<string, string>,
+  extra: string,
+): string {
+  const v = (k: string): string => (values[k] ?? "").trim();
+  const paras: string[] = ["Dengan hormat,"];
+  if (tpl.id === "undangan") {
+    const acara = v("acara") || "acara yang dimaksud";
+    const when: string[] = [];
+    if (v("hari")) when.push(`pada ${v("hari")}`);
+    if (v("waktu")) when.push(`pukul ${v("waktu")}`);
+    if (v("tempat")) when.push(`bertempat di ${v("tempat")}`);
+    const tujuan = v("tujuan") || "Bapak/Ibu/Saudara/i";
+    paras.push(
+      `Sehubungan dengan pelaksanaan ${acara}, dengan ini kami mengundang ${tujuan} untuk hadir${when.length ? ` ${when.join(" ")}` : " pada waktu dan tempat yang telah ditentukan"}.`,
+    );
+    if (v("agenda")) paras.push(`Adapun agenda yang akan dibahas sebagai berikut:\n${v("agenda")}`);
+    if (extra.trim()) paras.push(extra.trim());
+    paras.push(
+      "Demikian undangan ini kami sampaikan. Atas perhatian dan kehadiran Bapak/Ibu/Saudara/i, kami ucapkan terima kasih.",
+    );
+    return paras.join("\n\n");
+  }
+  const subject = v("perihal") || v("tentang") || "";
+  if (subject) paras.push(`Sehubungan dengan ${subject}, melalui surat ini kami sampaikan hal-hal sebagai berikut:`);
+  const isi = v("isi") || v("keperluan") || v("dasar") || "";
+  if (isi) paras.push(isi);
+  if (tpl.id === "pengantar" && v("nama")) {
+    paras.push(
+      `Dengan ini kami menerangkan bahwa ${v("nama")} bermaksud ${v("keperluan") || "mengurus keperluan sebagaimana dimaksud"}${v("tujuan") ? ` kepada ${v("tujuan")}` : ""}.`,
+    );
+  }
+  if ((tpl.id === "keterangan" || tpl.id === "sktm") && v("nama")) {
+    const detail: string[] = [];
+    if (v("nik")) detail.push(`NIK ${v("nik")}`);
+    if (v("alamat")) detail.push(`beralamat di ${v("alamat")}`);
+    if (v("pekerjaan")) detail.push(`pekerjaan ${v("pekerjaan")}`);
+    if (v("penghasilan")) detail.push(`penghasilan Rp${v("penghasilan").replace(/^Rp/i, "")} per bulan`);
+    paras.push(
+      `Dengan ini kami menerangkan bahwa ${v("nama")}${detail.length ? `, ${detail.join(", ")}` : ""}, adalah benar ${tpl.id === "sktm" ? "termasuk keluarga tidak mampu" : "warga sebagaimana dimaksud"}${v("keperluan") ? ` untuk keperluan ${v("keperluan")}` : ""}.`,
+    );
+  }
+  if (tpl.id === "sk-pengangkatan" && v("nama")) {
+    paras.push(
+      `Dengan ini kami mengangkat ${v("nama")}${v("jabatan") ? ` sebagai ${v("jabatan")}` : ""}${v("desa") ? ` di Desa ${v("desa")}` : ""}${v("masaMulai") || v("masaSelesai") ? `, dengan masa bhakti ${v("masaMulai") || "—"} sampai ${v("masaSelesai") || "—"}` : ""}.`,
+    );
+  }
+  if (extra.trim()) paras.push(extra.trim());
+  paras.push("Demikian surat ini kami sampaikan, atas perhatian dan kerja sama yang baik kami ucapkan terima kasih.");
+  return paras.join("\n\n");
 }
