@@ -173,11 +173,11 @@
             <div id="home-search-results" class="search-results" aria-live="polite"></div>
           </div>
 
-          <!-- Paket 27 — Dina, pemandu DesaAI (SVG murni, offline): sapaan +
+          <!-- Paket 27 — Anin, pemandu DesaAI (SVG murni, offline): sapaan +
                satu tips kontekstual + langkah berikutnya. -->
-          <div id="home-dina" class="bento-card bento-dina">
-            <div class="dina-face" aria-hidden="true">
-              <svg viewBox="0 0 120 120" role="img" aria-label="Dina, pemandu DesaAI">
+          <div id="home-anin" class="bento-card bento-anin">
+            <div class="anin-face" aria-hidden="true">
+              <svg viewBox="0 0 120 120" role="img" aria-label="Anin, pemandu DesaAI">
                 <path d="M34 98 Q60 84 86 98 L86 120 L34 120 Z" fill="#0f766e" />
                 <path d="M52 96 L60 104 L68 96" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
                 <circle cx="60" cy="58" r="32" fill="#ffd9a3" />
@@ -194,16 +194,16 @@
                 </g>
               </svg>
             </div>
-            <div class="dina-text">
-              <p class="bento-label"><span data-i18n="dinaTitle">Dina — pemandu DesaAI</span></p>
-              <p id="dina-greeting" class="dina-greeting"></p>
-              <p id="dina-tip" class="dina-tip"></p>
+            <div class="anin-text">
+              <p class="bento-label"><span data-i18n="aninTitle">Anin — pemandu DesaAI</span></p>
+              <p id="anin-greeting" class="anin-greeting"></p>
+              <p id="anin-tip" class="anin-tip"></p>
               <div class="actions">
-                <button id="dina-go-letters" class="btn btn-primary" type="button">
-                  <span data-i18n="dinaGoLetters">Buat surat</span>
+                <button id="anin-go-letters" class="btn btn-primary" type="button">
+                  <span data-i18n="aninGoLetters">Buat surat</span>
                 </button>
-                <button id="dina-go-aduan" class="btn" type="button" hidden>
-                  <span data-i18n="dinaGoAduan">Lihat pengaduan</span>
+                <button id="anin-go-aduan" class="btn" type="button" hidden>
+                  <span data-i18n="aninGoAduan">Lihat pengaduan</span>
                 </button>
               </div>
             </div>
@@ -519,7 +519,7 @@
         <div class="cepat-box">
           <p class="bento-label"><span data-i18n="cepatTitle">Surat Cepat — cukup satu kalimat</span></p>
           <p class="hint" data-i18n="cepatHint">
-            Jelaskan suratnya dalam satu kalimat — Dina menebak jenisnya dan mengisi
+            Jelaskan suratnya dalam satu kalimat — Anin menebak jenisnya dan mengisi
             formulir. Selalu periksa kolomnya sebelum membuat draf. Berfungsi offline.
           </p>
           <label class="field field-wide">
@@ -565,7 +565,7 @@
           <button id="letter-clear" class="btn" type="button" data-i18n="clear">Clear</button>
         </div>
         <div id="letter-status" class="status" aria-live="polite"></div>
-        <p id="letter-dina-tip" class="hint dina-tip-line" hidden></p>
+        <p id="letter-anin-tip" class="hint anin-tip-line" hidden></p>
         <div id="letter-output-wrap" class="output-wrap" hidden>
           <div class="output-head">
             <span id="letter-badge" class="badge"></span>
@@ -714,8 +714,8 @@
         <p id="drafts-empty" class="hint" data-i18n="draftsEmpty">
           No drafts yet. Generate a letter or summary and press “Save draft”.
         </p>
-        <p id="drafts-empty-dina" class="hint dina-tip-line" hidden>
-          <span data-i18n="dinaDraftsEmpty">Dina: belum ada draf — buat surat pertama di tab Draf Surat; Surat Cepat bisa mengisi formulir dari satu kalimat.</span>
+        <p id="drafts-empty-anin" class="hint anin-tip-line" hidden>
+          <span data-i18n="aninDraftsEmpty">Anin: belum ada draf — buat surat pertama di tab Draf Surat; Surat Cepat bisa mengisi formulir dari satu kalimat.</span>
         </p>
 
         <!-- Paket 15: print preview for one archived letter (filled in by JS). -->
@@ -1359,8 +1359,8 @@
         <p id="agenda-empty" class="hint" hidden data-i18n="agendaEmpty">
           Tidak ada entri dengan filter ini.
         </p>
-        <p id="agenda-empty-dina" class="hint dina-tip-line" hidden>
-          <span data-i18n="dinaAgendaEmpty">Dina: tidak ketemu — coba kata kunci lain, atau kosongkan pencarian untuk melihat semua agenda.</span>
+        <p id="agenda-empty-anin" class="hint anin-tip-line" hidden>
+          <span data-i18n="aninAgendaEmpty">Anin: tidak ketemu — coba kata kunci lain, atau kosongkan pencarian untuk melihat semua agenda.</span>
         </p>
         <p id="agenda-count" class="hint"></p>
         <div class="actions">

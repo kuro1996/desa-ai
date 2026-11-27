@@ -31,30 +31,30 @@ di kantor desa tanpa internet. Aturan kejujurannya tegas: field yang tidak
 dinyatakan jelas di kalimat **dibiarkan kosong, tidak pernah dikarang** —
 nama, angka, dan tanggal tidak pernah ditebak. Petugas selalu memeriksa
 isian sebelum menekan "Generate draft". Kalau jenis suratnya tidak bisa
-ditebak, Dina yang menjawab: pilih templat dulu, lalu isi manual seperti
+ditebak, Anin yang menjawab: pilih templat dulu, lalu isi manual seperti
 biasa. Kalimat yang tidak masuk akal juga dijawab jujur ("belum bisa
 menebak") — bukan diisi asal-asalan.
 
-## 2. UX playful — "Dina", pemandu DesaAI (saran Floor Mesters, Sr. Manager UX, Kiro)
+## 2. UX playful — "Anin", pemandu DesaAI (saran Floor Mesters, Sr. Manager UX, Kiro)
 
 Floor bilang: *"Scare me, then make it easy"* — antarmuka dengan sedikit
-unsur iseng, tapi pengguna tetap tahu tombol berikutnya apa. **Dina** adalah
+unsur iseng, tapi pengguna tetap tahu tombol berikutnya apa. **Anin** adalah
 pemandu ramah DesaAI: karakter petugas desa (SVG murni, tanpa aset
 eksternal — wajah tersenyum berpeci/songkok, seragam hijau, memegang
 amplop), pantas untuk kantor pemerintahan dan **bukan hantu seram**.
-Dina menyapa sesuai waktu ("Selamat pagi! Saya Dina, pemandu DesaAI…")
+Anin menyapa sesuai waktu ("Selamat pagi! Saya Anin, pemandu DesaAI…")
 lalu selalu menunjuk langkah berikutnya yang paling jelas: ada pengaduan
 baru → "buka tab Pengaduan, saya tunjukkan yang paling lama"; ada masa
 bhakti yang mau habis → ingatkan; belum ada surat hari ini → "coba Surat
 Cepat". Di bawahnya ada satu tips harian yang berputar (backup hari Jumat,
 bagikan survei IKM, Ctrl+K untuk pencarian, …).
 
-Dina juga menjaga pengguna dari jalan buntu: empty state di tab Draf dan
+Anin juga menjaga pengguna dari jalan buntu: empty state di tab Draf dan
 hasil pencarian Agenda yang kosong membawa baris langkah berikutnya dari
-Dina, dan error "formulir masih kosong" saat menekan Generate tanpa isi
+Anin, dan error "formulir masih kosong" saat menekan Generate tanpa isi
 langsung menyarankan "tulis satu kalimat di Surat Cepat". Semua teks baru
 tersedia dalam Bahasa Indonesia **dan** English (toggle bahasa ikut
-mengubah sapaan, tips, dan pesan Dina).
+mengubah sapaan, tips, dan pesan Anin).
 
 ## 3. Hidup lebih lama — "Paket Adopsi Desa Lain" (saran Sameer Ali, coding.kitty)
 
@@ -79,14 +79,14 @@ menemukan repo ini dari GitHub.
 | File | Perubahan |
 |---|---|
 | `src/cepat.ts` (baru) | Parser Surat Cepat: `detectCepatTemplate`, `extractCepatFields`, `parseCepat` (skor kata kunci + regex tanggal/waktu/tempat/nama/NIK/penghasilan; tidak pernah mengarang field) |
-| `src/dina.ts` (baru) | Karakter Dina (SVG murni) + `dinaGreeting`, `dinaTip`, `dinaTipKey` (salam per waktu + tips kontekstual + tips harian berputar) |
+| `src/anin.ts` (baru) | Karakter Anin (SVG murni) + `aninGreeting`, `aninTip`, `aninTipKey` (salam per waktu + tips kontekstual + tips harian berputar) |
 | `src/adopsi.ts` (baru) | `ADOPTION_STEPS`, `buildAdoptionPack` (kop surat + 7 templat + checklist → JSON, tanpa data kantor) |
-| `src/main.ts` | Wiring: kartu Dina di Beranda, kotak Surat Cepat di tab surat, baris Dina di empty state draf/agenda + error form kosong, panel adopsi + unduhan JSON; **perbaikan bug boot-race** — `renderLetterFields()` kini mempertahankan nilai yang sudah diisi saat render ulang (lihat bawah) |
+| `src/main.ts` | Wiring: kartu Anin di Beranda, kotak Surat Cepat di tab surat, baris Anin di empty state draf/agenda + error form kosong, panel adopsi + unduhan JSON; **perbaikan bug boot-race** — `renderLetterFields()` kini mempertahankan nilai yang sudah diisi saat render ulang (lihat bawah) |
 | `src/i18n.ts` | Semua string baru Paket 27, id + en |
-| `src/styles.css` | `.bento-dina`, `.cepat-box`, `.bento-adopsi`, `.dina-tip-line`; kartu Dina + adopsi disembunyikan di Mode Warga |
-| `index.html` | Kartu Dina + kartu adopsi di Beranda, kotak Surat Cepat, `#letter-dina-tip`, `#drafts-empty-dina`, `#agenda-empty-dina` |
-| `scripts/headless-test.mjs` | Seksi baru "9c. Paket 27": 18 cek (kartu Dina + tips sesuai state + 2 tombol, Surat Cepat S1/S2/S3/tidak-dikenali/kosong/offline, tips Dina di error Generate, baris Dina di empty state draf + agenda, panel adopsi 5 langkah + isi JSON + unduhan, toggle id untuk Dina + Surat Cepat) + 1 tes regresi boot-race; ekspektasi jumlah kartu bento 14 → 16 |
-| `README.md` | Paragraf Surat Cepat (fitur 1), paragraf Dina (fitur 9), fitur baru 10 "Adoption Pack for Other Villages" + bagian "Adoption in another village" |
+| `src/styles.css` | `.bento-anin`, `.cepat-box`, `.bento-adopsi`, `.anin-tip-line`; kartu Anin + adopsi disembunyikan di Mode Warga |
+| `index.html` | Kartu Anin + kartu adopsi di Beranda, kotak Surat Cepat, `#letter-anin-tip`, `#drafts-empty-anin`, `#agenda-empty-anin` |
+| `scripts/headless-test.mjs` | Seksi baru "9c. Paket 27": 18 cek (kartu Anin + tips sesuai state + 2 tombol, Surat Cepat S1/S2/S3/tidak-dikenali/kosong/offline, tips Anin di error Generate, baris Anin di empty state draf + agenda, panel adopsi 5 langkah + isi JSON + unduhan, toggle id untuk Anin + Surat Cepat) + 1 tes regresi boot-race; ekspektasi jumlah kartu bento 14 → 16 |
+| `README.md` | Paragraf Surat Cepat (fitur 1), paragraf Anin (fitur 9), fitur baru 10 "Adoption Pack for Other Villages" + bagian "Adoption in another village" |
 | `devpost-update-pack-20261121.md` | Entri Paket 26 (kode selesai 303/303, commit 399772f, BELUM LIVE — deploy menunggu Gas Bos) |
 | `PAKET-27-LAPORAN.md` (file ini) | Laporan paket |
 
@@ -95,13 +95,13 @@ menemukan repo ini dari GitHub.
 - **Total: 305/305 hijau** — headless 289/289 (287 lama + 18 baru Paket 27,
   termasuk tes regresi boot-race) + PWA 16/16.
 - **Tidak ada tes lama yang dihapus.** Satu ekspektasi lama diperbarui
-  dengan benar: jumlah kartu bento 14 → 16 (kartu Dina + kartu adopsi).
+  dengan benar: jumlah kartu bento 14 → 16 (kartu Anin + kartu adopsi).
 - **Verifikasi parser di luar browser (Node, `tsc`): 6/6 kasus benar** —
   undangan (5 field tepat), varian undangan berkoma, SK pengangkatan
   (5 field), SKTM (4 field), "surat dinas perihal undangan rapat"
   (benar dikenali surat dinas, bukan undangan), kalimat tidak masuk akal
   → null.
-- **Screenshot SVG Dina diperiksa langsung** — wajah ramah berpeci,
+- **Screenshot SVG Anin diperiksa langsung** — wajah ramah berpeci,
   seragam + amplop, tampil rapi di kartu Beranda.
 - Tes flaky bawaan "kepegawaian summary renders an offline recap without
   AI" tidak gagal pada run ini.
@@ -135,14 +135,14 @@ bahasa 2× (yang memaksa render ulang yang sama), nilai tetap utuh.
    RT 01 sampai RT 05` lalu tekan tombol isi. Formulir harus terisi
    (Undangan, acara Musyawarah Desa, Jumat 20 November 2026, 09.00
    WIB, Balai Desa Simpangkatis, Ketua RT 01–05). Coba juga kalimat
-   yang tidak jelas, misal `tolong buatkan surat` — Dina harus
+   yang tidak jelas, misal `tolong buatkan surat` — Anin harus
    menjawab jujur bahwa jenis suratnya belum bisa ditebak.
-2. **Dina** — di tab **Beranda**, kartu Dina menyapa sesuai jam dan
+2. **Anin** — di tab **Beranda**, kartu Anin menyapa sesuai jam dan
    memberi satu langkah berikutnya (misal: ada 3 pengaduan baru →
    tombol "Lihat pengaduan"). Kosongkan pencarian Agenda dengan kata
-   yang tidak ada (misal `zzz`) — baris Dina muncul di bawah "tidak
+   yang tidak ada (misal `zzz`) — baris Anin muncul di bawah "tidak
    ditemukan". Tekan "Generate draft" dengan formulir kosong — pesan
-   error muncul bersama saran Dina untuk mencoba Surat Cepat.
+   error muncul bersama saran Anin untuk mencoba Surat Cepat.
 3. **Paket Adopsi** — di tab **Beranda**, kartu "Paket Adopsi Desa
    Lain" menampilkan 5 langkah; tekan "Unduh paket adopsi" — file
    `desaai-paket-adopsi-YYYY-MM-DD.json` terunduh berisi kop surat,
@@ -157,8 +157,8 @@ bahasa 2× (yang memaksa render ulang yang sama), nilai tetap utuh.
    bisa diedit sampai **1 Des 2026 05:00 WIB**; entri Paket 26 sudah
    disiapkan di `devpost-update-pack-20261121.md` (entri Paket 27
    menyusul setelah live).
-3. **Nama karakter "Dina"** — dipilih karena hangat dan umum dipakai di
+3. **Nama karakter "Anin"** — dipilih karena hangat dan umum dipakai di
    kantor desa; kalau Bos mau nama lain (atau tanpa nama), tinggal
-   bilang — gantinya satu tempat di `src/dina.ts` + string i18n.
+   bilang — gantinya satu tempat di `src/anin.ts` + string i18n.
 4. **Uji cloud generation + PWA dari HP Bos** — masih belum terbukti
    (tidak berubah oleh paket ini; tetap menunggu tes Bos di live site).

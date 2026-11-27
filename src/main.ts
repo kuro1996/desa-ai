@@ -24,7 +24,7 @@ import {
 } from "./backup";
 import { buildAdoptionPack } from "./adopsi";
 import { parseCepat } from "./cepat";
-import { dinaGreetingKey, dinaRotatingTipKey, dinaTipKind } from "./dina";
+import { aninGreetingKey, aninRotatingTipKey, aninTipKind } from "./anin";
 import {
   generateStream,
   probeOnDevice,
@@ -132,9 +132,9 @@ function applyLang(): void {
   renderHome();
   setNetChip();
   void refreshDrafts();
-  // Paket 27 — keep Dina's error tip in the current language.
-  if (!$("letter-dina-tip").hidden)
-    $("letter-dina-tip").textContent = t("dinaGenerateEmpty", lang);
+  // Paket 27 — keep Anin's error tip in the current language.
+  if (!$("letter-anin-tip").hidden)
+    $("letter-anin-tip").textContent = t("aninGenerateEmpty", lang);
   // Paket 15 — keep an open print preview (with the officer's edits) when
   // the language toggles; field values live in printForm, so rebuild is safe.
   if (currentPrintDraft) {
@@ -1497,28 +1497,28 @@ function renderHome(): void {
   renderQuickStats();
   renderBackupCard();
   renderLetterheadForm();
-  renderDina();
+  renderAnin();
 }
 
-// Paket 27 — Dina, pemandu DesaAI: sapaan menurut jam + satu tips kontekstual
+// Paket 27 — Anin, pemandu DesaAI: sapaan menurut jam + satu tips kontekstual
 // (pengaduan baru → masa bhakti mendesak → belum ada surat hari ini → tips
 // harian bergilir). Tombol "Lihat pengaduan" hanya muncul bila ada yang baru.
-function renderDina(): void {
+function renderAnin(): void {
   const now = new Date();
   const aduanBaru = computeAduanStats(loadAduan()).baru;
   const masa = computeNotifications(loadPerangkat(), now).length;
   const lettersToday = listLocalDrafts().filter(
     (d) => d.kind === "letter" && sameDay(new Date(d.createdAt), now),
   ).length;
-  $("dina-greeting").textContent = t(dinaGreetingKey(now.getHours()), lang);
-  const kind = dinaTipKind({ aduanBaru, masaPerluPerhatian: masa, lettersToday });
+  $("anin-greeting").textContent = t(aninGreetingKey(now.getHours()), lang);
+  const kind = aninTipKind({ aduanBaru, masaPerluPerhatian: masa, lettersToday });
   let tip = "";
-  if (kind === "aduan") tip = t("dinaTipAduan", lang).replace("%d", String(aduanBaru));
-  else if (kind === "masa") tip = t("dinaTipMasa", lang).replace("%d", String(masa));
-  else if (kind === "surat") tip = t("dinaTipSurat", lang);
-  else tip = t(dinaRotatingTipKey(now), lang);
-  $("dina-tip").textContent = tip;
-  $("dina-go-aduan").hidden = aduanBaru === 0;
+  if (kind === "aduan") tip = t("aninTipAduan", lang).replace("%d", String(aduanBaru));
+  else if (kind === "masa") tip = t("aninTipMasa", lang).replace("%d", String(masa));
+  else if (kind === "surat") tip = t("aninTipSurat", lang);
+  else tip = t(aninRotatingTipKey(now), lang);
+  $("anin-tip").textContent = tip;
+  $("anin-go-aduan").hidden = aduanBaru === 0;
 }
 
 function initHome(): void {
@@ -1583,11 +1583,11 @@ function initHome(): void {
   $("home-letterhead-save").addEventListener("click", () =>
     saveLetterheadForm(),
   );
-  // Paket 27 — Dina + Paket Adopsi Desa Lain.
-  $("dina-go-letters").addEventListener("click", () =>
+  // Paket 27 — Anin + Paket Adopsi Desa Lain.
+  $("anin-go-letters").addEventListener("click", () =>
     document.querySelector<HTMLButtonElement>('[data-tab="letters"]')?.click(),
   );
-  $("dina-go-aduan").addEventListener("click", () =>
+  $("anin-go-aduan").addEventListener("click", () =>
     document.querySelector<HTMLButtonElement>('[data-tab="pengaduan"]')?.click(),
   );
   $("home-adopsi-download").addEventListener("click", () => {
@@ -1856,7 +1856,7 @@ function initLetters(): void {
     ($("letter-extra") as HTMLInputElement).value = "";
     $("letter-output-wrap").hidden = true;
     setStatus($("letter-status"), "");
-    $("letter-dina-tip").hidden = true;
+    $("letter-anin-tip").hidden = true;
   });
 
   $("letter-autonumber").addEventListener("click", () => {
@@ -1878,9 +1878,9 @@ function initLetters(): void {
     const extra = ($("letter-extra") as HTMLInputElement).value;
     if (Object.values(values).every((v) => !v.trim()) && !extra.trim()) {
       setStatus(status, t("statusNeedInput", lang), true);
-      // Paket 27 — Dina points at the next step instead of a bare error.
-      const tip = $("letter-dina-tip");
-      tip.textContent = t("dinaGenerateEmpty", lang);
+      // Paket 27 — Anin points at the next step instead of a bare error.
+      const tip = $("letter-anin-tip");
+      tip.textContent = t("aninGenerateEmpty", lang);
       tip.hidden = false;
       return;
     }
@@ -1981,7 +1981,7 @@ function initLetters(): void {
       status,
       t("cepatFound", lang).replace("%s", tplName).replace("%d", String(parsed.filled.length)),
     );
-    $("letter-dina-tip").hidden = true;
+    $("letter-anin-tip").hidden = true;
   });
 }
 
@@ -2277,9 +2277,9 @@ async function refreshDrafts(): Promise<void> {
     : all;
   list.innerHTML = "";
   empty.hidden = drafts.length > 0;
-  // Paket 27 — Dina's next-step line, shown only when the office truly has
+  // Paket 27 — Anin's next-step line, shown only when the office truly has
   // no drafts yet (not when a search simply matches nothing).
-  $("drafts-empty-dina").hidden = all.length > 0;
+  $("drafts-empty-anin").hidden = all.length > 0;
   empty.textContent =
     drafts.length === 0 && q ? t("draftsNoMatch", lang) : t("draftsEmpty", lang);
   const renderGroup = (title: string, group: Draft[]): void => {
@@ -3868,8 +3868,8 @@ function renderAgenda(): void {
   const wrap = $("agenda-list");
   wrap.innerHTML = "";
   $("agenda-empty").hidden = list.length > 0;
-  // Paket 27 — Dina's next-step line under the empty message.
-  $("agenda-empty-dina").hidden = list.length > 0;
+  // Paket 27 — Anin's next-step line under the empty message.
+  $("agenda-empty-anin").hidden = list.length > 0;
   for (const e of list) {
     const div = document.createElement("div");
     div.className = "draft-item aduan-item";

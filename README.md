@@ -86,13 +86,13 @@ back to **cloud Gemini**. Every answer shows a visible routing badge
    and stick at the service counter, or share it via WhatsApp. Every
    tab has its own deep link too (`#beranda`, `#surat`, `#ringkas`,
    `#tanya`, `#draf`, `#kepegawaian`, `#ikm`, `#pengaduan`). The
-   dashboard is also home to **Dina, the DesaAI guide** — a friendly
+   dashboard is also home to **Anin, the DesaAI guide** — a friendly
    village-clerk mascot (pure inline SVG, no external assets) who greets
    the officer by time of day and always points at the clearest next
    step: new complaints first, then expiring terms of office, then "no
    letters yet today — try Surat Cepat", plus one rotating daily tip
    (backup on Fridays, share the IKM survey, Ctrl+K, …). Empty states
-   and the empty-form error carry Dina's next-step line too, so the
+   and the empty-form error carry Anin's next-step line too, so the
    officer is never left staring at a dead end.
 10. **Adoption Pack for Other Villages** — DesaAI is free and
     open-source (Apache-2.0), and any village office can adopt it: the
@@ -339,7 +339,7 @@ scripts/live-cloud-test.mjs — browser probe for the cloud Gemini path
 - Bilingual (EN/ID) responsive UI with no external fonts or CDNs beyond the
   Firebase SDK.
 - **Surat Cepat** (one-sentence letter drafting, offline rules),
-  **Dina** (in-app guide with contextual next steps), and the
+  **Anin** (in-app guide with contextual next steps), and the
   **Adoption Pack for Other Villages** (in-app checklist + downloadable
   JSON pack), so the app keeps helping offices after the hackathon ends.
 - Apache-2.0 license, this README, and a headless-Chrome verification

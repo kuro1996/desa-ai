@@ -336,7 +336,7 @@ so the office keeps working offline. 199 automated checks on every build
   bekerja bersama pencarian; tombol "Reset" mengembalikan ketiganya.
   Statistik (total agenda, masuk, keluar, belum selesai) dan kalender
   tetap GLOBAL — tidak ikut terfilter, supaya angka di bento tidak
-  berubah saat mencari. Dina (Paket 27) menambah baris langkah
+  berubah saat mencari. Anin (Paket 27) menambah baris langkah
   berikutnya saat pencarian tidak menemukan apa-apa. 100% lokal,
   bekerja offline. **Status (23 Nov malam): KODE SELESAI + tes
   303/303 hijau (headless 287/287 + PWA 16/16; 10 cek pencarian
