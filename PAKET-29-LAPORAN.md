@@ -82,6 +82,6 @@ Akar masalah (3 bug):
 
 ## E. Status deploy
 
-- Commit main: (isi setelah commit).
+- Commit main: **3c0ea92** (push terverifikasi via ls-remote).
 - Deploy gh-pages: MENUNGGU Gas Bos (pola Paket 28). Build `dist/` siap; jalurnya
   fresh-clone gh-pages seperti Paket 28.
