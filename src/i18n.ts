@@ -238,6 +238,9 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   },
   generate: { en: "Generate draft", id: "Buat draf" },
   autoNumber: { en: "Auto number", id: "Nomor otomatis" },
+  // Paket 29 — lembar surat resmi hasil draf.
+  letterSheetCaption: { en: "Draft result — official letter format", id: "Hasil draf — format surat resmi" },
+  letterRawToggle: { en: "Draft text — editable", id: "Teks draf — bisa diedit" },
   autoNumberDone: { en: "Letter number filled in.", id: "Nomor surat terisi." },
   clear: { en: "Clear", id: "Bersihkan" },
   copy: { en: "Copy", id: "Salin" },

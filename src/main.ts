@@ -2000,6 +2000,203 @@ function readLetterValues(): Record<string, string> {
   return values;
 }
 
+// ---------- Paket 29 — lembar surat resmi hasil draf ----------
+// The generated draft shows as a formal letter sheet (kop + Nomor/
+// Tanggal/Perihal + body + signature), like the PDF sample Bos sent:
+// the AI writes only the body prose, the app renders the structure from
+// the form fields + the officer's letterhead settings. Nothing here
+// invents a name, number or date — an empty field prints "—".
+
+function letterSheetSubject(values: Record<string, string>, tpl: LetterTemplate): string {
+  const pick = (...keys: string[]): string => {
+    for (const k of keys) {
+      const v = (values[k] ?? "").trim();
+      if (v) return v;
+    }
+    return "";
+  };
+  const perihal = pick("perihal", "tentang");
+  if (perihal) return perihal;
+  const acara = pick("acara");
+  if (acara) return `Undangan ${acara}`;
+  const jenis = pick("jenis");
+  if (jenis) return `Keterangan ${jenis}`;
+  const keperluan = pick("keperluan");
+  if (keperluan) return keperluan;
+  return tpl.nameId;
+}
+
+/** Drop the AI's own kop/meta header lines from the body text: the sheet
+ * already renders kop + Nomor/Tanggal/Perihal from the form fields, so a
+ * repeated header would print twice. Only the leading lines are touched. */
+function stripLeadingLetterMeta(text: string): string {
+  const lines = text.split("\n");
+  let i = 0;
+  let dropped = 0;
+  while (i < lines.length && dropped < 8) {
+    const line = lines[i].trim();
+    if (!line) {
+      i++;
+      continue;
+    }
+    if (
+      /^(nomor|no\.?|tanggal|perihal|hal|sifat|lampiran|kepada|yth\.?)\s*:/i.test(line) ||
+      /^(pemerintah|kecamatan|sekretariat|kabupaten)\b/i.test(line) ||
+      /^surat (dinas|undangan|keputusan|keterangan|pengantar)\b/i.test(line)
+    ) {
+      lines.splice(i, 1);
+      dropped++;
+      continue;
+    }
+    break;
+  }
+  return lines.join("\n");
+}
+
+/** Split a trailing "Tembusan" section out of the body text, if the AI
+ * wrote one. The Tembusan form field wins when filled. */
+function splitTembusan(text: string): { body: string; tembusan: string } {
+  const lines = text.split("\n");
+  const idx = lines.findIndex((l) => /^tembusan\s*:?\s*$/i.test(l.trim()));
+  if (idx < 0) return { body: text, tembusan: "" };
+  return {
+    body: lines.slice(0, idx).join("\n").trimEnd(),
+    tembusan: lines.slice(idx + 1).join("\n").trim(),
+  };
+}
+
+function renderLetterSheet(): void {
+  const sheet = $("letter-sheet");
+  if (!sheet) return;
+  sheet.innerHTML = "";
+  const values = readLetterValues();
+  const lh = loadLetterhead();
+
+  // Kop: logo + dua baris instansi + kontak, dari pengaturan kop petugas.
+  const kop = document.createElement("div");
+  kop.className = "print-kop";
+  const logo = document.createElement("img");
+  logo.className = "print-kop-logo";
+  logo.src = "./logo.png";
+  logo.alt = "";
+  const kopText = document.createElement("div");
+  kopText.className = "print-kop-text";
+  const gov = document.createElement("p");
+  gov.className = "print-kop-gov";
+  gov.textContent = lh.instansi1.trim() || "—";
+  const office = document.createElement("p");
+  office.className = "print-kop-office";
+  office.textContent = lh.instansi2.trim() || "—";
+  kopText.append(gov, office);
+  const contact = letterheadContactLine(lh);
+  if (contact) {
+    const contactEl = document.createElement("p");
+    contactEl.className = "print-kop-contact";
+    contactEl.textContent = contact;
+    kopText.appendChild(contactEl);
+  }
+  kop.append(logo, kopText);
+  sheet.appendChild(kop);
+  sheet.appendChild(document.createElement("hr"));
+
+  // Meta: Nomor / Tanggal / Perihal / Kepada — baris Kepada hanya bila
+  // template ini punya kolom tujuan.
+  const meta = document.createElement("div");
+  meta.className = "print-meta";
+  meta.append(printMetaRow("Nomor", values.nomor ?? ""));
+  meta.append(printMetaRow("Tanggal", values.tanggal ?? ""));
+  meta.append(printMetaRow("Perihal", letterSheetSubject(values, currentTemplate)));
+  if (currentTemplate.fields.some((f) => f.key === "tujuan")) {
+    meta.append(printMetaRow("Kepada Yth.", values.tujuan ?? ""));
+  }
+  sheet.appendChild(meta);
+
+  // Tabel rincian undangan (Acara / Hari / Waktu / Tempat) — hanya baris
+  // yang terisi, seperti tabel pada contoh surat Bos.
+  if (currentTemplate.id === "undangan") {
+    const labels: Record<string, string> = {
+      acara: "Acara",
+      hari: "Hari/Tanggal",
+      waktu: "Waktu",
+      tempat: "Tempat",
+    };
+    const rows: Array<[string, string]> = [];
+    for (const key of ["acara", "hari", "waktu", "tempat"]) {
+      const v = (values[key] ?? "").trim();
+      if (v) rows.push([labels[key], v]);
+    }
+    if (rows.length > 0) {
+      const table = document.createElement("table");
+      table.className = "letter-details";
+      for (const [label, val] of rows) {
+        const tr = document.createElement("tr");
+        const tdK = document.createElement("td");
+        tdK.textContent = label;
+        const tdC = document.createElement("td");
+        tdC.textContent = ":";
+        const tdV = document.createElement("td");
+        tdV.textContent = val;
+        tr.append(tdK, tdC, tdV);
+        table.appendChild(tr);
+      }
+      sheet.appendChild(table);
+    }
+  }
+
+  // Isi: teks AI, satu paragraf per baris kosong; bagian Tembusan dipisah.
+  const rawText = ($("letter-output") as HTMLTextAreaElement).value;
+  const { body, tembusan: bodyTembusan } = splitTembusan(stripLeadingLetterMeta(rawText));
+  const bodyEl = document.createElement("div");
+  bodyEl.className = "letter-body";
+  const paras = body
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  for (const para of paras) {
+    const p = document.createElement("p");
+    const lines = para.split("\n");
+    lines.forEach((line, li) => {
+      if (li > 0) p.appendChild(document.createElement("br"));
+      p.appendChild(document.createTextNode(line));
+    });
+    bodyEl.appendChild(p);
+  }
+  sheet.appendChild(bodyEl);
+
+  // Tembusan: dari kolom formulir bila diisi, kalau tidak dari teks AI.
+  const tembusanText = (values.tembusan ?? "").trim() || bodyTembusan;
+  if (tembusanText) {
+    const temb = document.createElement("div");
+    temb.className = "letter-tembusan";
+    const head = document.createElement("p");
+    head.textContent = "Tembusan :";
+    temb.appendChild(head);
+    const list = document.createElement("ol");
+    for (const item of tembusanText
+      .split("\n")
+      .map((s) => s.trim().replace(/^\d+[.)]\s*/, ""))
+      .filter(Boolean)) {
+      const li = document.createElement("li");
+      li.textContent = item;
+      list.appendChild(li);
+    }
+    temb.appendChild(list);
+    sheet.appendChild(temb);
+  }
+
+  // Tanda tangan: Camat (dari pengaturan kop) + Sekretaris bila diisi.
+  const sign = document.createElement("div");
+  sign.className = "print-sign";
+  const secretary = printSecretaryBlock();
+  if (secretary) {
+    sign.classList.add("print-sign-dual");
+    sign.append(secretary, printSignBlock(values.tanggal ?? ""));
+  } else {
+    sign.appendChild(printSignBlock(values.tanggal ?? ""));
+  }
+  sheet.appendChild(sign);
+}
+
 function initLetters(): void {
   const sel = $("letter-template") as HTMLSelectElement;
   sel.addEventListener("change", () => {
@@ -2008,6 +2205,11 @@ function initLetters(): void {
   });
   renderTemplateSelect();
   renderLetterFields();
+
+  // Paket 29 — mengedit kolom formulir atau teks mentah langsung
+  // memperbarui lembar surat (Nomor, Hal, isi…).
+  $("letter-fields").addEventListener("input", () => renderLetterSheet());
+  $("letter-output").addEventListener("input", () => renderLetterSheet());
 
   $("letter-clear").addEventListener("click", () => {
     renderLetterFields(false);
@@ -2051,6 +2253,9 @@ function initLetters(): void {
     $("letter-output-wrap").hidden = false;
     const output = $("letter-output") as HTMLTextAreaElement;
     output.value = "";
+    // Paket 29 — bingkai lembar surat (kop + meta dari formulir) tampil
+    // langsung, lalu terisi saat AI mengalir.
+    renderLetterSheet();
     try {
       warmUpDeviceModel(svc, (p) => setDeviceChip("downloading", p));
       const prompt = buildLetterPrompt(currentTemplate, values, extra);
@@ -2060,11 +2265,15 @@ function initLetters(): void {
         { forceCloud: false, onDevice },
         (text) => {
           output.value = text;
+          renderLetterSheet();
         },
       );
       lastLetterText = result.text;
       showBadge($("letter-badge"), $("letter-reason"), result.source, result.route.reason);
       setStatus(status, "");
+      // Paket 29 — hasil langsung digulir ke layar setelah selesai.
+      renderLetterSheet();
+      $("letter-sheet").scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (e) {
       console.error("DesaAI: letter generation failed", e);
       setStatus(status, t("statusAiError", lang), true);
@@ -2516,6 +2725,9 @@ function openDraft(d: Draft): void {
     $("letter-output-wrap").hidden = false;
     ($("letter-output") as HTMLTextAreaElement).value = d.content;
     lastLetterText = d.content;
+    // Paket 29 — draf arsip juga tampil sebagai lembar surat resmi.
+    renderLetterSheet();
+    $("letter-sheet").scrollIntoView({ behavior: "smooth", block: "start" });
   } else if (d.kind === "summary") {
     document.querySelector<HTMLButtonElement>('[data-tab="summarize"]')?.click();
     $("sum-output-wrap").hidden = false;

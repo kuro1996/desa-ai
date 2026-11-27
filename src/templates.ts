@@ -30,6 +30,7 @@ export const TEMPLATES: LetterTemplate[] = [
       { key: "perihal", labelId: "Perihal", labelEn: "Subject", placeholder: "cth: Undangan Musrenbang Desa" },
       { key: "tujuan", labelId: "Ditujukan kepada", labelEn: "Addressed to", placeholder: "cth: Camat Simpangkatis" },
       { key: "isi", labelId: "Isi pokok", labelEn: "Main content", placeholder: "Poin-poin yang harus disampaikan…", type: "textarea" },
+      { key: "tembusan", labelId: "Tembusan (opsional)", labelEn: "Cc (optional)", placeholder: "cth: Bupati Bangka Tengah, satu per baris", type: "textarea" },
     ],
     structureId:
       "Kop surat desa, nomor/tanggal/perihal, alamat tujuan, salam pembuka, isi (maksud dan tujuan surat), penutup, tanda tangan Kepala Desa beserta nama dan NIP (tulis [NAMA] dan [NIP] bila tidak diberikan).",
@@ -59,6 +60,7 @@ export const TEMPLATES: LetterTemplate[] = [
       { key: "waktu", labelId: "Waktu", labelEn: "Time", placeholder: "cth: 09.00 WIB" },
       { key: "tempat", labelId: "Tempat", labelEn: "Venue", placeholder: "cth: Balai Desa Simpangkatis" },
       { key: "tujuan", labelId: "Ditujukan kepada", labelEn: "Addressed to", placeholder: "cth: Ketua RT 01 s.d. RT 05" },
+      { key: "tembusan", labelId: "Tembusan (opsional)", labelEn: "Cc (optional)", placeholder: "cth: Camat Simpangkatis, satu per baris", type: "textarea" },
     ],
     structureId:
       "Kop surat desa, nomor/tanggal, perihal Undangan, alamat tujuan, salam pembuka, isi undangan (acara, hari/tanggal, waktu, tempat, agenda), penutup, tanda tangan Kepala Desa.",
@@ -135,7 +137,9 @@ export function buildLetterPrompt(
   extra: string,
 ): string {
   const lines = Object.entries(values)
-    .filter(([, v]) => v.trim().length > 0)
+    // Paket 29 — Tembusan dirender aplikasi dari kolomnya sendiri, bukan
+    // ditulis AI di tubuh surat.
+    .filter(([k, v]) => k !== "tembusan" && v.trim().length > 0)
     .map(([k, v]) => {
       const field = tpl.fields.find((f) => f.key === k);
       return `- ${field ? field.labelId : k}: ${v.trim()}`;
@@ -143,6 +147,10 @@ export function buildLetterPrompt(
   return [
     `Tulis draf ${tpl.nameId} resmi pemerintah desa dalam Bahasa Indonesia formal.`,
     `Struktur yang harus diikuti: ${tpl.structureId}`,
+    // Paket 29 — aplikasi sudah menampilkan kop, nomor/tanggal/perihal,
+    // alamat tujuan, dan tanda tangan dari formulir; AI hanya menulis
+    // tubuh surat supaya tidak tercetak dua kali di lembar hasil.
+    "Tulis HANYA tubuh surat (salam pembuka, isi, dan penutup). JANGAN menulis kop surat, nomor, tanggal, perihal, alamat tujuan, Tembusan, atau tanda tangan.",
     "Data yang diberikan:",
     ...lines,
     extra.trim()

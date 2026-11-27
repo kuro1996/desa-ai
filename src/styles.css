@@ -1396,7 +1396,11 @@ footer {
   box-shadow: var(--shadow);
 }
 
-.archive-print-sheet {
+/* Paket 29 — lembar hasil draf memakai kertas formal yang sama dengan
+   pratinjau arsip (Paket 15): putih, serif, 720px. Di mode gelap pun kertas
+   tetap putih — surat resmi dibaca/dicetak di atas putih. */
+.archive-print-sheet,
+.letter-sheet {
   max-width: 720px;
   margin: 16px auto;
   padding: 28px 32px;
@@ -1411,6 +1415,7 @@ footer {
 }
 
 .archive-print-sheet hr,
+.letter-sheet hr,
 #archive-print-area hr {
   margin: 12px 0 16px;
   border: none;
@@ -1506,6 +1511,79 @@ footer {
   display: flex;
   align-items: flex-end;
   padding-bottom: 4px;
+}
+
+/* Paket 29 — lembar hasil draf (di dalam panel surat, di atas teks mentah). */
+.letter-sheet-caption {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.letter-sheet {
+  margin-top: 8px;
+}
+
+.letter-sheet .letter-body p {
+  margin: 0 0 12px;
+  text-align: justify;
+}
+
+.letter-sheet .letter-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Tabel rincian undangan (Hari/Tanggal/Waktu/Tempat) seperti contoh PDF. */
+.letter-details {
+  width: 100%;
+  margin: 0 0 16px;
+  border-collapse: collapse;
+}
+
+.letter-details td {
+  padding: 2px 0;
+  vertical-align: top;
+}
+
+.letter-details td:first-child {
+  width: 130px;
+  font-weight: 700;
+}
+
+.letter-details td:nth-child(2) {
+  width: 16px;
+}
+
+.letter-tembusan {
+  margin-top: 24px;
+}
+
+.letter-tembusan p {
+  margin: 0;
+}
+
+.letter-tembusan ol {
+  margin: 4px 0 0;
+  padding-left: 22px;
+}
+
+/* Teks mentah tetap bisa dibuka untuk diedit — tersembunyi di balik
+   <details> supaya lembar resmi yang tampil pertama. */
+.letter-raw {
+  margin-top: 12px;
+}
+
+.letter-raw summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 4px 0;
+}
+
+.letter-raw textarea {
+  margin-top: 8px;
 }
 
 /* ---------- print: only the chosen document prints, as a clean formal page ----------
@@ -2564,11 +2642,12 @@ body.mode-warga #home-adopsi-card {
   height: 18px;
 }
 
-/* Area konten: abu-abu muda seperti model. */
+/* Area konten: abu-abu muda seperti model (token --bg, bukan warna mentah,
+   supaya mode gelap tidak meninggalkan slab terang di balik page-head). */
 .app-content {
   flex: 1 1 auto;
   min-width: 0;
-  background: #f1f5f9;
+  background: var(--bg);
   display: flex;
   flex-direction: column;
 }
@@ -2608,16 +2687,27 @@ body.mode-warga #home-adopsi-card {
   padding: 20px 24px 0;
 }
 
-.page-head-text h1 {
+/* Paket 29 — kelasnya .page-head-titles (sesuai index.html); aturan lama
+   .page-head-text tidak pernah cocok sehingga h1 memakai default browser
+   (32px) dan subjudul tidak pernah mendapat warna muted. */
+.page-head-titles h1 {
   margin: 0;
   font-size: 1.5rem;
   line-height: 1.25;
 }
 
-.page-head-text p {
+.page-head-titles p {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 0.95rem;
+}
+
+.page-head-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .page-head-actions {
@@ -2636,6 +2726,20 @@ body.mode-warga #home-adopsi-card {
 }
 
 .page-head .btn-ghost:hover {
+  background: var(--blue-soft);
+}
+
+/* Paket 29 — aturan gelap `html[data-theme="dark"] .btn-ghost` (transparan,
+   teks putih, untuk foto hero gelap) spesifikasinya lebih tinggi daripada
+   `.page-head .btn-ghost`, sehingga tombol Bahasa/Mode/⌘K jadi tak terlihat
+   di page-head. Varian eksplisit ini mengembalikannya ke token permukaan. */
+html[data-theme="dark"] .page-head .btn-ghost {
+  color: var(--ink);
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+html[data-theme="dark"] .page-head .btn-ghost:hover {
   background: var(--blue-soft);
 }
 
@@ -3013,6 +3117,19 @@ html[data-theme="dark"] .sidebar .tab.active {
 
   .page-head {
     padding: 16px 16px 0;
+    /* Paket 29 — di HP judul di atas (lebar penuh), pill + lonceng + aksi
+       membungkus rapi di bawahnya; tanpa ini baris aksi terpotong. */
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-head-titles {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .page-head-titles h1 {
+    font-size: 1.25rem;
   }
 
   .app-content main {

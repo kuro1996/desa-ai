@@ -1106,7 +1106,7 @@ async function main() {
     await page.select("#letter-template", "undangan");
     await sleep(200);
     const fieldCount = await page.$$eval("#letter-fields input, #letter-fields textarea", (els) => els.length);
-    check("undangan template renders fields", fieldCount === 7, `${fieldCount} fields`);
+    check("undangan template renders fields", fieldCount === 8, `${fieldCount} fields`);
     await page.type("#letter-field-acara", "Musyawarah Desa");
     await page.type("#letter-field-hari", "Jumat, 20 November 2026");
     await page.type("#letter-field-waktu", "09.00 WIB");
@@ -4054,6 +4054,115 @@ async function main() {
     check(
       "Paket 28 header toggle restores officer mode after Keluar",
       await page.evaluate(() => !document.body.classList.contains("mode-warga")),
+    );
+
+    // 9e. Paket 29 — page-head diperbaiki (judul 24px bukan default 32px,
+    // slab terang hilang di mode gelap, tombol ghost terlihat, HP tidak
+    // terpotong) + hasil draf tampil sebagai lembar surat resmi.
+    await page.click('[data-tab="letters"]');
+    await sleep(300);
+    const p29Head = await page.evaluate(() => ({
+      h1: getComputedStyle(document.getElementById("page-title")).fontSize,
+      sub: getComputedStyle(document.getElementById("page-subtitle")).color,
+    }));
+    check(
+      "Paket 29 page-head title uses the designed size and muted subtitle",
+      p29Head.h1 === "24px" && p29Head.sub === "rgb(90, 107, 94)",
+      `h1=${p29Head.h1} sub=${p29Head.sub}`,
+    );
+    // NB: .btn mentransisikan background 0.15s — baca gaya SETELAH jeda,
+    // kalau tidak yang terbaca masih nilai awal transisi (putih).
+    await page.evaluate(() => {
+      document.documentElement.dataset.theme = "dark";
+    });
+    await sleep(300);
+    const p29Dark = await page.evaluate(() => {
+      const cs = (el) => getComputedStyle(el);
+      const out = {
+        contentBg: cs(document.querySelector(".app-content")).backgroundColor,
+        title: cs(document.getElementById("page-title")).color,
+        langBg: cs(document.getElementById("lang-toggle")).backgroundColor,
+        langColor: cs(document.getElementById("lang-toggle")).color,
+      };
+      document.documentElement.dataset.theme = "light";
+      return out;
+    });
+    check(
+      "Paket 29 dark mode page-head is readable (dark content bg, visible buttons)",
+      p29Dark.contentBg === "rgb(15, 26, 19)" &&
+        p29Dark.title === "rgb(232, 240, 234)" &&
+        p29Dark.langBg === "rgb(24, 36, 32)" &&
+        p29Dark.langColor === "rgb(232, 240, 234)",
+      `bg=${p29Dark.contentBg} title=${p29Dark.title} langBg=${p29Dark.langBg} langColor=${p29Dark.langColor}`,
+    );
+    await page.setViewport({ width: 390, height: 844 });
+    await sleep(400);
+    const p29Mobile = await page.evaluate(() => ({
+      scrollW: document.documentElement.scrollWidth,
+      h1: getComputedStyle(document.getElementById("page-title")).fontSize,
+    }));
+    check(
+      "Paket 29 mobile page-head does not overflow and title shrinks",
+      p29Mobile.scrollW <= 390 && p29Mobile.h1 === "20px",
+      `scrollW=${p29Mobile.scrollW} h1=${p29Mobile.h1}`,
+    );
+    await page.setViewport({ width: 1280, height: 900 });
+    await sleep(400);
+    // Lembar surat: isi formulir undangan, lalu simulasikan teks AI (dengan
+    // kop/meta di awal + bagian Tembusan) — lembar harus merender format
+    // resmi, membuang duplikasi kop, dan memakai kolom Tembusan.
+    await page.select("#letter-template", "undangan");
+    await sleep(200);
+    await page.evaluate(() => {
+      const set = (id, v) => {
+        const el = document.getElementById(id);
+        el.value = v;
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+      };
+      set("letter-field-nomor", "140/20/DS/XI/2026");
+      set("letter-field-tanggal", "27 November 2026");
+      set("letter-field-acara", "Musyawarah Desa");
+      set("letter-field-hari", "Jumat, 20 November 2026");
+      set("letter-field-waktu", "09.00 WIB");
+      set("letter-field-tempat", "Balai Desa");
+      set("letter-field-tujuan", "Ketua RT 01 s.d. RT 05");
+      set("letter-field-tembusan", "Camat Simpangkatis");
+      const out = document.getElementById("letter-output");
+      out.value =
+        "Nomor: 140/20/DS/XI/2026\nPEMERINTAH KABUPATEN BANGKA TENGAH\nSURAT UNDANGAN\n\nDengan hormat, warga diundang musyawarah desa pada hari yang telah ditentukan.\n\nDemikian undangan ini disampaikan, atas perhatian diucapkan terima kasih.\n\nTembusan:\nBupati Bangka Tengah";
+      out.dispatchEvent(new Event("input", { bubbles: true }));
+      document.getElementById("letter-output-wrap").hidden = false;
+    });
+    await sleep(200);
+    const p29Sheet = await page.evaluate(() => ({
+      text: document.getElementById("letter-sheet")?.textContent ?? "",
+      body: document.querySelector("#letter-sheet .letter-body")?.textContent ?? "",
+      caption: document.querySelector(".letter-sheet-caption")?.textContent ?? "",
+      rawInDetails: !!document.querySelector("details.letter-raw #letter-output"),
+    }));
+    check(
+      "Paket 29 letter sheet renders kop + meta + details + signature",
+      /Hasil draf|Draft result/.test(p29Sheet.caption) &&
+        /Pemerintah Kabupaten Bangka Tengah/.test(p29Sheet.text) &&
+        /Kecamatan Simpangkatis/.test(p29Sheet.text) &&
+        /140\/20\/DS\/XI\/2026/.test(p29Sheet.text) &&
+        /Undangan Musyawarah Desa/.test(p29Sheet.text) &&
+        /Ketua RT 01 s\.d\. RT 05/.test(p29Sheet.text) &&
+        /Balai Desa/.test(p29Sheet.text) &&
+        /09\.00 WIB/.test(p29Sheet.text) &&
+        /Simpangkatis, 27 November 2026/.test(p29Sheet.text) &&
+        /Camat Simpangkatis/.test(p29Sheet.text),
+      `caption="${p29Sheet.caption}" sheet="${p29Sheet.text.slice(0, 120)}"`,
+    );
+    check(
+      "Paket 29 letter sheet body drops the AI header and uses the Tembusan field",
+      /Dengan hormat/.test(p29Sheet.body) &&
+        /musyawarah desa/.test(p29Sheet.body) &&
+        !/Nomor: 140/.test(p29Sheet.body) &&
+        /Camat Simpangkatis/.test(p29Sheet.text) &&
+        !/Bupati Bangka Tengah/.test(p29Sheet.text) &&
+        p29Sheet.rawInDetails,
+      `body="${p29Sheet.body.slice(0, 80)}" rawInDetails=${p29Sheet.rawInDetails}`,
     );
 
     // 10. No console errors / failed requests (excluding the VM tunnel noise)
