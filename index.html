@@ -34,8 +34,8 @@
         /* storage unavailable — light theme by default */
       }
     </script>
-    <script type="module" crossorigin src="./assets/index-BF6RU5f_.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-D86rgwfW.css">
+    <script type="module" crossorigin src="./assets/index-BfuBwuXZ.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Ch1FvPtR.css">
   </head>
   <body>
     <div class="app-shell">
@@ -665,11 +665,19 @@
                 <span id="letter-badge" class="badge"></span>
                 <span id="letter-reason" class="reason"></span>
               </div>
-              <textarea
-                id="letter-output"
-                rows="16"
-                aria-label="Generated letter draft — editable"
-              ></textarea>
+              <!-- Paket 29 — hasil tampil sebagai lembar surat resmi (kop +
+                   nomor/tanggal/perihal + isi + tanda tangan), seperti
+                   contoh PDF Bos, bukan lagi sekadar kotak teks mentah. -->
+              <p class="letter-sheet-caption" data-i18n="letterSheetCaption">Hasil draf — format surat resmi</p>
+              <div id="letter-sheet" class="letter-sheet" aria-live="polite"></div>
+              <details class="letter-raw">
+                <summary data-i18n="letterRawToggle">Teks draf — bisa diedit</summary>
+                <textarea
+                  id="letter-output"
+                  rows="16"
+                  aria-label="Generated letter draft — editable"
+                ></textarea>
+              </details>
               <div class="actions">
                 <button id="letter-copy" class="btn" type="button" data-i18n="copy">Copy</button>
                 <button id="letter-download" class="btn" type="button" data-i18n="download">
