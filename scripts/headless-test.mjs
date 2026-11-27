@@ -3432,7 +3432,9 @@ async function main() {
     await sleep(1200);
     // Logo + favicon (Bos's "Heritage of Simpangkatis" emblem)
     const logoOk = await page.$eval("#brand-logo", (el) => el.naturalWidth > 0 && el.complete);
+    const logoKabOk = await page.$eval("#brand-logo-kab", (el) => el.naturalWidth > 0 && el.complete);
     check("header logo loads (naturalWidth > 0)", logoOk);
+    check("Paket 31 kabupaten logo loads in the brand block (naturalWidth > 0)", logoKabOk);
     const faviconHref = await page.$eval(
       'link[rel="icon"]',
       (el) => el.getAttribute("href") ?? "",
@@ -4061,14 +4063,22 @@ async function main() {
     // terpotong) + hasil draf tampil sebagai lembar surat resmi.
     await page.click('[data-tab="letters"]');
     await sleep(300);
+    // Paket 31 — page-head kini banner foto + gradien biru: judul putih,
+    // subjudul putih tembus pandang, latar gradien + foto kantor.
     const p29Head = await page.evaluate(() => ({
       h1: getComputedStyle(document.getElementById("page-title")).fontSize,
+      titleColor: getComputedStyle(document.getElementById("page-title")).color,
       sub: getComputedStyle(document.getElementById("page-subtitle")).color,
+      bannerBg: getComputedStyle(document.querySelector(".page-head")).backgroundImage,
     }));
     check(
-      "Paket 29 page-head title uses the designed size and muted subtitle",
-      p29Head.h1 === "24px" && p29Head.sub === "rgb(75, 85, 99)",
-      `h1=${p29Head.h1} sub=${p29Head.sub}`,
+      "Paket 31 page-head banner: white title, translucent subtitle, gradient + photo background",
+      p29Head.h1 === "24px" &&
+        p29Head.titleColor === "rgb(255, 255, 255)" &&
+        p29Head.sub === "rgba(255, 255, 255, 0.85)" &&
+        p29Head.bannerBg.includes("linear-gradient") &&
+        p29Head.bannerBg.includes("kantor"),
+      `h1=${p29Head.h1} title=${p29Head.titleColor} sub=${p29Head.sub} banner=${p29Head.bannerBg.slice(0, 120)}`,
     );
     // NB: .btn mentransisikan background 0.15s — baca gaya SETELAH jeda,
     // kalau tidak yang terbaca masih nilai awal transisi (putih).
@@ -4088,11 +4098,13 @@ async function main() {
       return out;
     });
     check(
-      "Paket 29 dark mode page-head is readable (light content bg, dark text, visible buttons)",
-      p29Dark.contentBg === "rgb(233, 238, 245)" &&
-        p29Dark.title === "rgb(17, 24, 39)" &&
-        p29Dark.langBg === "rgb(255, 255, 255)" &&
-        p29Dark.langColor === "rgb(17, 24, 39)",
+      // Judul page-head sengaja PUTIH di kedua tema: ia duduk di atas banner
+      // gradien biru gelap — bukan warna ink mode gelap (rgb(242,245,249)).
+      "Paket 31 dark mode is truly dark (black bg, white text, glass buttons on the banner)",
+      p29Dark.contentBg === "rgb(11, 13, 18)" &&
+        p29Dark.title === "rgb(255, 255, 255)" &&
+        p29Dark.langBg === "rgba(255, 255, 255, 0.14)" &&
+        p29Dark.langColor === "rgb(255, 255, 255)",
       `bg=${p29Dark.contentBg} title=${p29Dark.title} langBg=${p29Dark.langBg} langColor=${p29Dark.langColor}`,
     );
     await page.setViewport({ width: 390, height: 844 });
@@ -4164,6 +4176,26 @@ async function main() {
         p29Sheet.rawInDetails,
       `body="${p29Sheet.body.slice(0, 80)}" rawInDetails=${p29Sheet.rawInDetails}`,
     );
+
+    // Paket 31 — lembar surat TETAP kertas putih di mode gelap sungguhan.
+    await page.evaluate(() => {
+      document.documentElement.dataset.theme = "dark";
+    });
+    await sleep(300);
+    const p31Sheet = await page.evaluate(() => {
+      const sheet = document.getElementById("letter-sheet");
+      if (!sheet) return { bg: "missing", color: "missing" };
+      const cs = getComputedStyle(sheet);
+      return { bg: cs.backgroundColor, color: cs.color };
+    });
+    check(
+      "Paket 31 letter sheet stays paper-white in dark mode",
+      p31Sheet.bg === "rgb(255, 255, 255)" && p31Sheet.color === "rgb(0, 0, 0)",
+      `bg=${p31Sheet.bg} color=${p31Sheet.color}`,
+    );
+    await page.evaluate(() => {
+      document.documentElement.dataset.theme = "light";
+    });
 
     // 9f. Paket 30 — draf offline saat AI gagal + Surat Cepat tahan salah
     // ketik + judul Data Kepegawaian / Administrasi Kecamatan Simpangkatis
@@ -4312,10 +4344,12 @@ async function main() {
       return out;
     });
     check(
-      "Paket 30 dark mode on mobile keeps white content + black text",
-      p30DarkMobile.contentBg === "rgb(233, 238, 245)" &&
-        p30DarkMobile.title === "rgb(17, 24, 39)" &&
-        p30DarkMobile.cardBg === "rgb(255, 255, 255)",
+      // Judul page-head sengaja PUTIH di kedua tema (di atas banner gradien
+      // biru gelap) — bukan warna ink mode gelap.
+      "Paket 31 dark mode on mobile is truly dark (black bg, white text, dark cards)",
+      p30DarkMobile.contentBg === "rgb(11, 13, 18)" &&
+        p30DarkMobile.title === "rgb(255, 255, 255)" &&
+        p30DarkMobile.cardBg === "rgb(21, 24, 31)",
       `bg=${p30DarkMobile.contentBg} title=${p30DarkMobile.title} cardBg=${p30DarkMobile.cardBg}`,
     );
     await page.setViewport({ width: 1280, height: 900 });

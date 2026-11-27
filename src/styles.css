@@ -122,18 +122,60 @@ h3 {
   gap: 12px;
 }
 
+/* Paket 31 — blok brand: lockup bertumpuk yang rapi (riset: pola lockup
+   vertikal dashboard admin modern — lambang di atas, wordmark di bawah,
+   hierarki dari ukuran/bobot huruf + spasi, bukan dari kotak-kotak).
+   Dua lambang resmi berdampingan dalam badge putih: badge terang membuat
+   kedua logo terbaca di atas foto hero gelap, di tema terang maupun gelap.
+   Logo Kabupaten asli 76x99 — tampil max 52px tingginya supaya tidak
+   di-upscale. Garis pemisah memisahkan nama produk dari identitas kantor. */
 .brand {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 12px;
 }
 
+.brand-logos {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-badge {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+}
+
+.brand-badge img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.brand-logo-kab {
+  height: 52px;
+  width: auto;
+}
+
 .brand-logo {
-  width: 56px;
-  height: 60px;
+  height: 52px;
+  width: auto;
   object-fit: contain;
   flex: 0 0 auto;
-  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.3));
+}
+
+.brand-text {
+  min-width: 0;
 }
 
 .brand h1 {
@@ -150,7 +192,9 @@ h3 {
 }
 
 .office-line {
-  margin: 2px 0 0;
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid rgb(255 255 255 / 0.25);
   font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -307,9 +351,15 @@ main {
     padding: 16px 14px;
   }
 
+  .brand-badge {
+    width: 54px;
+    height: 54px;
+    border-radius: 12px;
+  }
+
+  .brand-logo-kab,
   .brand-logo {
-    width: 46px;
-    height: 50px;
+    height: 42px;
   }
 
   .hero-stat strong {
@@ -1782,27 +1832,30 @@ html[data-theme="dark"] .theme-icon-sun {
   display: block;
 }
 
-/* Paket 30 — mode gelap: area konten TETAP putih + tulisan hitam (seperti
-   mode terang) supaya tulisan selalu jelas dibaca; sidebar tetap biru. */
+/* Paket 31 — mode gelap SUNGGUHAN: hitam pekat + tulisan putih, semua
+   elemen menyesuaikan lewat token. Pengecualian yang disengaja: lembar
+   surat tetap kertas putih (itu halaman cetak) dan QR box tetap putih
+   (harus bisa dipindai). Sidebar tetap biru — sudah putih di atas biru
+   di kedua tema. Kartu statistik warna-warni + kartu IKM biru tetap
+   hidup; teks putih di atasnya memang dirancang kontras. */
 html[data-theme="dark"] {
-  color-scheme: light;
-  --bg: #e9eef5;
-  --surface: #ffffff;
-  --ink: #111827;
-  --muted: #4b5563;
-  --line: #d7dee8;
-  --green-soft: #e3f2e9;
-  --teal-soft: #e0f2f0;
-  --amber-soft: #fef3c7;
-  --blue-soft: #e8f0fe;
-  --rose-soft: #ffe4e6;
-  --shadow: 0 2px 10px rgb(0 0 0 / 0.06);
-  --shadow-lg: 0 10px 28px rgb(0 0 0 / 0.09);
+  color-scheme: dark;
+  --bg: #0b0d12;
+  --surface: #15181f;
+  --ink: #f2f5f9;
+  --muted: #a8b2c1;
+  --line: #262c38;
+  --green-soft: #12291d;
+  --teal-soft: #0f2624;
+  --amber-soft: #33240a;
+  --blue-soft: #16233d;
+  --rose-soft: #33121c;
+  --shadow: 0 2px 10px rgb(0 0 0 / 0.35);
+  --shadow-lg: 0 10px 28px rgb(0 0 0 / 0.45);
 }
 
-/* Paket 30 — konten selalu terang (token di atas), jadi aturan ini hanya
-   menegaskan permukaan terang + teks hitam di semua komponen. The QR box
-   stays white on purpose — a QR code must scan against a white background. */
+/* Paket 31 — komponen memakai token gelap di atas (bukan permukaan putih
+   seperti Paket 30). */
 html[data-theme="dark"] .tab,
 html[data-theme="dark"] .btn,
 html[data-theme="dark"] input[type="text"],
@@ -1828,7 +1881,7 @@ html[data-theme="dark"] .chip-row button {
 }
 
 html[data-theme="dark"] .btn:hover {
-  background: var(--green-soft);
+  background: #1e242e;
 }
 
 html[data-theme="dark"] .btn-ghost {
@@ -1841,31 +1894,100 @@ html[data-theme="dark"] .btn-ghost:hover {
   background: var(--blue-soft);
 }
 
+/* Paket 31 — page-head adalah banner biru di KEDUA tema (lihat bawah),
+   jadi kontrolnya selalu kaca putih di atas biru — bukan permukaan gelap. */
+html[data-theme="dark"] .page-head .btn-ghost {
+  background: rgb(255 255 255 / 0.14);
+  border-color: rgb(255 255 255 / 0.28);
+  color: #fff;
+}
+
+html[data-theme="dark"] .page-head .btn-ghost:hover {
+  background: rgb(255 255 255 / 0.26);
+}
+
 html[data-theme="dark"] .share-card {
-  background: linear-gradient(180deg, #ffffff, #eef2f7);
+  background: linear-gradient(180deg, #1a1e27, #12151c);
 }
 
 html[data-theme="dark"] .notif-item {
-  background: #fff7ed;
+  background: #2a2113;
 }
 
 html[data-theme="dark"] .notif-item.notif-habis {
-  background: #ffe4e6;
+  background: #33121c;
 }
 
 html[data-theme="dark"] .data-table tbody tr:hover {
-  background: var(--blue-soft);
+  background: #1b212c;
 }
 
 html[data-theme="dark"] .badge-unknown {
-  background: #e5e7eb;
-  color: var(--ink);
+  background: #262c38;
+  color: var(--muted);
 }
 
 html[data-theme="dark"] .ikm-radios label:has(input:checked) {
   background: var(--green-soft);
   border-color: var(--green);
   color: var(--ink);
+}
+
+/* Paket 31 — teks aksen yang di tema terang memakai warna gelap pekat
+   harus diterangkan di tema gelap supaya terbaca di atas hitam. */
+html[data-theme="dark"] .status.error {
+  color: #f87171;
+}
+
+html[data-theme="dark"] .briefing-summary.briefing-urgent {
+  color: #f87171;
+}
+
+html[data-theme="dark"] .stat-blue h3 {
+  color: #60a5fa;
+}
+
+html[data-theme="dark"] .stat-green h3 {
+  color: #4ade80;
+}
+
+html[data-theme="dark"] .stat-emerald h3 {
+  color: #2dd4bf;
+}
+
+html[data-theme="dark"] .stat-amber h3 {
+  color: #fbbf24;
+}
+
+html[data-theme="dark"] .stat-rose h3 {
+  color: #fb7185;
+}
+
+html[data-theme="dark"] .badge-device {
+  color: #4ade80;
+}
+
+html[data-theme="dark"] .badge-cloud {
+  color: #93c5fd;
+}
+
+html[data-theme="dark"] .status-pill.habis {
+  background: #33121c;
+  color: #fca5a5;
+}
+
+html[data-theme="dark"] .banner-warn {
+  border-color: #6b4a12;
+  color: #fcd34d;
+}
+
+html[data-theme="dark"] a {
+  color: #8ab8ff;
+}
+
+html[data-theme="dark"] ::placeholder {
+  color: #7d8898;
+  opacity: 1;
 }
 
 /* ---------- home dashboard: bento grid ---------- */
@@ -2739,7 +2861,16 @@ body.mode-warga #home-adopsi-card {
   border: 0;
 }
 
+/* Paket 31 — page-head jadi banner: foto kantor + gradien biru gelap di
+   atasnya, judul + subjudul putih, kontrol (pill tanggal, lonceng, chip
+   status, tombol) berupa kaca putih tembus pandang. Banner SAMA di kedua
+   tema — selalu biru gelap, jadi kontrolnya selalu terbaca. Foto
+   dibundel lewat src/assets/kantor.jpg (Vite) supaya URL relatif tetap
+   jalan di gh-pages maupun file://. Bila foto gagal dimuat, gradien
+   saja sudah cukup sebagai latar. */
 .page-head {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -2747,24 +2878,37 @@ body.mode-warga #home-adopsi-card {
   flex-wrap: wrap;
   max-width: 1100px;
   width: 100%;
-  margin: 0 auto;
-  padding: 20px 24px 0;
+  margin: 16px auto 0;
+  padding: 22px 24px;
+  border-radius: var(--radius);
+  color: #fff;
+  background:
+    linear-gradient(
+      115deg,
+      rgb(8 28 64 / 0.94) 0%,
+      rgb(29 78 216 / 0.88) 52%,
+      rgb(13 116 128 / 0.9) 100%
+    ),
+    url("./assets/kantor.jpg") center 38% / cover no-repeat;
+  box-shadow: var(--shadow-lg);
 }
 
 /* Paket 29 — kelasnya .page-head-titles (sesuai index.html); aturan lama
    .page-head-text tidak pernah cocok sehingga h1 memakai default browser
-   (32px) dan subjudul tidak pernah mendapat warna muted. */
+   (32px) dan subjudul tidak pernah mendapat warna muted.
+   Paket 31 — di atas banner, judul putih dan subjudul putih tembus pandang. */
 .page-head-titles h1 {
   margin: 0;
   font-size: 1.5rem;
   line-height: 1.25;
   font-weight: 800;
   overflow-wrap: break-word;
+  color: #fff;
 }
 
 .page-head-titles p {
   margin: 4px 0 0;
-  color: var(--muted);
+  color: rgb(255 255 255 / 0.85);
   font-size: 0.95rem;
 }
 
@@ -2783,35 +2927,49 @@ body.mode-warga #home-adopsi-card {
   flex-wrap: wrap;
 }
 
-/* Tombol ghost + chip status dulu duduk di atas foto hero gelap; di
-   page-head terang mereka butuh warna permukaan terang agar terbaca. */
+/* Paket 31 — kontrol di atas banner: kaca putih tembus pandang + teks
+   putih, sama di tema terang dan gelap. */
 .page-head .btn-ghost {
-  color: var(--ink);
-  border-color: var(--line);
-  background: var(--surface);
+  color: #fff;
+  border-color: rgb(255 255 255 / 0.28);
+  background: rgb(255 255 255 / 0.14);
 }
 
 .page-head .btn-ghost:hover {
-  background: var(--blue-soft);
+  background: rgb(255 255 255 / 0.26);
 }
 
-/* Paket 29 — aturan gelap `html[data-theme="dark"] .btn-ghost` (transparan,
-   teks putih, untuk foto hero gelap) spesifikasinya lebih tinggi daripada
-   `.page-head .btn-ghost`, sehingga tombol Bahasa/Mode/⌘K jadi tak terlihat
-   di page-head. Varian eksplisit ini mengembalikannya ke token permukaan. */
-html[data-theme="dark"] .page-head .btn-ghost {
-  color: var(--ink);
-  border-color: var(--line);
-  background: var(--surface);
+.page-head .date-pill {
+  background: rgb(255 255 255 / 0.14);
+  border-color: rgb(255 255 255 / 0.28);
+  color: #fff;
+  box-shadow: none;
 }
 
-html[data-theme="dark"] .page-head .btn-ghost:hover {
-  background: var(--blue-soft);
+.page-head .notif-bell {
+  background: rgb(255 255 255 / 0.14);
+  border-color: rgb(255 255 255 / 0.28);
+  color: #fff;
+  box-shadow: none;
+}
+
+.page-head .notif-bell:hover {
+  background: rgb(255 255 255 / 0.26);
 }
 
 .page-head .chip-muted {
-  background: var(--line);
-  color: var(--ink);
+  background: rgb(255 255 255 / 0.16);
+  color: #fff;
+}
+
+.page-head .chip-ok {
+  background: rgb(22 163 74 / 0.55);
+  color: #dcfce7;
+}
+
+.page-head .chip-warn {
+  background: rgb(217 119 6 / 0.55);
+  color: #fef3c7;
 }
 
 .date-pill {
@@ -3190,9 +3348,10 @@ html[data-theme="dark"] .sidebar .tab.active {
   }
 
   .page-head {
-    padding: 16px 16px 0;
+    padding: 16px;
     /* Paket 29 — di HP judul di atas (lebar penuh), pill + lonceng + aksi
-       membungkus rapi di bawahnya; tanpa ini baris aksi terpotong. */
+       membungkus rapi di bawahnya; tanpa ini baris aksi terpotong.
+       Paket 31 — banner butuh padding bawah penuh (bukan 0). */
     flex-direction: column;
     align-items: stretch;
   }
