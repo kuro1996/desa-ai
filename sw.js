@@ -14,6 +14,9 @@
 //   cached. API responses must never be served stale or stored offline.
 //
 // Bump CACHE_NAME on every release that changes the precached files.
+// (Paket 30: daftar PRECACHE tidak berubah — hanya pola runtime untuk
+// woff2 — jadi nama cache tetap v1; file sw.js yang berubah sudah cukup
+// memicu update worker di browser.)
 const CACHE_NAME = "desaai-v1";
 
 // Content-stable shell files. index.html is deliberately NOT here.
@@ -28,7 +31,7 @@ const PRECACHE = [
 ];
 
 const HASHED_ASSET = /\/assets\/[^/]+\.(?:js|css)$/;
-const STATIC_FILE = /\.(?:png|jpe?g|svg|webmanifest)$/;
+const STATIC_FILE = /\.(?:png|jpe?g|svg|webmanifest|woff2)$/;
 
 self.addEventListener("install", (event) => {
   // Precache one file at a time: a single missing file must not fail the
