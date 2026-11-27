@@ -68,3 +68,11 @@ Permintaan Bos (23:05–23:26 WIB, dari screenshot HP):
 - **TIDAK di-deploy ke gh-pages dan TIDAK di-push branch deploy** — sesuai perintah. Yang di-commit hanya main (`89ce950` + laporan ini).
 - Live site saat ini masih Paket 30 (gh-pages `c788e2b`). Paket 31 baru tampil setelah Bos memberi Gas untuk deploy — jalankan deploy dari fresh single-branch clone seperti Paket 30, lalu verifikasi `ls-remote`.
 - Yang masih terbuka dari paket sebelumnya (tidak disentuh Paket 31): "Export Word" di tabel kepegawaian masih mengunduh CSV, bukan .docx; generasi cloud belum terbukti di HP Bos (draf offline yang jalan); update Devpost (proyek 1305863) bisa diedit sampai 1 Des 2026 05:00 WIB.
+
+## Addendum — Paket 31.1 (27 Nov 23:50 WIB, sebelum deploy)
+Bos mengirim logo Kabupaten resolusi tinggi (3095x4022 PNG). Logo lama 76x99 jpg
+diganti `public/logo-bangka-tengah.png` (diperkecil ke 512px, ~195 KB), referensi
+di `index.html` diperbarui, badge diperbesar (desktop 72px/logo 60px, mobile
+60px/logo 48px) supaya kedua lambang terbaca seimbang. Verifikasi ulang:
+build lolos, headless 331/331, PWA 16/16, check:secrets bersih; screenshot
+viewport terang+gelap diperbarui (show-20261127/, 23:54 WIB).
