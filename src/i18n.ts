@@ -726,6 +726,32 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     en: "The pack contains your letterhead, the 7 letter templates, and this checklist — no office data is included.",
     id: "Paket berisi kop surat Anda, 7 template surat, dan checklist ini — tanpa data kantor.",
   },
+  // Paket 28 — redesign model SIAP AKAD: sidebar biru, kartu statistik
+  // cerah, grafik per desa/jabatan, banner form biru, ekspor tabel.
+  sidebarUserRole: { en: "Subdistrict Admin", id: "Admin Kecamatan" },
+  sidebarUserPlace: { en: "Simpangkatis", id: "Simpangkatis" },
+  sidebarLogout: { en: "Exit", id: "Keluar" },
+  qsPerangkat: { en: "Village officers", id: "Perangkat desa" },
+  homeDesaChartTitle: { en: "Officers per village", id: "Distribusi Perangkat per Desa" },
+  homeDesaChartHint: {
+    en: "Village officers in this browser, grouped by village.",
+    id: "Perangkat desa di browser ini, dikelompokkan per desa.",
+  },
+  homeDesaChartEmpty: { en: "No officer data yet.", id: "Belum ada data perangkat." },
+  homeJabatanTitle: { en: "Composition by position", id: "Komposisi Jabatan" },
+  homeJabatanHint: {
+    en: "Village officers in this browser, grouped by position.",
+    id: "Perangkat desa di browser ini, dikelompokkan per jabatan.",
+  },
+  homeJabatanEmpty: { en: "No officer data yet.", id: "Belum ada data perangkat." },
+  notifBell: { en: "Notifications — open Personnel", id: "Notifikasi — buka Kepegawaian" },
+  kegExportPdf: { en: "Export PDF", id: "Export PDF" },
+  kegExportWord: { en: "Export Word", id: "Export Word" },
+  kegPrinted: {
+    en: "Personnel table sent to print — choose “Save as PDF” in the print dialog.",
+    id: "Tabel perangkat dikirim ke printer — pilih “Save as PDF” di dialog cetak.",
+  },
+  lettersFormTitle: { en: "Fill in the letter form", id: "Isi formulir surat" },
 };
 
 export function t(key: string, lang: Lang): string {

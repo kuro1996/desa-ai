@@ -18,6 +18,8 @@
   --amber: #b45309;
   --amber-soft: #fef3c7;
   --blue: #175cd3;
+  --blue-strong: #1d4ed8;
+  --blue-dark: #1e40af;
   --blue-soft: #e8f0fe;
   --rose: #be123c;
   --rose-soft: #ffe4e6;
@@ -283,11 +285,11 @@ main {
     height: 50px;
   }
 
-  .quick-stat strong {
+  .hero-stat strong {
     font-size: 1.3rem;
   }
 
-  .quick-stat span {
+  .hero-stat-text span {
     font-size: 0.72rem;
   }
 }
@@ -297,7 +299,7 @@ main {
 }
 
 .tab.active {
-  background: linear-gradient(135deg, var(--green) 0%, var(--teal) 100%);
+  background: linear-gradient(135deg, #2563eb 0%, var(--blue-strong) 100%);
   border-color: transparent;
   color: #fff;
 }
@@ -378,9 +380,9 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid var(--green);
+  outline: 2px solid var(--blue-strong);
   outline-offset: 1px;
-  border-color: var(--green);
+  border-color: var(--blue-strong);
 }
 
 .actions {
@@ -416,14 +418,14 @@ textarea:focus {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--green) 0%, var(--teal) 100%);
+  background: linear-gradient(135deg, #2563eb 0%, var(--blue-strong) 100%);
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 4px 12px rgb(14 122 77 / 0.3);
+  box-shadow: 0 4px 12px rgb(29 78 216 / 0.3);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--green-dark) 0%, #0c5e58 100%);
+  background: linear-gradient(135deg, var(--blue-strong) 0%, var(--blue-dark) 100%);
 }
 
 .btn-ghost {
@@ -441,14 +443,14 @@ textarea:focus {
   padding: 4px 0;
   border: none;
   background: none;
-  color: var(--green);
+  color: var(--blue-strong);
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 .btn-link:hover {
-  color: var(--green-dark);
+  color: var(--blue-dark);
   background: none;
   transform: none;
 }
@@ -851,7 +853,7 @@ footer {
 }
 
 .data-table thead th {
-  background: var(--green-dark);
+  background: var(--blue-strong);
   color: #fff;
   font-size: 0.82rem;
 }
@@ -1526,6 +1528,8 @@ footer {
   body[data-print-target="report"] #report-print-area *,
   body[data-print-target="archive-letter"] #archive-print-area,
   body[data-print-target="archive-letter"] #archive-print-area *,
+  body[data-print-target="keg-table"] #keg-print-area,
+  body[data-print-target="keg-table"] #keg-print-area *,
   body:not([data-print-target]) #letter-print-area,
   body:not([data-print-target]) #letter-print-area * {
     visibility: visible;
@@ -1533,7 +1537,8 @@ footer {
 
   #letter-print-area,
   #report-print-area,
-  #archive-print-area {
+  #archive-print-area,
+  #keg-print-area {
     position: absolute;
     inset: 0;
     display: block !important;
@@ -1543,7 +1548,8 @@ footer {
   }
 
   #letter-print-area .print-head-office,
-  #report-print-area .print-head-office {
+  #report-print-area .print-head-office,
+  #keg-print-area .print-head-office {
     margin: 0 0 2px;
     font-size: 11pt;
     font-weight: 700;
@@ -1552,7 +1558,8 @@ footer {
   }
 
   #letter-print-area .print-head-title,
-  #report-print-area .print-head-title {
+  #report-print-area .print-head-title,
+  #keg-print-area .print-head-title {
     margin: 0;
     font-size: 12pt;
     font-weight: 700;
@@ -2005,8 +2012,8 @@ html[data-theme="dark"] .ikm-radios label:has(input:checked) {
 }
 
 .search-result:hover {
-  border-color: var(--green);
-  background: var(--green-soft);
+  border-color: var(--blue-strong);
+  background: var(--blue-soft);
 }
 
 .search-result span {
@@ -2144,7 +2151,7 @@ html[data-theme="dark"] .ikm-radios label:has(input:checked) {
   cursor: pointer;
 }
 .palette-item.selected {
-  background: var(--green-dark);
+  background: var(--blue-strong);
   color: #fff;
 }
 .palette-empty {
@@ -2396,5 +2403,623 @@ body.mode-warga #home-adopsi-card {
   .anin-face {
     width: 72px;
     height: 72px;
+  }
+}
+
+/* ---------- Paket 28 — redesign model SIAP AKAD ---------- */
+/* Sidebar biru royal + area konten abu-abu muda + kartu statistik cerah
+   + kartu form/tabel ber-banner biru. Semua data tetap live; tidak ada
+   CDN, tidak ada font eksternal, tidak ada library chart (SVG murni). */
+
+/* App shell: sidebar tetap di kiri, konten mengisi sisanya. */
+.app-shell {
+  display: flex;
+  align-items: stretch;
+  min-height: 100vh;
+}
+
+/* Sidebar royal: gradasi biru tua; tetap biru di tema gelap juga. */
+.sidebar {
+  flex: 0 0 264px;
+  width: 264px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #1e3a8a 0%, #1d4ed8 55%, #1e40af 100%);
+  color: #fff;
+  overflow-y: auto;
+  z-index: 30;
+}
+
+/* Hero foto kantor dipakai sebagai blok merek di atas sidebar (penyimpangan
+   dari model: model memakai blok logo biru polos; hero dipertahankan agar
+   tes Paket 4 tetap lolos tanpa perubahan). */
+.sidebar .hero {
+  flex: 0 0 auto;
+  border-bottom: 1px solid rgb(255 255 255 / 0.15);
+  box-shadow: none;
+}
+
+/* Menu vertikal: sembilan tab yang sama, data-tab dan id tidak berubah. */
+.sidebar .tabs {
+  position: static;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0;
+  padding: 16px 12px;
+  background: transparent;
+  overflow: visible;
+  gap: 4px;
+}
+
+.sidebar .tab {
+  justify-content: flex-start;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: rgb(255 255 255 / 0.85);
+  box-shadow: none;
+  padding: 10px 12px;
+}
+
+.sidebar .tab:hover {
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+  transform: none;
+}
+
+/* Item aktif: pill biru lebih terang + garis putih di kiri. */
+.sidebar .tab.active {
+  background: rgb(255 255 255 / 0.18);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: inset 4px 0 0 #fff;
+}
+
+.sidebar .tab-icon {
+  color: rgb(255 255 255 / 0.85);
+}
+
+.sidebar .tab.active .tab-icon {
+  color: #fff;
+}
+
+/* Kaki sidebar: chip pengguna + tombol Keluar (mode Warga). */
+.sidebar-foot {
+  padding: 12px;
+  border-top: 1px solid rgb(255 255 255 / 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.08);
+}
+
+.sidebar-avatar {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.2);
+  color: #fff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-user-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-user-role {
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-place {
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
+
+.sidebar-logout {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 10px;
+  background: rgb(0 0 0 / 0.25);
+  color: #fff;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sidebar-logout:hover {
+  background: rgb(0 0 0 / 0.4);
+}
+
+.sidebar-logout svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Area konten: abu-abu muda seperti model. */
+.app-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: #f1f5f9;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-content main {
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 24px 48px;
+}
+
+/* Page head: judul + subjudul kiri, pill tanggal + lonceng kanan.
+   Panel h2 + hint pertama disembunyikan secara visual (tetap terbaca
+   screen reader dan textContent untuk updatePageHead). */
+.panel > h2,
+.panel > p.hint:first-of-type {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px 24px 0;
+}
+
+.page-head-text h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.25;
+}
+
+.page-head-text p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.page-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Tombol ghost + chip status dulu duduk di atas foto hero gelap; di
+   page-head terang mereka butuh warna permukaan terang agar terbaca. */
+.page-head .btn-ghost {
+  color: var(--ink);
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+.page-head .btn-ghost:hover {
+  background: var(--blue-soft);
+}
+
+.page-head .chip-muted {
+  background: var(--line);
+  color: var(--ink);
+}
+
+.date-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+.date-pill svg {
+  width: 18px;
+  height: 18px;
+}
+
+.notif-bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.notif-bell:hover {
+  background: var(--blue-soft);
+}
+
+.notif-bell svg {
+  width: 20px;
+  height: 20px;
+}
+
+.notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  border: 2px solid var(--surface);
+}
+
+/* Kartu statistik cerah (model): angka besar putih + chip ikon.
+   Empat kartu, data live yang sama dengan quick-stats lama + perangkat. */
+.quick-stats {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.hero-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  color: #fff;
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+
+.hero-stat-blue {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.hero-stat-green {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+}
+
+.hero-stat-orange {
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+}
+
+.hero-stat-rose {
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+}
+
+.hero-stat-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hero-stat-text span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  opacity: 0.92;
+  overflow-wrap: break-word;
+}
+
+.hero-stat strong {
+  font-size: 1.9rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-stat-icon {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-stat-icon svg {
+  width: 26px;
+  height: 26px;
+  color: #fff;
+}
+
+/* Kartu grafik Home: tiga kartu grafik berdampingan (pengaduan, per desa,
+   jabatan). Revisi dari rencana awal span 3: kartu pengaduan lama tidak
+   punya span (default 1), jadi ketiganya span 2 agar satu baris rapi. */
+.bento-chart,
+.bento-desa-chart,
+.bento-jabatan-chart {
+  grid-column: span 2;
+}
+
+/* Donut komposisi jabatan (SVG murni, legenda swatch + jumlah). */
+.donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.donut-chart {
+  flex: 0 0 auto;
+  width: 140px;
+  height: 140px;
+}
+
+.donut-chart svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.donut-total {
+  font-size: 1.5rem;
+  font-weight: 700;
+  fill: var(--ink);
+}
+
+.donut-total-label {
+  font-size: 0.7rem;
+  fill: var(--muted);
+}
+
+.donut-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 160px;
+  display: grid;
+  gap: 6px;
+}
+
+.donut-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+}
+
+.donut-swatch {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.donut-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.donut-legend strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Kartu form: banner header biru solid + isi putih. */
+.form-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.form-card-head {
+  background: var(--blue-strong);
+  padding: 14px 18px;
+}
+
+.form-card-head h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.05rem;
+}
+
+.form-card-body {
+  padding: 18px;
+}
+
+/* Kartu tabel kepegawaian: header + tombol ekspor merah/biru. */
+.table-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.table-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.table-card-head .subhead {
+  margin: 0;
+}
+
+.table-card-body {
+  padding: 18px;
+}
+
+.table-export-actions {
+  margin-top: 0;
+}
+
+.btn-export-pdf {
+  background: #dc2626;
+  border-color: transparent;
+  color: #fff;
+}
+
+.btn-export-pdf:hover {
+  background: #b91c1c;
+}
+
+.btn-export-word {
+  background: var(--blue-strong);
+  border-color: transparent;
+  color: #fff;
+}
+
+.btn-export-word:hover {
+  background: var(--blue-dark);
+}
+
+/* Cetak tabel perangkat: tanggal + tabel bergaris (target "keg-table"). */
+@media print {
+  #keg-print-area .print-head-date {
+    margin: 0 0 10px;
+    font-size: 10pt;
+    color: #444;
+  }
+
+  #keg-print-area table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+  }
+
+  #keg-print-area th,
+  #keg-print-area td {
+    border: 1px solid #999;
+    padding: 3px 5px;
+    text-align: left;
+  }
+
+  #keg-print-area th {
+    background: #e8e8e8;
+  }
+}
+
+/* Tema gelap: sidebar tetap biru royal. Aturan gelap lama
+   (html[data-theme="dark"] .tab, spesifisitas 0,2,1) akan mengalahkan
+   .sidebar .tab (0,2,0) tanpa override tiga kelas ini. */
+html[data-theme="dark"] .sidebar .tab {
+  background: transparent;
+  color: rgb(255 255 255 / 0.85);
+  border-color: transparent;
+}
+
+html[data-theme="dark"] .sidebar .tab:hover {
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+}
+
+html[data-theme="dark"] .sidebar .tab.active {
+  background: rgb(255 255 255 / 0.18);
+  color: #fff;
+  box-shadow: inset 4px 0 0 #fff;
+}
+
+/* Responsif: di bawah 900px sidebar jadi header atas + nav horizontal. */
+@media (max-width: 900px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: static;
+    flex: 0 0 auto;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar .tabs {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 10px 12px;
+  }
+
+  .sidebar .tab {
+    width: auto;
+    white-space: nowrap;
+  }
+
+  .sidebar-foot {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .sidebar-user {
+    flex: 1 1 auto;
+  }
+
+  .sidebar-logout {
+    width: auto;
+    padding: 0 18px;
+  }
+
+  .page-head {
+    padding: 16px 16px 0;
+  }
+
+  .app-content main {
+    padding: 12px 16px 40px;
+  }
+
+  .quick-stats {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

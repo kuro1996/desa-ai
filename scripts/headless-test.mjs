@@ -178,8 +178,8 @@ async function main() {
     }));
     const monthName = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
     check(
-      "bento shows 16 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
-      bento.cards === 16 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
+      "bento shows 18 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
+      bento.cards === 18 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
         bento.lettersToday === "0" && bento.aduanBaru === "3" &&
         bento.monthIkm === "12" && bento.monthAduan === "6" && bento.monthLetters === "0" &&
         bento.monthName === monthName,
@@ -3515,23 +3515,26 @@ async function main() {
     const dlStatus = await page.$eval("#ikm-share-status", (el) => el.textContent);
     check("QR download button reports the download", /diunduh|downloaded/i.test(dlStatus), dlStatus);
     // Quick-stats strip reflects live data (1 letter draft seeded,
-    // IKM all-1s score 25.00, 2 complaints resolved)
+    // IKM all-1s score 25.00, 2 complaints resolved, officers = personnel total)
     const qs = await page.evaluate(() => ({
       letters: document.getElementById("qs-letters")?.textContent ?? "",
       ikm: document.getElementById("qs-ikm")?.textContent ?? "",
       aduan: document.getElementById("qs-aduan")?.textContent ?? "",
+      perangkat: document.getElementById("qs-perangkat")?.textContent ?? "",
+      kegTotal: document.getElementById("keg-stat-total")?.textContent ?? "",
       dashIkm: document.getElementById("ikm-score")?.textContent ?? "",
-      items: document.querySelectorAll("#quick-stats .quick-stat").length,
+      items: document.querySelectorAll("#quick-stats .hero-stat").length,
     }));
     check(
-      "quick-stats strip shows 3 live stats",
-      qs.items === 3,
+      "quick-stats strip shows 4 live hero stats",
+      qs.items === 4,
       `items=${qs.items}`,
     );
     check(
-      "quick-stats match live data (1 letter, IKM = dashboard, 2 resolved)",
-      qs.letters === "1" && qs.ikm === qs.dashIkm && qs.aduan === "2",
-      `letters=${qs.letters} ikm=${qs.ikm} dash=${qs.dashIkm} aduan=${qs.aduan}`,
+      "quick-stats match live data (1 letter, IKM = dashboard, 2 resolved, officers = personnel total)",
+      qs.letters === "1" && qs.ikm === qs.dashIkm && qs.aduan === "2" &&
+        qs.perangkat === qs.kegTotal && qs.perangkat !== "",
+      `letters=${qs.letters} ikm=${qs.ikm} dash=${qs.dashIkm} aduan=${qs.aduan} perangkat=${qs.perangkat} kegTotal=${qs.kegTotal}`,
     );
 
     // 9b. Paket 7 — command palette, citizen mode, complaints chart
@@ -3890,6 +3893,168 @@ async function main() {
     );
     await page.click("#lang-toggle");
     await sleep(300);
+
+    // 9d. Paket 28 — redesign model SIAP AKAD: sidebar biru, page head,
+    // kartu statistik cerah, grafik per desa/jabatan, form/tabel biru.
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    const p28Shell = await page.evaluate(() => ({
+      sidebar: !!document.querySelector(".sidebar"),
+      tabs: document.querySelectorAll(".sidebar .tab").length,
+      datePill: document.getElementById("date-pill-text")?.textContent ?? "",
+      title: document.getElementById("page-title")?.textContent ?? "",
+      homeH2: document.querySelector("#panel-home h2")?.textContent ?? "",
+    }));
+    const todayId = new Date().toLocaleDateString("id-ID", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+    check(
+      "Paket 28 sidebar exists with all 9 tabs",
+      p28Shell.sidebar && p28Shell.tabs === 9,
+      `sidebar=${p28Shell.sidebar} tabs=${p28Shell.tabs}`,
+    );
+    check(
+      "Paket 28 date pill shows today's Indonesian date",
+      p28Shell.datePill === todayId,
+      `pill="${p28Shell.datePill}" today="${todayId}"`,
+    );
+    check(
+      "Paket 28 page head mirrors the home panel title",
+      p28Shell.title === p28Shell.homeH2 && p28Shell.title !== "",
+      `title="${p28Shell.title}" h2="${p28Shell.homeH2}"`,
+    );
+    const notif = await page.evaluate(() => ({
+      count: document.getElementById("keg-notif-count")?.textContent ?? "",
+      badgeHidden: document.getElementById("notif-badge")?.hidden ?? true,
+      badgeText: document.getElementById("notif-badge")?.textContent ?? "",
+    }));
+    check(
+      "Paket 28 notification bell badge matches personnel count (hidden when 0)",
+      notif.count === "0"
+        ? notif.badgeHidden
+        : !notif.badgeHidden && notif.badgeText === notif.count,
+      `count=${notif.count} badgeHidden=${notif.badgeHidden} badgeText=${notif.badgeText}`,
+    );
+    // Page head follows the active tab.
+    await page.click('[data-tab="letters"]');
+    await sleep(300);
+    const headLetters = await page.evaluate(() => ({
+      title: document.getElementById("page-title")?.textContent ?? "",
+      h2: document.querySelector("#panel-letters h2")?.textContent ?? "",
+    }));
+    check(
+      "Paket 28 page head follows the letters tab",
+      headLetters.title === headLetters.h2 && headLetters.title !== "",
+      `title="${headLetters.title}" h2="${headLetters.h2}"`,
+    );
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    // Home charts sum to the live personnel total.
+    const p28Charts = await page.evaluate(() => ({
+      desaSum: [...document.querySelectorAll("#home-desa-chart .chart-value")]
+        .reduce((s, el) => s + Number(el.dataset.count ?? "0"), 0),
+      desaRows: document.querySelectorAll("#home-desa-chart .chart-row").length,
+      jabSum: [...document.querySelectorAll("#home-jabatan-legend li")]
+        .reduce((s, el) => s + Number(el.dataset.count ?? "0"), 0),
+      jabTotal: document.querySelector("#home-jabatan-donut .donut-total")?.textContent ?? "",
+      perangkat: document.getElementById("qs-perangkat")?.textContent ?? "",
+    }));
+    // 11 bars: 10 desa + 1 baris Kecamatan (staf kecamatan adalah
+    // personel juga; tanpa baris itu jumlah bar hanya 15 dari total 23).
+    check(
+      "Paket 28 officers-per-village bars sum to the personnel total",
+      p28Charts.desaRows === 11 && String(p28Charts.desaSum) === p28Charts.perangkat,
+      `rows=${p28Charts.desaRows} sum=${p28Charts.desaSum} total=${p28Charts.perangkat}`,
+    );
+    check(
+      "Paket 28 position donut legend + center total match the personnel total",
+      String(p28Charts.jabSum) === p28Charts.perangkat &&
+        p28Charts.jabTotal === p28Charts.perangkat,
+      `legendSum=${p28Charts.jabSum} center=${p28Charts.jabTotal} total=${p28Charts.perangkat}`,
+    );
+    // Form-card blue headers (6 forms) + blue table header.
+    const p28Cards = await page.evaluate(() => ({
+      heads: document.querySelectorAll(".form-card-head").length,
+      headBg: document.querySelector(".form-card-head")
+        ? getComputedStyle(document.querySelector(".form-card-head")).backgroundColor
+        : "",
+      thBg: document.querySelector("#keg-table thead th")
+        ? getComputedStyle(document.querySelector("#keg-table thead th")).backgroundColor
+        : "",
+    }));
+    check(
+      "Paket 28 six forms have blue header banners",
+      p28Cards.heads === 6 && p28Cards.headBg === "rgb(29, 78, 216)",
+      `heads=${p28Cards.heads} bg=${p28Cards.headBg}`,
+    );
+    check(
+      "Paket 28 personnel table header is blue",
+      p28Cards.thBg === "rgb(29, 78, 216)",
+      `thBg=${p28Cards.thBg}`,
+    );
+    // Export Word reuses the CSV download; Export PDF uses the print route.
+    await page.click('[data-tab="kepegawaian"]');
+    await sleep(400);
+    await installCsvCapture();
+    await page.click("#keg-export-word");
+    await sleep(300);
+    const p28Word = await page.evaluate(async () => {
+      const blobs = window.__csvBlobs ?? [];
+      const last = blobs[blobs.length - 1];
+      return {
+        csv: last ? await last.text() : "",
+        rows: document.querySelectorAll("#keg-table tbody tr").length,
+      };
+    });
+    const p28WordLines = p28Word.csv.trim().split("\n");
+    check(
+      "Paket 28 Export Word downloads the personnel CSV (header + shown rows)",
+      p28WordLines[0]?.startsWith("No,Nama,Unit,Jabatan,Desa,") &&
+        p28WordLines.length === p28Word.rows + 1,
+      `header=${p28WordLines[0] ?? ""} lines=${p28WordLines.length} rows=${p28Word.rows}`,
+    );
+    await page.evaluate(() => {
+      window.__printed = false;
+      window.print = () => {
+        window.__printed = true;
+      };
+    });
+    await page.click("#keg-export-pdf");
+    await sleep(300);
+    const p28Pdf = await page.evaluate(() => ({
+      printed: window.__printed === true,
+      rows: document.querySelectorAll("#keg-print-area table tbody tr").length,
+      tableRows: document.querySelectorAll("#keg-table tbody tr").length,
+      status: document.getElementById("keg-export-status")?.textContent ?? "",
+      target: document.body.dataset.printTarget ?? "",
+    }));
+    check(
+      "Paket 28 Export PDF fills the print area with the shown rows and calls print",
+      p28Pdf.printed && p28Pdf.rows === p28Pdf.tableRows && p28Pdf.rows > 0 &&
+        p28Pdf.target === "keg-table" && /Save as PDF|printer/i.test(p28Pdf.status),
+      `printed=${p28Pdf.printed} printRows=${p28Pdf.rows} tableRows=${p28Pdf.tableRows} target=${p28Pdf.target} status=${p28Pdf.status}`,
+    );
+    // Sidebar "Keluar" switches to Warga mode; the header toggle restores it.
+    await page.click("#sidebar-logout");
+    await sleep(300);
+    const p28Warga = await page.evaluate(() => ({
+      warga: document.body.classList.contains("mode-warga"),
+      card: !document.getElementById("home-warga-card")?.hidden,
+    }));
+    check(
+      "Paket 28 sidebar Keluar switches to Warga mode",
+      p28Warga.warga && p28Warga.card,
+      `mode-warga=${p28Warga.warga} wargaCard=${p28Warga.card}`,
+    );
+    await page.click("#mode-toggle");
+    await sleep(300);
+    check(
+      "Paket 28 header toggle restores officer mode after Keluar",
+      await page.evaluate(() => !document.body.classList.contains("mode-warga")),
+    );
 
     // 10. No console errors / failed requests (excluding the VM tunnel noise)
     check("0 console errors (excluding VM tunnel noise)", errors.length === 0, errors.join(" | ").slice(0, 500));

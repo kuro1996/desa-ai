@@ -141,6 +141,8 @@ function applyLang(): void {
     buildArchivePrintFields();
     renderArchiveSheet();
   }
+  // Paket 28 — the page head mirrors the active panel's title + subtitle.
+  updatePageHead(currentTab);
 }
 
 // ---------- theme (dark mode) ----------
@@ -196,6 +198,7 @@ function surveyLink(): string {
 }
 
 function activateTab(tab: string, updateHash = true): void {
+  currentTab = tab;
   document.querySelectorAll(".tab").forEach((b) => {
     const isActive = (b as HTMLButtonElement).dataset.tab === tab;
     b.classList.toggle("active", isActive);
@@ -217,6 +220,8 @@ function activateTab(tab: string, updateHash = true): void {
   if (updateHash) {
     history.replaceState(null, "", `#${HASH_BY_TAB[tab] ?? tab}`);
   }
+  // Paket 28 — the page head mirrors the newly active panel.
+  updatePageHead(tab);
 }
 
 function tabFromHash(): string | null {
@@ -389,6 +394,9 @@ const MODE_KEY = "desaai-mode-v1";
 type AppMode = "petugas" | "warga";
 let appMode: AppMode = "petugas";
 
+// Paket 28 — the tab whose title + subtitle the page head shows.
+let currentTab = "home";
+
 // Officer-only tabs — hidden from the nav while in citizen mode.
 const OFFICER_TABS = ["letters", "summarize", "drafts", "kepegawaian", "agenda"];
 
@@ -428,6 +436,11 @@ function initMode(): void {
   $("mode-toggle").addEventListener("click", () =>
     applyMode(appMode === "warga" ? "petugas" : "warga"),
   );
+  // Paket 28 — the sidebar "Keluar" button is the same mode toggle:
+  // the app has no login, so exiting means switching to Warga mode.
+  $("sidebar-logout").addEventListener("click", () => {
+    if (appMode !== "warga") applyMode("warga");
+  });
   $("warga-go-ikm").addEventListener("click", () => activateTab("ikm"));
   $("warga-go-aduan").addEventListener("click", () => activateTab("pengaduan"));
   $("warga-go-qa").addEventListener("click", () => activateTab("qa"));
@@ -466,6 +479,145 @@ function renderAduanChart(): void {
   });
 }
 
+// ---------- Paket 28 — page head, date pill, notification bell ----------
+
+// The page head (model: title + subtitle top-left) mirrors the active
+// panel's own h2 + first hint, so the title text stays defined in exactly
+// one place per tab. The panel headings are visually hidden by CSS, but
+// their textContent is still readable here.
+function updatePageHead(tab: string): void {
+  const panel = $(`panel-${tab}`);
+  if (!panel) return;
+  const h2 = panel.querySelector("h2");
+  const hint = panel.querySelector("p.hint");
+  if (h2) $("page-title").textContent = h2.textContent ?? "";
+  if (hint) $("page-subtitle").textContent = hint.textContent?.trim() ?? "";
+}
+
+// Live Indonesian date, e.g. "Jumat, 27 November 2026".
+function updateDatePill(): void {
+  $("date-pill-text").textContent = new Date().toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+// The bell shows the same notification count as the personnel tab;
+// it hides when there is nothing to act on.
+function updateNotifBell(): void {
+  const count = computeNotifications(loadPerangkat()).length;
+  const badge = $("notif-badge");
+  badge.textContent = String(count);
+  badge.hidden = count === 0;
+}
+
+// ---------- Paket 28 — Home charts (model: bar + donut, live data) ----------
+
+// Officers per village, reusing the app's own horizontal-bar pattern from
+// renderAduanChart (.chart-row / .chart-track / .chart-fill).
+function renderDesaChart(): void {
+  const wrap = $("home-desa-chart");
+  const items = loadPerangkat();
+  $("home-desa-chart-empty").hidden = items.length > 0;
+  wrap.innerHTML = "";
+  if (items.length === 0) return;
+  // 10 desa + 1 baris Kecamatan: staf kecamatan (unit "kecamatan",
+  // desa "Kecamatan Simpangkatis") adalah personel juga — tanpa baris
+  // ini jumlah bar hanya 15 padahal total perangkat 23.
+  const entries = [
+    ...DESA_LIST.map((d) => ({
+      label: d,
+      count: items.filter((p) => p.desa === d).length,
+    })),
+    {
+      label: KECAMATAN_LABEL,
+      count: items.filter((p) => p.unit === "kecamatan").length,
+    },
+  ];
+  const max = Math.max(1, ...entries.map((e) => e.count));
+  entries.forEach(({ label, count }) => {
+    const row = document.createElement("div");
+    row.className = "chart-row";
+    const labelEl = document.createElement("span");
+    labelEl.className = "chart-label";
+    labelEl.textContent = label;
+    const track = document.createElement("div");
+    track.className = "chart-track";
+    const fill = document.createElement("div");
+    fill.className = "chart-fill";
+    fill.style.width = `${Math.round((count / max) * 100)}%`;
+    track.appendChild(fill);
+    const value = document.createElement("span");
+    value.className = "chart-value";
+    value.dataset.count = String(count);
+    value.textContent = String(count);
+    row.appendChild(labelEl);
+    row.appendChild(track);
+    row.appendChild(value);
+    wrap.appendChild(row);
+  });
+}
+
+// Officers by position, hand-rolled SVG (no chart library, offline):
+// one circle segment per position, rotated -90° so the first segment
+// starts at the top; the total sits in the middle.
+const CHART_COLORS = [
+  "#2563eb", "#16a34a", "#ea580c", "#e11d48", "#7c3aed",
+  "#0891b2", "#ca8a04", "#db2777", "#4d7c0f", "#0f766e", "#b91c1c",
+];
+
+// Jabatan desa + jabatan kecamatan: staf kecamatan (Camat, Sekcam, …)
+// adalah personel juga — tanpa mereka legenda donut hanya 15 padahal
+// total perangkat 23.
+const JABATAN_ALL = [...JABATAN_LIST, ...JABATAN_KECAMATAN];
+
+function renderJabatanChart(): void {
+  const donut = $("home-jabatan-donut");
+  const legend = $("home-jabatan-legend");
+  const items = loadPerangkat();
+  $("home-jabatan-chart-empty").hidden = items.length > 0;
+  donut.innerHTML = "";
+  legend.innerHTML = "";
+  if (items.length === 0) return;
+  const counts = JABATAN_ALL.map((j) => items.filter((p) => p.jabatan === j).length);
+  const total = items.length;
+  let offset = 0;
+  const segments: string[] = [];
+  JABATAN_ALL.forEach((j, i) => {
+    if (counts[i] === 0) return;
+    const pct = (counts[i] / total) * 100;
+    const color = CHART_COLORS[i % CHART_COLORS.length];
+    segments.push(
+      `<circle cx="60" cy="60" r="48" fill="none" stroke="${color}" stroke-width="22" ` +
+        `stroke-dasharray="${pct.toFixed(2)} 100" stroke-dashoffset="${(-offset).toFixed(2)}" ` +
+        `pathLength="100" transform="rotate(-90 60 60)" />`,
+    );
+    offset += pct;
+    const li = document.createElement("li");
+    li.dataset.count = String(counts[i]);
+    const swatch = document.createElement("span");
+    swatch.className = "donut-swatch";
+    swatch.style.backgroundColor = color;
+    const label = document.createElement("span");
+    label.className = "donut-label";
+    label.textContent = j;
+    const value = document.createElement("strong");
+    value.textContent = String(counts[i]);
+    li.appendChild(swatch);
+    li.appendChild(label);
+    li.appendChild(value);
+    legend.appendChild(li);
+  });
+  donut.innerHTML =
+    `<svg viewBox="0 0 120 120" role="img" aria-label="${t("homeJabatanTitle", lang)}">` +
+    segments.join("") +
+    `<text x="60" y="57" text-anchor="middle" class="donut-total">${total}</text>` +
+    `<text x="60" y="75" text-anchor="middle" class="donut-total-label">${t("kegStatTotal", lang)}</text>` +
+    `</svg>`;
+}
+
 // ---------- quick-stats strip (live counts from existing data) ----------
 
 function renderQuickStats(): void {
@@ -475,6 +627,8 @@ function renderQuickStats(): void {
     ikmStats.count === 0 ? "–" : ikmFmt(ikmStats.overall);
   const aduStats = computeAduanStats(loadAduan());
   $("qs-aduan").textContent = String(aduStats.selesai);
+  // Paket 28 — the fourth hero card: total village officers (live data).
+  $("qs-perangkat").textContent = String(loadPerangkat().length);
 }
 
 // ---------- home dashboard (bento) + global search + monthly report ----------
@@ -1489,6 +1643,10 @@ function renderHome(): void {
   );
   renderTrend();
   renderAduanChart();
+  // Paket 28 — model charts from live officer data.
+  renderDesaChart();
+  renderJabatanChart();
+  updateNotifBell();
   renderReportPreview();
   renderMonthlyTrend();
   renderFollowUp();
@@ -2794,7 +2952,11 @@ function renderKepegawaian(): void {
   // Paket 25 — remember the displayed rows for the CSV export, and
   // disable the export button when the current view is empty.
   kegLastRows = sorted;
-  ($("keg-export-csv") as HTMLButtonElement).disabled = sorted.length === 0;
+  // Paket 28 — the two model export buttons follow the same rule.
+  const kegHasRows = sorted.length > 0;
+  ($("keg-export-csv") as HTMLButtonElement).disabled = !kegHasRows;
+  ($("keg-export-pdf") as HTMLButtonElement).disabled = !kegHasRows;
+  ($("keg-export-word") as HTMLButtonElement).disabled = !kegHasRows;
   const tbody = $("keg-table-body");
   tbody.innerHTML = "";
   sorted.forEach((p, i) => {
@@ -2973,6 +3135,8 @@ function renderKepegawaian(): void {
     lemWrap.appendChild(card);
   }
   renderQuickStats();
+  // Paket 28 — the bell badge follows the same notification count.
+  updateNotifBell();
 }
 
 function kegShowDetail(p: Perangkat): void {
@@ -3044,6 +3208,55 @@ function kegStaffCsv(rows: Perangkat[], now = new Date()): { filename: string; t
   });
   const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   return { filename: `daftar-pegawai-${stamp}.csv`, text: [header, ...lines].join("\n") };
+}
+
+// Paket 28 — "Export PDF" for the personnel table: the app has no PDF
+// library (100% offline), so it reuses the existing window.print() route
+// (print target "keg-table"). The hidden print area is filled from the
+// rows currently shown (kegLastRows: filtered + sorted), and the browser's
+// "Save as PDF" produces a real PDF file.
+function printKegTable(): void {
+  if (kegLastRows.length === 0) {
+    setStatus($("keg-export-status"), t("kegExportEmpty", lang));
+    return;
+  }
+  const title = $("keg-print-title");
+  const date = $("keg-print-date");
+  const body = $("keg-print-body");
+  title.textContent = `${t("kegTitle", lang)}`;
+  date.textContent = new Date().toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  // Column labels match the on-screen table header (hardcoded Indonesian
+  // there, except Unit which has an i18n key); "Aksi" is left out — a
+  // printout has no buttons.
+  const headRow = ["No", "Nama", t("kegUnitCol", lang), "Jabatan", "Desa", "TTL", "Agama", "No HP", "Masa Bhakti", "Status"];
+  const rows = kegLastRows.map((p, i) => [
+    String(i + 1),
+    p.nama,
+    p.unit === "kecamatan" ? t("kegUnitKecOpt", lang) : t("kegUnitDesaOpt", lang),
+    p.jabatan,
+    p.desa,
+    `${p.tempatLahir}, ${formatDateId(p.tglLahir)}`,
+    p.agama,
+    p.noHp || "-",
+    `${formatDateId(p.masaMulai)} - ${formatDateId(p.masaSelesai)}`,
+    kegStatusPill(p).text,
+  ]);
+  const esc = (s: string): string =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  body.innerHTML =
+    "<table><thead><tr>" +
+    headRow.map((h) => `<th>${esc(h)}</th>`).join("") +
+    "</tr></thead><tbody>" +
+    rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("") +
+    "</tbody></table>";
+  setStatus($("keg-export-status"), t("kegPrinted", lang));
+  document.body.dataset.printTarget = "keg-table";
+  window.print();
 }
 
 function exportKegCsv(): void {
@@ -3154,6 +3367,10 @@ function initKepegawaian(): void {
   $("keg-filter-status").addEventListener("change", renderKepegawaian);
   // Paket 25 — export the rows currently shown (filtered + sorted).
   $("keg-export-csv").addEventListener("click", exportKegCsv);
+  // Paket 28 — model export buttons: PDF via the print route, Word via the
+  // existing CSV download (there is no native .docx writer offline).
+  $("keg-export-pdf").addEventListener("click", printKegTable);
+  $("keg-export-word").addEventListener("click", exportKegCsv);
 
   // Paket 23 — sortable column headers: click (or Enter/Space on the
   // focused header) cycles asc -> desc -> cleared (stored order).
@@ -4213,11 +4430,17 @@ async function boot(): Promise<void> {
   initAgenda();
   initPalette();
   initMode();
+  // Paket 28 — live date pill + notification bell in the page head.
+  updateDatePill();
+  $("notif-bell").addEventListener("click", () => activateTab("kepegawaian"));
   renderQuickStats();
 
   // Deep link: open the tab named by location.hash (e.g. #ikm for the survey).
   const initialTab = tabFromHash();
   if (initialTab) activateTab(initialTab, false);
+  // Paket 28 — the page head always reflects the visible panel, also on
+  // a fresh load with no hash (home is the default tab).
+  updatePageHead(currentTab);
 
   $("lang-toggle").addEventListener("click", () => {
     lang = lang === "en" ? "id" : "en";
