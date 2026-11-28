@@ -210,6 +210,29 @@ export const ANIN_KB: AninKbEntry[] = [
     keywords: ["desa lain", "pakai di desa lain", "adopsi", "desa lain pakai", "paket adopsi", "kantor desa lain"],
     answerKey: "aninFaqAdopsi",
   },
+  // Paket 34 (Ide 7–9) — fitur baru: notulen rapat, Bahasa Bangka,
+  // Mode Darurat. Jawaban di i18n.ts (aninFaqNotulen/Bangka/Darurat).
+  {
+    id: "notulen",
+    titleId: "Notulen Rapat",
+    titleEn: "Meeting minutes",
+    keywords: ["notulen", "notulen rapat", "ringkasan rapat", "catatan rapat", "rapat", "menit rapat", "berita acara rapat", "buat notulen"],
+    answerKey: "aninFaqNotulen",
+  },
+  {
+    id: "bahasa-bangka",
+    titleId: "Anin Bahasa Bangka",
+    titleEn: "Anin in Bangka language",
+    keywords: ["bahasa bangka", "bangka", "jawab bahasa bangka", "bahasa daerah", "warga lanjut usia", "lansia", "mode bangka"],
+    answerKey: "aninFaqBangka",
+  },
+  {
+    id: "mode-darurat",
+    titleId: "Mode Darurat",
+    titleEn: "Emergency mode",
+    keywords: ["mode darurat", "darurat", "banjir", "kebakaran", "longsor", "gempa", "bencana", "surat darurat", "laporan darurat", "bantuan darurat"],
+    answerKey: "aninFaqDarurat",
+  },
 ];
 
 /** Best-matching app entry for a question, or null. Keyword scoring like kb.ts. */

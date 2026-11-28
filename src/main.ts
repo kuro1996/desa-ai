@@ -37,7 +37,25 @@ import {
   suggestClosestTopics,
   type AninExpression,
 } from "./anin-chat";
-import { parseCepat, type CepatResult } from "./cepat";
+import {
+  findArchivedTemplate,
+  suggestNextNumber,
+} from "./anin-arsip";
+import { checkLetter, type LetterCheckResult, type LetterIssue } from "./anin-periksa";
+import {
+  computeReminders,
+  type Reminder,
+  type ReminderSummary,
+} from "./anin-pengingat";
+import { parseCepat, DARURAT_JENIS, daruratCepatResult, type CepatResult } from "./cepat";
+import { parseNotulen, formatNotulen, notulenToLetterFields } from "./notulen";
+import {
+  BANGKA_FALLBACK_NOTE,
+  BANGKA_PROMPT_GUIDE,
+  BANGKA_WELCOME,
+  bangkaGreeting,
+  matchBangkaTopic,
+} from "./bahasa-bangka";
 import { aninGreetingKey, aninRotatingTipKey, aninTipKind } from "./anin";
 import {
   generateStream,
@@ -173,6 +191,7 @@ function applyLang(): void {
   updateModeButton();
   renderTemplateSelect();
   renderLetterFields();
+  renderDaruratGrid();
   renderKbList();
   renderQaSuggestions();
   renderAninChips();
@@ -306,6 +325,26 @@ function isAninVoiceEnabled(): boolean {
 function setAninVoiceEnabled(on: boolean): void {
   try {
     localStorage.setItem(ANIN_VOICE_KEY, on ? "on" : "off");
+  } catch {
+    // Storage unavailable — the choice still applies for this session.
+  }
+}
+
+// Paket 34 (Ide 8) — sakelar "Jawab dalam Bahasa Bangka" di panel Anin,
+// tersimpan di perangkat ini (default mati).
+const BANGKA_KEY = "desaai-bangka-v1";
+
+function isBangkaEnabled(): boolean {
+  try {
+    return localStorage.getItem(BANGKA_KEY) === "on";
+  } catch {
+    return false;
+  }
+}
+
+function setBangkaEnabled(on: boolean): void {
+  try {
+    localStorage.setItem(BANGKA_KEY, on ? "on" : "off");
   } catch {
     // Storage unavailable — the choice still applies for this session.
   }
@@ -1938,6 +1977,8 @@ function renderHome(): void {
   renderHomeSearch();
   renderQuickStats();
   renderAnin();
+  // Paket 34 Ide 3 — widget "Pengingat hari ini" di Beranda.
+  renderHomeReminders();
 }
 
 // Paket 27 — Anin, pemandu DesaAI: sapaan menurut jam + satu tips kontekstual
@@ -2047,6 +2088,14 @@ function initHome(): void {
   $("home-aduan-list").addEventListener("click", () =>
     document.querySelector<HTMLButtonElement>('[data-tab="pengaduan"]')?.click(),
   );
+  // Paket 34 Ide 3 — tapping a reminder opens its tab.
+  $("home-reminder-list").addEventListener("click", (ev) => {
+    const li = (ev.target as HTMLElement).closest<HTMLElement>("li[data-tab]");
+    if (!li) return;
+    document
+      .querySelector<HTMLButtonElement>(`[data-tab="${li.dataset.tab}"]`)
+      ?.click();
+  });
   // Paket 16 — tapping a follow-up item jumps to its tab.
   $("home-followup-list").addEventListener("click", (ev) => {
     const li = (ev.target as HTMLElement).closest<HTMLElement>("li[data-tab]");
@@ -2409,6 +2458,34 @@ function renderTemplateSelect(): void {
   currentTemplate = TEMPLATES.find((t) => t.id === sel.value) ?? TEMPLATES[0];
 }
 
+// Paket 34 (Ide 9) — Mode Darurat: 8 tombol satu ketuk (4 bencana ×
+// laporan/bantuan). Satu ketuk mengisi formulir dengan kerangka itu;
+// petugas melengkapi detail lalu generate seperti biasa.
+function renderDaruratGrid(): void {
+  const grid = $("darurat-grid");
+  grid.innerHTML = "";
+  for (const d of DARURAT_JENIS) {
+    for (const kind of ["laporan", "bantuan"] as const) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn darurat-btn";
+      b.dataset.jenis = d.label;
+      b.dataset.kind = kind;
+      b.textContent = t(
+        kind === "laporan" ? "daruratBtnLaporan" : "daruratBtnBantuan",
+        lang,
+      ).replace("%s", d.label);
+      b.addEventListener("click", () => {
+        applyCepatResult(daruratCepatResult(d.label, kind));
+        const tplName = lang === "id" ? currentTemplate.nameId : currentTemplate.nameEn;
+        setStatus($("cepat-status"), t("daruratFilled", lang).replace("%s", tplName));
+        $("letter-fields").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      grid.appendChild(b);
+    }
+  }
+}
+
 function renderLetterFields(keepValues = true): void {
   const wrap = $("letter-fields");
   // Paket 27 — never wipe what the officer already typed: boot() calls
@@ -2670,6 +2747,7 @@ function initLetters(): void {
   });
   renderTemplateSelect();
   renderLetterFields();
+  renderDaruratGrid();
 
   // Paket 29 — mengedit kolom formulir atau teks mentah langsung
   // memperbarui lembar surat (Nomor, Hal, isi…).
@@ -2694,6 +2772,18 @@ function initLetters(): void {
     if (!input) return;
     input.value = nextLetterNumber(currentTemplate.id);
     setStatus($("letter-status"), t("autoNumberDone", lang));
+  });
+
+  // Paket 34 Ide 2 — Anin pemeriksa surat: hasil tampil di bawah lembar
+  // surat; perbaikan hanya diterapkan bila petugas menekan "Terapkan".
+  $("letter-check").addEventListener("click", () => {
+    const result = runLetterCheck();
+    if (!result.hasDraft) {
+      setStatus($("letter-status"), t("p34CheckEmpty", lang), true);
+      return;
+    }
+    renderLetterCheckResults(result);
+    $("letter-check-results").scrollIntoView({ behavior: "smooth", block: "nearest" });
   });
 
   $("letter-generate").addEventListener("click", async () => {
@@ -2925,6 +3015,139 @@ function initSummarizer(): void {
       $("sum-status"),
       d.source === "firestore" ? t("statusSaved", lang) : t("statusSavedLocal", lang),
     );
+  });
+}
+
+// ---------- notulen rapat (Paket 34, Ide 7) ----------
+
+let lastNotulenText = "";
+let lastNotulenFields: { perihal: string; isi: string } | null = null;
+
+function initNotulen(): void {
+  const input = $("notulen-input") as HTMLTextAreaElement;
+  const micBtn = $("notulen-mic") as HTMLButtonElement;
+  const note = $("notulen-audio-note");
+  const status = $("notulen-status");
+
+  // Transkripsi audio HANYA bila peramban mendukung SpeechRecognition —
+  // deteksi SAMA seperti mikrofon Anin (startListening): SpeechRecognition
+  // ?? webkitSpeechRecognition. Bila tidak didukung, tombol dikte
+  // DISEMBUNYIKAN dan tampil pesan jujur (teks diisi via data-i18n supaya
+  // ikut bahasa aktif) — fitur audio tidak ditampilkan sebagai bisa dipakai.
+  const w = window as unknown as {
+    SpeechRecognition?: AninRecognitionCtor;
+    webkitSpeechRecognition?: AninRecognitionCtor;
+  };
+  const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+  if (!SR) {
+    micBtn.hidden = true;
+    note.hidden = false;
+  }
+
+  micBtn.addEventListener("click", () => {
+    if (!SR) return;
+    try {
+      const rec = new SR();
+      rec.lang = lang === "id" ? "id-ID" : "en-US";
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      micBtn.disabled = true;
+      // Pesan gagal harus BERTAHAN dibaca petugas — onend tidak boleh
+      // menghapusnya (sebelumnya status kembali kosong begitu rekaman
+      // berakhir, sehingga error hanya berkedip).
+      let micFailed = false;
+      setStatus(status, t("notulenListening", lang));
+      rec.onresult = (ev) => {
+        const said = ev.results[0]?.[0]?.transcript ?? "";
+        if (said.trim()) {
+          input.value = input.value.trim()
+            ? `${input.value.trim()} ${said.trim()}`
+            : said.trim();
+        }
+      };
+      rec.onerror = (ev) => {
+        micFailed = true;
+        setStatus(
+          status,
+          t("notulenAudioError", lang).replace("%s", String(ev.error ?? "?")),
+          true,
+        );
+      };
+      rec.onend = () => {
+        micBtn.disabled = false;
+        if (!micFailed) setStatus(status, "");
+      };
+      rec.start();
+    } catch (e) {
+      micBtn.disabled = false;
+      setStatus(
+        status,
+        t("notulenAudioError", lang).replace("%s", e instanceof Error ? e.message : "?"),
+        true,
+      );
+    }
+  });
+
+  $("notulen-generate").addEventListener("click", () => {
+    const text = input.value.trim();
+    if (!text) {
+      setStatus(status, t("notulenEmpty", lang), true);
+      return;
+    }
+    const parsed = parseNotulen(text);
+    const hasAny =
+      parsed.tanggal ||
+      parsed.peserta.length > 0 ||
+      parsed.agenda.length > 0 ||
+      parsed.keputusan.length > 0 ||
+      parsed.tindakLanjut.length > 0;
+    if (!hasAny) {
+      setStatus(status, t("notulenNoResult", lang), true);
+      return;
+    }
+    lastNotulenText = formatNotulen(parsed);
+    lastNotulenFields = notulenToLetterFields(parsed);
+    $("notulen-output").textContent = lastNotulenText;
+    $("notulen-output-wrap").hidden = false;
+    setStatus(status, "");
+  });
+
+  $("notulen-clear").addEventListener("click", () => {
+    input.value = "";
+    lastNotulenText = "";
+    lastNotulenFields = null;
+    $("notulen-output-wrap").hidden = true;
+    setStatus(status, "");
+  });
+
+  $("notulen-copy").addEventListener("click", async () => {
+    const ok = await copyText($("notulen-output").textContent ?? "");
+    setStatus(status, ok ? t("statusCopied", lang) : t("statusError", lang) + "clipboard", !ok);
+  });
+  $("notulen-save").addEventListener("click", async () => {
+    if (!svc || !lastNotulenText.trim()) return;
+    const d = await saveDraft(svc, "summary", "Notulen rapat", lastNotulenText);
+    setStatus(
+      status,
+      d.source === "firestore" ? t("statusSaved", lang) : t("statusSavedLocal", lang),
+    );
+  });
+  $("notulen-to-letter").addEventListener("click", () => {
+    if (!lastNotulenFields) return;
+    applyCepatResult({
+      templateId: "surat-dinas",
+      fields: lastNotulenFields,
+      filled: Object.keys(lastNotulenFields),
+    });
+    const tplName = lang === "id" ? currentTemplate.nameId : currentTemplate.nameEn;
+    setStatus(
+      $("cepat-status"),
+      t("cepatFound", lang)
+        .replace("%s", tplName)
+        .replace("%d", String(Object.keys(lastNotulenFields).length)),
+    );
+    activateTab("letters");
+    $("letter-fields").scrollIntoView({ behavior: "smooth", block: "start" });
   });
 }
 
@@ -3168,6 +3391,7 @@ const ANIN_CHIP_KEYS = [
   "aninChipIkm",
   "aninChipKeluhan",
   "aninChipLapor",
+  "p34ReminderChip",
 ];
 
 const ANIN_TAB_I18N: Record<string, string> = {
@@ -3259,6 +3483,206 @@ async function speakText(text: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+// ---------- Paket 34 — Anin: arsip (Ide 1), pemeriksa surat (Ide 2),
+// pengingat (Ide 3). All local, all from real data; Anin never invents
+// a number, a template, or a reminder.
+
+/** One reminder as a full sentence (chat answers). */
+function formatReminderSentence(r: Reminder): string {
+  if (r.kind === "agenda-besok") {
+    return t("p34ReminderAgendaBesok", lang)
+      .replace("%s", r.title)
+      .replace("%s", r.detail);
+  }
+  if (r.kind === "agenda-dekat") {
+    return t("p34ReminderAgendaDekat", lang)
+      .replace("%d", String(r.days))
+      .replace("%s", r.title)
+      .replace("%s", r.detail);
+  }
+  if (r.kind === "agenda-lewat") {
+    return t("p34ReminderAgendaLewat", lang)
+      .replace("%d", String(r.days))
+      .replace("%s", r.title)
+      .replace("%s", r.detail);
+  }
+  return t("p34ReminderAduanLama", lang)
+    .replace("%s", r.title)
+    .replace("%d", String(r.days));
+}
+
+/** Chat answer for "ada pengingat apa hari ini" — honest "none" when empty. */
+function formatReminderSummary(s: ReminderSummary): string {
+  if (s.total === 0) return t("p34ReminderNone", lang);
+  const parts: string[] = [];
+  const label =
+    lang === "id"
+      ? { besok: "agenda besok", dekat: "agenda dekat", lewat: "agenda lewat", aduan: "pengaduan belum ditindaklanjuti" }
+      : { besok: "agenda tomorrow", dekat: "agenda soon", lewat: "agenda overdue", aduan: "stale complaints" };
+  if (s.agendaBesok > 0) parts.push(`${s.agendaBesok} ${label.besok}`);
+  if (s.agendaDekat > 0) parts.push(`${s.agendaDekat} ${label.dekat}`);
+  if (s.agendaLewat > 0) parts.push(`${s.agendaLewat} ${label.lewat}`);
+  if (s.aduanLama > 0) parts.push(`${s.aduanLama} ${label.aduan}`);
+  const head = t("p34ReminderSummary", lang)
+    .replace("%d", String(s.total))
+    .replace("%s", parts.join(", "));
+  const lines = s.items.slice(0, 5).map((r) => `• ${formatReminderSentence(r)}`);
+  return [head, ...lines].join("\n");
+}
+
+/** Fill one reminder list (Home widget or the Anin panel card). */
+function renderReminderList(
+  listId: string,
+  emptyId: string,
+  countId: string,
+  s: ReminderSummary,
+): void {
+  const list = $(listId);
+  const empty = $(emptyId);
+  const count = $(countId);
+  list.innerHTML = "";
+  count.textContent = String(s.total);
+  empty.hidden = s.total > 0;
+  for (const r of s.items) {
+    const li = document.createElement("li");
+    li.className = "notif-item";
+    li.dataset.tab = r.tab;
+    const strong = document.createElement("strong");
+    strong.textContent =
+      r.kind === "aduan-lama" ? `${t("p34ReminderAduanTitle", lang)}: ${r.title}` : r.title;
+    li.appendChild(strong);
+    const detail = document.createElement("span");
+    if (r.kind === "agenda-besok") detail.textContent = `${r.detail} — ${lang === "id" ? "besok" : "tomorrow"}`;
+    else if (r.kind === "agenda-dekat")
+      detail.textContent = `${r.detail} — ${r.days} ${lang === "id" ? "hari lagi" : "day(s) left"}`;
+    else if (r.kind === "agenda-lewat")
+      detail.textContent = `${r.detail} — ${lang === "id" ? "lewat" : "overdue"} ${r.days} ${lang === "id" ? "hari" : "day(s)"}`;
+    else
+      detail.textContent = `${r.detail} — ${r.days} ${lang === "id" ? "hari menunggu" : "day(s) waiting"}`;
+    li.appendChild(detail);
+    list.appendChild(li);
+  }
+}
+
+function renderHomeReminders(): void {
+  renderReminderList(
+    "home-reminder-list",
+    "home-reminder-empty",
+    "home-reminder-count",
+    computeReminders(new Date(), loadAgenda(), loadAduan()),
+  );
+}
+
+function renderAninReminders(): void {
+  renderReminderList(
+    "anin-reminder-list",
+    "anin-reminder-empty",
+    "anin-reminder-count",
+    computeReminders(new Date(), loadAgenda(), loadAduan()),
+  );
+}
+
+/** Ide 1 — Anin's archive answer, from LOCAL drafts only (no new
+ * Firebase query). Empty archive → honest "belum ada arsip". */
+function answerArchive(templateId: string | null): string {
+  const drafts = listLocalDrafts().filter((d) => d.kind === "letter");
+  if (drafts.length === 0) return t("p34ArchiveEmpty", lang);
+  const tpl = templateId ? findArchivedTemplate(drafts, templateId) : null;
+  const sug =
+    suggestNextNumber(drafts, templateId) ??
+    (templateId ? suggestNextNumber(drafts, null) : null);
+  if (!sug && !tpl) return t("p34ArchiveNoNumbers", lang);
+  const lines: string[] = [];
+  if (tpl) {
+    lines.push(
+      t("p34ArchiveTemplate", lang)
+        .replace("%s", tpl.templateNameId)
+        .replace("%s", tpl.lastNumber ?? "—")
+        .replace("%s", tpl.lastDraft.title)
+        .replace("%d", String(tpl.count)),
+    );
+  } else if (templateId) {
+    const name =
+      TEMPLATES.find((x) => x.id === templateId)?.nameId ?? templateId;
+    lines.push(t("p34ArchiveNoType", lang).replace("%s", name));
+  }
+  if (sug) {
+    lines.push(
+      t("p34ArchiveNext", lang)
+        .replace("%s", sug.next)
+        .replace("%d", String(sug.basedOn))
+        .replace("%s", sug.lastNumber),
+    );
+  }
+  return lines.join("\n");
+}
+
+/** Ide 2 — check the draft currently open in the letters tab. */
+function runLetterCheck(): LetterCheckResult {
+  return checkLetter(
+    currentTemplate,
+    readLetterValues(),
+    ($("letter-output") as HTMLTextAreaElement).value,
+    loadLetterhead(),
+  );
+}
+
+function checkSummaryText(result: LetterCheckResult): string {
+  if (result.issues.length === 0) return t("p34CheckOk", lang);
+  return t("p34CheckSummary", lang)
+    .replace("%d", String(result.issues.length))
+    .replace("%d", String(result.errors))
+    .replace("%d", String(result.warnings));
+}
+
+/** Apply one issue's fix (field value or body transform), then re-render. */
+function applyLetterFix(issue: LetterIssue): void {
+  if (issue.fix?.field) {
+    const input = document.getElementById(
+      `letter-field-${issue.fix.field.key}`,
+    ) as HTMLInputElement | HTMLTextAreaElement | null;
+    if (input) input.value = issue.fix.field.value;
+  }
+  if (issue.fix?.body) {
+    const out = $("letter-output") as HTMLTextAreaElement;
+    out.value = issue.fix.body(out.value);
+  }
+  renderLetterSheet();
+}
+
+/** Ide 2 — the check panel under the letter sheet. Fixes apply only
+ * when the officer presses "Terapkan" on that item. */
+function renderLetterCheckResults(result: LetterCheckResult): void {
+  const box = $("letter-check-results");
+  box.innerHTML = "";
+  box.hidden = false;
+  const head = document.createElement("p");
+  head.className = "check-head";
+  head.textContent = `${t("p34CheckTitle", lang)} — ${checkSummaryText(result)}`;
+  box.appendChild(head);
+  for (const issue of result.issues) {
+    const row = document.createElement("div");
+    row.className = `check-item check-${issue.severity}`;
+    const msg = document.createElement("p");
+    let text = t(issue.messageKey, lang);
+    for (const p of issue.params) text = text.replace(/%[sd]/, p);
+    msg.textContent = text;
+    row.appendChild(msg);
+    if (issue.fix) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn-link check-apply";
+      btn.textContent = t("p34CheckApply", lang);
+      btn.addEventListener("click", () => {
+        applyLetterFix(issue);
+        renderLetterCheckResults(runLetterCheck());
+      });
+      row.appendChild(btn);
+    }
+    box.appendChild(row);
   }
 }
 
@@ -3612,7 +4036,7 @@ function initAninChat(): void {
       setChatStatus(t("aninChatStatusOffline", lang));
       addMessage(
         "anin",
-        `${formatKbAnswer(matches)}\n\n${t("sourcesLabel", lang)}${matches.map((m) => m.titleId).join(", ")}`,
+        `${formatKbAnswer(matches)}\n\n${t("sourcesLabel", lang)}${matches.map((m) => m.titleId).join(", ")}${isBangkaEnabled() ? `\n\n${BANGKA_FALLBACK_NOTE}` : ""}`,
       );
       setChatStatus(t("aninChatStatusReady", lang));
       return;
@@ -3629,6 +4053,9 @@ function initAninChat(): void {
       const prompt = [
         "Jawab pertanyaan warga tentang prosedur administrasi desa dalam Bahasa Indonesia yang jelas dan ringkas.",
         "Gunakan HANYA informasi dari panduan berikut; jangan mengarang syarat atau langkah.",
+        // Paket 34 (Ide 8) — sakelar Bangka aktif: AI menjawab dalam
+        // Bahasa Bangka, hanya dengan kata yang terverifikasi di panduan.
+        ...(isBangkaEnabled() ? [BANGKA_PROMPT_GUIDE] : []),
         "",
         "PANDUAN:",
         grounding,
@@ -3669,7 +4096,7 @@ function initAninChat(): void {
       if (matches.length > 0) {
         setExpression("tersenyum");
         bubble.textContent =
-          `${formatKbAnswer(matches)}\n\n${t("sourcesLabel", lang)}${matches.map((m) => m.titleId).join(", ")}\n\n${t("aninChatAiFailed", lang)}`;
+          `${formatKbAnswer(matches)}\n\n${t("sourcesLabel", lang)}${matches.map((m) => m.titleId).join(", ")}\n\n${t("aninChatAiFailed", lang)}${isBangkaEnabled() ? `\n\n${BANGKA_FALLBACK_NOTE}` : ""}`;
         setChatStatus(t("aninChatStatusOffline", lang));
       } else {
         bubble.textContent = noUnderstandReply(question);
@@ -3696,7 +4123,9 @@ function initAninChat(): void {
       setExpression("bersemangat", 2500);
       addMessage(
         "anin",
-        `${t(aninGreetingKey(new Date().getHours()), lang)} ${t("aninChatWelcomeBody", lang)}`,
+        isBangkaEnabled()
+          ? `${bangkaGreeting(new Date().getHours())}. ${BANGKA_WELCOME}`
+          : `${t(aninGreetingKey(new Date().getHours()), lang)} ${t("aninChatWelcomeBody", lang)}`,
       );
       return;
     }
@@ -3704,6 +4133,16 @@ function initAninChat(): void {
       setExpression("senang", 2500);
       addMessage("anin", t("aninChatThanks", lang));
       return;
+    }
+    // Paket 34 (Ide 8) — sakelar Bangka aktif: prosedur umum (KTP, KK,
+    // surat pengantar, pengaduan) dijawab langsung dalam Bahasa Bangka.
+    if (isBangkaEnabled()) {
+      const bangkaTopic = matchBangkaTopic(text);
+      if (bangkaTopic) {
+        setExpression("tersenyum");
+        addMessage("anin", bangkaTopic.answer);
+        return;
+      }
     }
     if (intent.kind === "nav") {
       activateTab(intent.tab);
@@ -3739,6 +4178,46 @@ function initAninChat(): void {
       startLapor();
       return;
     }
+    // Paket 34 — Ide 1: nomor/template dari arsip lokal.
+    if (intent.kind === "archive") {
+      setExpression("terkagum", 2000);
+      setChatStatus(t("aninChatStatusOffline", lang));
+      addMessage("anin", answerArchive(intent.templateId));
+      setChatStatus(t("aninChatStatusReady", lang));
+      return;
+    }
+    // Paket 34 — Ide 2: periksa draf yang sedang dibuka.
+    if (intent.kind === "check") {
+      activateTab("letters");
+      const result = runLetterCheck();
+      if (!result.hasDraft) {
+        setExpression("bingung", 2500);
+        addMessage("anin", t("p34CheckEmpty", lang));
+        return;
+      }
+      renderLetterCheckResults(result);
+      setExpression(result.issues.length === 0 ? "senang" : "tersenyum", 2500);
+      addMessage(
+        "anin",
+        `${checkSummaryText(result)}
+
+${t("p34CheckSeePanel", lang)}`,
+      );
+      return;
+    }
+    // Paket 34 — Ide 3: pengingat hari ini dari data lokal.
+    if (intent.kind === "reminders") {
+      setExpression("terkagum", 2000);
+      setChatStatus(t("aninChatStatusOffline", lang));
+      addMessage(
+        "anin",
+        formatReminderSummary(
+          computeReminders(new Date(), loadAgenda(), loadAduan()),
+        ),
+      );
+      setChatStatus(t("aninChatStatusReady", lang));
+      return;
+    }
     if (intent.kind === "analyst") {
       setExpression("terkagum", 2000);
       setChatStatus(t("aninChatStatusAnalis", lang));
@@ -3748,7 +4227,14 @@ function initAninChat(): void {
     }
     if (intent.kind === "appkb") {
       setChatStatus(t("aninChatStatusOffline", lang));
-      addMessage("anin", t(intent.entry.answerKey, lang));
+      // Paket 34 (Ide 8) — sakelar Bangka aktif tapi topik ini lom ade
+      // jawaban Bangka-nya: jawab Bahasa Indonesia + catatan jujur.
+      addMessage(
+        "anin",
+        isBangkaEnabled() && intent.entry.id !== "bahasa-bangka"
+          ? `${t(intent.entry.answerKey, lang)}\n\n${BANGKA_FALLBACK_NOTE}`
+          : t(intent.entry.answerKey, lang),
+      );
       setChatStatus(t("aninChatStatusReady", lang));
       return;
     }
@@ -3762,12 +4248,16 @@ function initAninChat(): void {
   const openPanel = (): void => {
     panel.hidden = false;
     fab.setAttribute("aria-expanded", "true");
+    // Paket 34 Ide 3 — kartu Pengingat diperbarui tiap kali panel dibuka.
+    renderAninReminders();
     if (!welcomed) {
       welcomed = true;
       setExpression("bersemangat", 3000);
       addMessage(
         "anin",
-        `${t(aninGreetingKey(new Date().getHours()), lang)} ${t("aninChatWelcomeBody", lang)}`,
+        isBangkaEnabled()
+          ? `${bangkaGreeting(new Date().getHours())}. ${BANGKA_WELCOME}`
+          : `${t(aninGreetingKey(new Date().getHours()), lang)} ${t("aninChatWelcomeBody", lang)}`,
       );
     }
     input.focus();
@@ -3790,6 +4280,14 @@ function initAninChat(): void {
     void handleAninMessage(input.value);
   });
   micBtn.addEventListener("click", startListening);
+  // Paket 34 Ide 3 — tapping a reminder in the Anin card closes the
+  // panel and opens the tab the reminder belongs to.
+  $("anin-reminder-list").addEventListener("click", (ev) => {
+    const li = (ev.target as HTMLElement).closest<HTMLElement>("li[data-tab]");
+    if (!li) return;
+    closePanel();
+    activateTab(li.dataset.tab ?? "home");
+  });
   // Paket 32 — Tanya Prosedur bisa menyerahkan pertanyaan ke Anin di sini:
   // buka panel dan jawab pertanyaan yang sama (Anin bisa ditanyai lanjut).
   document.addEventListener("desaai:open-anin", (ev) => {
@@ -3798,6 +4296,20 @@ function initAninChat(): void {
     if (q) {
       input.value = q;
       void handleAninMessage(q);
+    }
+  });
+  // Paket 34 (Ide 8) — sakelar Bahasa Bangka di kepala panel Anin.
+  const bangkaToggle = $("anin-bangka-toggle") as HTMLInputElement;
+  bangkaToggle.checked = isBangkaEnabled();
+  bangkaToggle.addEventListener("change", () => {
+    setBangkaEnabled(bangkaToggle.checked);
+    if (welcomed) {
+      addMessage(
+        "anin",
+        bangkaToggle.checked
+          ? BANGKA_WELCOME
+          : `${t(aninGreetingKey(new Date().getHours()), lang)} ${t("aninChatWelcomeBody", lang)}`,
+      );
     }
   });
   renderAninChips();
@@ -4252,6 +4764,40 @@ function initDrafts(): void {
   ($("drafts-search") as HTMLInputElement).addEventListener("input", (ev) => {
     draftsQuery = (ev.target as HTMLInputElement).value;
     void refreshDrafts();
+  });
+  // Paket 34 Ide 1 — nomor & template dari arsip lokal (tanpa query baru).
+  $("drafts-anin-arsip").addEventListener("click", () => {
+    const result = $("drafts-anin-result");
+    result.innerHTML = "";
+    result.hidden = false;
+    const text = document.createElement("p");
+    text.textContent = answerArchive(null);
+    result.appendChild(text);
+    const sug = suggestNextNumber(
+      listLocalDrafts().filter((d) => d.kind === "letter"),
+      null,
+    );
+    if (sug) {
+      const useBtn = document.createElement("button");
+      useBtn.type = "button";
+      useBtn.className = "btn";
+      useBtn.textContent = t("p34ArchiveUseNumber", lang);
+      useBtn.addEventListener("click", () => {
+        document.querySelector<HTMLButtonElement>('[data-tab="letters"]')?.click();
+        const input = document.getElementById(
+          "letter-field-nomor",
+        ) as HTMLInputElement | null;
+        if (input) {
+          input.value = sug.next;
+          renderLetterSheet();
+          setStatus(
+            $("letter-status"),
+            t("p34ArchiveApplied", lang).replace("%s", sug.next),
+          );
+        }
+      });
+      result.appendChild(useBtn);
+    }
   });
   // Paket 15 — print the archived letter shown in the preview.
   $("archive-print-do").addEventListener("click", doArchivePrint);
@@ -5997,6 +6543,7 @@ async function boot(): Promise<void> {
   initHome();
   initLetters();
   initSummarizer();
+  initNotulen();
   initQa();
   initAninChat();
   initDrafts();
@@ -6059,6 +6606,17 @@ async function boot(): Promise<void> {
   // Paket 34, Ide 4 — di mode verifikasi, tampilkan hasil dari arsip lokal
   // dulu (cepat + offline); salinan Firestore menyusul di bawah.
   if (verifyMode && verifyParams) void showVerifyPage(verifyParams, null);
+
+  // Paket 34 (gabung) — terapkan bahasa TERSIMPAN sebelum probe Firebase
+  // yang lambat: applyLang() di akhir boot menunggu initFirebase() +
+  // probeOnDevice(), sementara `lang` sudah dibaca dari localStorage saat
+  // modul dimuat. Selama jendela itu UI masih berbahasa Inggris (HTML
+  // statis) padahal `lang` sudah "id" — tombol bahasa lalu bekerja
+  // terbalik (klik "Bahasa Indonesia" justru mengubah id→en) dan label
+  // yang dirender JS (mis. tombol Mode Darurat) tidak sejalan dengan
+  // label statis. Panggilan awal ini idempotent; applyLang() di akhir
+  // boot tetap jalan untuk chip Firebase/perangkat.
+  applyLang();
 
   // Firebase init (skipped silently in demo mode — no network calls).
   try {

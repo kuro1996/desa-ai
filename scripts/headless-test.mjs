@@ -264,18 +264,19 @@ async function main() {
     }));
     const monthName = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
     // Paket 40 — 14 kartu tersisa (kartu Hubungi Kami pindah ke tab
-    // Contact Person sendiri). Dicek sebagai himpunan, bukan sekadar
-    // jumlah, supaya detail kegagalan menunjukkan kartu mana yang
+    // Contact Person sendiri). Paket 34 Ide 3 menambah 1 kartu
+    // "Pengingat hari ini" → 15 kartu. Dicek sebagai himpunan, bukan
+    // sekadar jumlah, supaya detail kegagalan menunjukkan kartu mana yang
     // hilang/lebih.
     const expectCards = [
       "bento-search", "home-anin", "home-briefing", "home-camat",
       "home-warga-card", "bento-ikm", "bento-kpi", "bento-kpi",
       "bento-masa", "bento-month", "bento-trend", "bento-report",
-      "home-adopsi-card", "home-followup-card",
+      "home-adopsi-card", "home-followup-card", "home-reminder-card",
     ];
     check(
-      "bento shows 14 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
-      bento.cards.length === 14 &&
+      "bento shows 15 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
+      bento.cards.length === 15 &&
         expectCards.every((c) => bento.cards.includes(c)) &&
         !bento.cards.includes("home-backup-card") &&
         !bento.cards.includes("home-letterhead-card") &&
@@ -376,8 +377,8 @@ async function main() {
       };
     });
     check(
-      "every Beranda card except IKM Trend has a collapse button (13 of 14)",
-      collapseInfo.total === 14 && collapseInfo.withBtn === 13 && !collapseInfo.trendBtn,
+      "every Beranda card except IKM Trend has a collapse button (14 of 15)",
+      collapseInfo.total === 15 && collapseInfo.withBtn === 14 && !collapseInfo.trendBtn,
       `total=${collapseInfo.total} withBtn=${collapseInfo.withBtn} trendBtn=${collapseInfo.trendBtn}`,
     );
     check(
@@ -2504,12 +2505,17 @@ async function main() {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     };
     await installCsvCapture();
+    // Bahasa aktif di titik ini adalah Inggris (suite beralih ke Indonesia
+    // di 1651, diverifikasi, lalu kembali ke Inggris di 1655). Dulu label
+    // statis HTML ("Ekspor CSV") menutupi ini karena applyLang() baru jalan
+    // di akhir boot; sejak perbaikan applyLang-awal (gabung Paket 34),
+    // label mengikuti bahasa aktif sejak awal.
     const p25Btn = await page.$("#keg-export-csv");
     check(
-      "kepegawaian CSV export button exists with Indonesian label",
+      "kepegawaian CSV export button exists with English label",
       !!p25Btn &&
         (await page.$eval("#keg-export-csv", (el) => el.textContent ?? "")) ===
-          "Ekspor CSV" &&
+          "Export CSV" &&
         (await kegExportDisabled()) === false,
       `label=${await page.$eval("#keg-export-csv", (el) => el.textContent ?? "")}`,
     );
@@ -4230,12 +4236,13 @@ async function main() {
       adoptPack = null;
     }
     check(
-      "adoption pack JSON has letterhead, 7 templates, 5-step checklist, no office data",
+      // Paket 34 Ide 9 menambah 2 template darurat → total 9 template.
+      "adoption pack JSON has letterhead, 9 templates, 5-step checklist, no office data",
       !!adoptPack &&
         adoptPack.app === "DesaAI" &&
         adoptPack.format === "desaai-adoption-pack" &&
         Array.isArray(adoptPack.templates) &&
-        adoptPack.templates.length === 7 &&
+        adoptPack.templates.length === 9 &&
         adoptPack.letterhead?.instansi2 === "Kecamatan Simpangkatis" &&
         Array.isArray(adoptPack.checklist) &&
         adoptPack.checklist.length === 5 &&
@@ -4334,7 +4341,8 @@ async function main() {
     // Paket 39 — grafik Beranda (per desa / per jabatan) dihapus; jumlah
     // perangkat per desa + per jabatan tetap terverifikasi di tab
     // Kepegawaian (cek statistik Paket 21: group by jabatan/desa).
-    // Form-card blue headers (6 forms) + blue table header.
+    // Form-card blue headers (7 forms — Paket 34 Ide 7 menambah panel
+    // Notulen Rapat) + blue table header.
     const p28Cards = await page.evaluate(() => ({
       heads: document.querySelectorAll(".form-card-head").length,
       headBg: document.querySelector(".form-card-head")
@@ -4345,8 +4353,8 @@ async function main() {
         : "",
     }));
     check(
-      "Paket 28 six forms have blue header banners",
-      p28Cards.heads === 6 && p28Cards.headBg === "rgb(29, 78, 216)",
+      "Paket 28 seven forms have blue header banners",
+      p28Cards.heads === 7 && p28Cards.headBg === "rgb(29, 78, 216)",
       `heads=${p28Cards.heads} bg=${p28Cards.headBg}`,
     );
     check(

@@ -168,6 +168,57 @@ export function normalizeCepatText(text: string): string {
   return out;
 }
 
+// Paket 34 (Ide 9) — Mode Darurat: jenis bencana + deteksi template darurat.
+// Urutan aturan penting: "darurat-laporan" DIDAHULUKAN atas
+// "darurat-bantuan" supaya "surat darurat banjir" (tanpa kata "bantuan")
+// jatuh ke Laporan Kejadian; "bantuan"/"permohonan bantuan" yang
+// eksplisit mengangkat skor darurat-bantuan di atasnya.
+export const DARURAT_JENIS: Array<{ id: string; label: string; patterns: RegExp[] }> = [
+  { id: "banjir", label: "Banjir", patterns: [/\bbanjir\b/i] },
+  { id: "kebakaran", label: "Kebakaran", patterns: [/\bkebakaran\b/i] },
+  { id: "longsor", label: "Tanah Longsor", patterns: [/\blongsor\b/i, /\btanah longsor\b/i] },
+  { id: "gempa", label: "Gempa Bumi", patterns: [/\bgempa\b/i] },
+];
+
+/** Jenis bencana yang disebut di teks, atau "" bila tidak ada. */
+export function findDaruratJenis(text: string): string {
+  for (const d of DARURAT_JENIS) {
+    if (d.patterns.some((re) => re.test(text))) return d.label;
+  }
+  return "";
+}
+
+/** Hasil Surat Cepat untuk satu ketuk tombol Mode Darurat: kerangka
+ * terisi (jenis bencana), petugas melengkapi detail lalu generate. */
+export function daruratCepatResult(
+  jenisLabel: string,
+  kind: "laporan" | "bantuan",
+): CepatResult {
+  return {
+    templateId: kind === "laporan" ? "darurat-laporan" : "darurat-bantuan",
+    fields: { jenisBencana: jenisLabel },
+    filled: ["jenisBencana"],
+  };
+}
+
+/** Perintah Anin "surat darurat banjir" (tanpa kata kerja "buat") → hasil
+ * Surat Cepat darurat, atau null bila tidak ada jenis bencana yang jelas
+ * (Anin tidak menebak-nebak: jatuh ke jawaban "belum paham"). */
+export function parseDarurat(text: string): CepatResult | null {
+  if (!text || !text.trim()) return null;
+  const norm = normalizeCepatText(text);
+  if (!/\bdarurat\b/i.test(norm)) return null;
+  const jenis = findDaruratJenis(norm);
+  if (!jenis) return null;
+  const templateId = /\b(bantuan|permohonan\b)/i.test(norm) ? "darurat-bantuan" : "darurat-laporan";
+  const tpl = TEMPLATES.find((t) => t.id === templateId);
+  if (!tpl) return null;
+  const raw = extractCepatFields(templateId, norm);
+  const fields: Record<string, string> = {};
+  for (const f of tpl.fields) if (raw[f.key]) fields[f.key] = raw[f.key];
+  return { templateId, fields, filled: Object.keys(fields) };
+}
+
 function findUndanganAcara(text: string): string {
   text = normalizeCepatText(text);
   const m = text.match(
@@ -205,6 +256,35 @@ interface CepatRule {
 
 // Rule order is the tie-break priority (first wins on equal scores).
 const CEPAT_RULES: CepatRule[] = [
+  // Paket 34 (Ide 9) — Mode Darurat, didahulukan: "darurat" + jenis
+  // bencana harus menang atas "surat dinas" (kata "permohonan") dan SKTM
+  // (kata "bantuan"). Lihat catatan urutan di atas DARURAT_JENIS.
+  {
+    id: "darurat-laporan",
+    patterns: [
+      [/\bdarurat\b/i, 4],
+      [/\blaporan kejadian\b/i, 4],
+      [/\blaporan\b/i, 2],
+      [/\bkejadian\b/i, 2],
+      [/\bbanjir\b/i, 3],
+      [/\bkebakaran\b/i, 3],
+      [/\blongsor\b/i, 3],
+      [/\bgempa\b/i, 3],
+    ],
+  },
+  {
+    id: "darurat-bantuan",
+    patterns: [
+      [/\bdarurat\b/i, 4],
+      [/\bpermohonan bantuan\b/i, 4],
+      [/\bbantuan darurat\b/i, 4],
+      [/\bbantuan\b/i, 2],
+      [/\bbanjir\b/i, 3],
+      [/\bkebakaran\b/i, 3],
+      [/\blongsor\b/i, 3],
+      [/\bgempa\b/i, 3],
+    ],
+  },
   {
     id: "sktm",
     patterns: [
@@ -290,6 +370,22 @@ export function extractCepatFields(templateId: string, text: string): Record<str
   const dates = findCepatDates(text);
   const day = findCepatDay(text);
   switch (templateId) {
+    // Paket 34 (Ide 9) — Mode Darurat: jenis bencana + detail kejadian.
+    // Kolom yang tidak disebut di kalimat tetap kosong untuk diisi petugas.
+    case "darurat-laporan":
+    case "darurat-bantuan": {
+      set("jenisBencana", findDaruratJenis(text));
+      set("lokasi", findCepatPlace(text));
+      if (dates[0]) set("tanggalKejadian", dates[0]);
+      set("korban", cepatSentenceCase(afterKeyword(text, /\bkorban\s+([^,.;]+)/i)));
+      set("kerusakan", cepatSentenceCase(afterKeyword(text, /\bkerusakan\s+([^,.;]+)/i)));
+      if (templateId === "darurat-laporan") {
+        set("kebutuhan", cepatSentenceCase(afterKeyword(text, /\bkebutuhan\s+([^,.;]+)/i)));
+      } else {
+        set("bantuan", cepatSentenceCase(afterKeyword(text, /\bbantuan\s+([^,.;]+)/i)));
+      }
+      break;
+    }
     case "undangan": {
       set("acara", findUndanganAcara(text));
       set("hari", day && dates[0] ? `${day}, ${dates[0]}` : day || dates[0] || "");

@@ -722,8 +722,8 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   // Paket 32 (standar "DIMAKSIMALKAN" 28 Nov 00:20) — Anin tidak boleh
   // buntu: bila tidak paham, ia menyebut apa saja yang bisa dibantunya.
   aninChatNoUnderstand: {
-    en: "Sorry, I don't understand that question yet — but I can help with: drafting a letter (“Draft an invitation to the village meeting”), procedure requirements (“What do I need for a KTP?”), Personnel Data, IKM, complaints, the Mail Register, and trend analysis (“What is the top complaint this month?”). Try one of those, or tap a suggestion below.",
-    id: "Maaf, saya belum paham pertanyaan itu — tapi saya bisa membantu soal: membuat draf surat (“Buatkan surat undangan musyawarah desa”), syarat prosedur (“Syarat KTP apa saja?”), Data Kepegawaian, IKM, pengaduan, Buku Agenda, dan analisis tren (“Keluhan terbanyak bulan ini apa?”). Coba salah satu contoh itu, atau ketuk salah satu saran di bawah.",
+    en: "Sorry, I don't understand that question yet — but I can help with: drafting a letter (“Draft an invitation to the village meeting”), procedure requirements (“What do I need for a KTP?”), Personnel Data, IKM, complaints, the Mail Register, trend analysis (“What is the top complaint this month?”), the next letter number from the archive (“What is the next letter number?”), checking a draft (“Check this letter”), and today's reminders (“Any reminders today?”). Try one of those, or tap a suggestion below.",
+    id: "Maaf, saya belum paham pertanyaan itu — tapi saya bisa membantu soal: membuat draf surat (“Buatkan surat undangan musyawarah desa”), syarat prosedur (“Syarat KTP apa saja?”), Data Kepegawaian, IKM, pengaduan, Buku Agenda, analisis tren (“Keluhan terbanyak bulan ini apa?”), nomor surat berikutnya dari arsip (“Nomor surat berikutnya berapa?”), memeriksa draf (“Periksa surat ini”), dan pengingat hari ini (“Ada pengingat apa hari ini?”). Coba salah satu contoh itu, atau ketuk salah satu saran di bawah.",
   },
   // Paket 32.1 — jawaban "belum paham" bukan jalan buntu: bila ada topik
   // yang hampir cocok, Anin menyebutkannya di bawah jawaban ini.
@@ -756,6 +756,139 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     id: "Cara buat SK pengangkatan",
   },
   aninChipKeg: { en: "Open Personnel Data", id: "Buka Data Kepegawaian" },
+  // Paket 34 — Ide 1 (arsip), Ide 2 (pemeriksa surat), Ide 3 (pengingat).
+  // "%s" / "%d" filled by main.ts in order.
+  p34ArchiveBtn: {
+    en: "Next number & template from archive",
+    id: "Nomor & template dari arsip",
+  },
+  p34ArchiveEmpty: {
+    en: "There are no archived letters yet — so I can't suggest a number or a template. Save a letter draft first, and I'll learn its number pattern.",
+    id: "Belum ada arsip surat — Anin belum bisa menyarankan nomor atau template. Simpan draf surat dulu, nanti Anin mempelajari pola nomornya.",
+  },
+  p34ArchiveNext: {
+    en: "Next letter number: %s (pattern from %d archived letter(s), last used %s).",
+    id: "Nomor surat berikutnya: %s (pola dari %d surat arsip, terakhir dipakai %s).",
+  },
+  p34ArchiveTemplate: {
+    en: "Format for %s used before: last number %s (%s), %d letter(s) of this type in the archive.",
+    id: "Format %s yang pernah dipakai: nomor terakhir %s (%s), %d surat sejenis di arsip.",
+  },
+  p34ArchiveNoType: {
+    en: "No archived %s yet, so the number above follows the general archive pattern.",
+    id: "Belum ada arsip %s, jadi nomor di atas mengikuti pola umum arsip.",
+  },
+  p34ArchiveNoNumbers: {
+    en: "The archive exists, but no letter number with a readable pattern was found — so I can't suggest a next number yet.",
+    id: "Arsip ada, tapi tidak ada nomor surat yang polanya bisa dibaca — Anin belum bisa menyarankan nomor berikutnya.",
+  },
+  p34ArchiveUseNumber: { en: "Use this number", id: "Pakai nomor ini" },
+  p34ArchiveApplied: {
+    en: "Number %s filled into the Draft Letters form.",
+    id: "Nomor %s sudah diisi di formulir Draf Surat.",
+  },
+  p34CheckDraft: { en: "Check draft", id: "Periksa draf" },
+  p34CheckTitle: { en: "Anin's check results", id: "Hasil pemeriksaan Anin" },
+  p34CheckOk: {
+    en: "The draft looks good — nothing to fix.",
+    id: "Draf sudah rapi — tidak ada yang perlu diperbaiki.",
+  },
+  p34CheckEmpty: {
+    en: "There is no draft to check yet — draft a letter in this tab first.",
+    id: "Belum ada draf yang bisa diperiksa — buat draf dulu di tab ini.",
+  },
+  p34CheckSummary: {
+    en: "Anin found %d thing(s) to fix (%d important, %d minor). Press “Apply” on an item only if you agree — the draft is never changed silently.",
+    id: "Anin menemukan %d hal yang perlu diperbaiki (%d penting, %d ringan). Tekan “Terapkan” pada tiap item bila setuju — draf tidak pernah diubah diam-diam.",
+  },
+  p34CheckSeePanel: {
+    en: "See the details under the letter sheet in the Draft Letters tab.",
+    id: "Lihat rinciannya di bawah lembar surat pada tab Draf Surat.",
+  },
+  p34CheckApply: { en: "Apply", id: "Terapkan" },
+  p34CheckApplied: { en: "Fixed.", id: "Diperbaiki." },
+  p34CheckKop: {
+    en: "Letterhead is incomplete: %s is empty. Fill it in on the Letterhead card (Home tab).",
+    id: "Kop surat belum lengkap: %s kosong. Isi di kartu Kop Surat (tab Beranda).",
+  },
+  p34CheckNomorEmpty: {
+    en: "Letter number is still empty — type it or press “Auto number”.",
+    id: "Nomor surat masih kosong — isi manual atau tekan “Nomor otomatis”.",
+  },
+  p34CheckNomorPattern: {
+    en: "Number pattern looks unusual: “%s”. Usual pattern: 140/012/DS/XI/2026.",
+    id: "Pola nomor tidak seperti biasa: “%s”. Contoh pola: 140/012/DS/XI/2026.",
+  },
+  p34CheckTanggalEmpty: {
+    en: "Letter date is still empty.",
+    id: "Tanggal surat masih kosong.",
+  },
+  p34CheckTanggalFormat: {
+    en: "Date format not recognised: “%s”. Example: 28 November 2026.",
+    id: "Format tanggal tidak dikenali: “%s”. Contoh: 28 November 2026.",
+  },
+  p34CheckPerihalEmpty: {
+    en: "Subject is still empty.",
+    id: "Perihal masih kosong.",
+  },
+  p34CheckTujuanEmpty: {
+    en: "Addressee is still empty.",
+    id: "Tujuan surat masih kosong.",
+  },
+  p34CheckBodyEmpty: {
+    en: "Letter body is still empty.",
+    id: "Isi surat masih kosong.",
+  },
+  p34CheckLowerStart: {
+    en: "A sentence starts with a lowercase letter: “%s…” (%d sentence(s)).",
+    id: "Ada kalimat yang diawali huruf kecil: “%s…” (total %d kalimat).",
+  },
+  p34CheckDoubleSpace: {
+    en: "Double spaces found (%d time(s)).",
+    id: "Ada spasi ganda (%d kali).",
+  },
+  p34CheckSpelling: {
+    en: "“%s” is better written “%s”.",
+    id: "Kata “%s” sebaiknya ditulis “%s”.",
+  },
+  p34ReminderTitle: { en: "Today's reminders", id: "Pengingat hari ini" },
+  p34ReminderHint: {
+    en: "Register items due soon and complaints waiting over 3 days — tap an item to open it.",
+    id: "Agenda yang dekat waktunya dan pengaduan yang menunggu lebih dari 3 hari — ketuk untuk membukanya.",
+  },
+  p34ReminderEmpty: {
+    en: "No reminders today.",
+    id: "Tidak ada pengingat hari ini.",
+  },
+  p34ReminderNone: {
+    en: "No reminders today — every agenda item and complaint is already followed up.",
+    id: "Tidak ada pengingat hari ini — semua agenda dan pengaduan sudah ditindaklanjuti.",
+  },
+  p34ReminderAgendaBesok: {
+    en: "Agenda tomorrow: %s — %s",
+    id: "Agenda besok: %s — %s",
+  },
+  p34ReminderAgendaDekat: {
+    en: "Agenda in %d day(s): %s — %s",
+    id: "Agenda %d hari lagi: %s — %s",
+  },
+  p34ReminderAgendaLewat: {
+    en: "Agenda overdue %d day(s), not done: %s — %s",
+    id: "Agenda lewat %d hari (belum selesai): %s — %s",
+  },
+  p34ReminderAduanLama: {
+    en: "Complaint %s has waited %d days without follow-up",
+    id: "Pengaduan %s sudah %d hari belum ditindaklanjuti",
+  },
+  p34ReminderAduanTitle: { en: "Complaint", id: "Pengaduan" },
+  p34ReminderSummary: {
+    en: "There are %d reminder(s) today: %s",
+    id: "Ada %d pengingat hari ini: %s",
+  },
+  p34ReminderChip: {
+    en: "Any reminders today?",
+    id: "Ada pengingat apa hari ini?",
+  },
   aninFaqSurat: {
     en: "Open the Draft Letters tab, choose a letter type, fill in the form, then press “Generate draft”. Always check the draft before using it. Or just tell me: “Draft an invitation…” and I'll fill in the form for you.",
     id: "Buka tab Draf Surat, pilih jenis surat, isi formulir, lalu tekan “Buat draf”. Selalu periksa drafnya sebelum dipakai. Atau perintahkan saya: “Buatkan surat undangan…” — saya isi formulirnya.",
@@ -1122,6 +1255,64 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     en: "Anin: write one sentence first — for example, an invitation with the event, day, time, and place.",
     id: "Anin: tulis satu kalimat dulu — contohnya undangan beserta acara, hari, jam, dan tempat.",
   },
+  // Paket 34 (Ide 7) — Notulen Rapat.
+  notulenTitle: { en: "Meeting minutes — from meeting notes", id: "Notulen Rapat — dari catatan rapat" },
+  notulenHint: {
+    en: "Paste the meeting notes — Anin arranges them into minutes (date, attendees, agenda, decisions, follow-ups + the person in charge when named). Nothing is invented: a part that is not in the notes stays blank. Then make the follow-up letter from the minutes.",
+    id: "Tempel catatan rapat — Anin menyusunnya jadi notulen (tanggal, peserta, agenda, keputusan, tindak lanjut + penanggung jawab bila disebut). Tidak ada yang dikarang: bagian yang tidak ada di catatan tetap kosong. Lalu buat surat tindak lanjut dari notulen itu.",
+  },
+  notulenInputLabel: { en: "Meeting notes", id: "Catatan rapat" },
+  notulenPh: {
+    en: "e.g. Rapat 28 November 2026. Peserta: Budi, Siti, Ahmad. Agenda: 1. Jadwal posyandu; 2. Perbaikan jalan. Keputusan: posyandu pindah ke balai desa. Tindak lanjut: Budi menyiapkan undangan…",
+    id: "cth: Rapat 28 November 2026. Peserta: Budi, Siti, Ahmad. Agenda: 1. Jadwal posyandu; 2. Perbaikan jalan. Keputusan: posyandu pindah ke balai desa. Tindak lanjut: Budi menyiapkan undangan…",
+  },
+  notulenGenerate: { en: "Make minutes", id: "Buat notulen" },
+  notulenEmpty: {
+    en: "Anin: paste the meeting notes first.",
+    id: "Anin: tempel catatan rapat dulu.",
+  },
+  notulenNoResult: {
+    en: "Anin: nothing readable in this text — write the date, attendees, agenda, decisions, or follow-ups (e.g. “Peserta: Budi, Siti” or “Keputusan: …”).",
+    id: "Anin: tidak ada bagian notulen yang bisa dibaca dari teks ini — tulis tanggal, peserta, agenda, keputusan, atau tindak lanjut (cth: “Peserta: Budi, Siti” atau “Keputusan: …”).",
+  },
+  notulenToLetter: { en: "Make follow-up letter", id: "Buat surat tindak lanjut" },
+  notulenMic: { en: "Dictate notes (voice)", id: "Dikte catatan (suara)" },
+  notulenListening: { en: "Listening… speak the meeting notes.", id: "Mendengarkan… ucapkan catatan rapat." },
+  notulenAudioUnsupported: {
+    en: "This browser does not support audio transcription — paste the meeting notes in the box above.",
+    id: "Peramban ini tidak mendukung transkripsi audio — tempel teks rapat di kolom di atas.",
+  },
+  notulenAudioError: {
+    en: "Anin: voice dictation failed (%s) — paste the meeting notes instead.",
+    id: "Anin: dikte suara gagal (%s) — tempel teks rapat saja.",
+  },
+  // Paket 34 (Ide 9) — Mode Darurat.
+  daruratTitle: { en: "Emergency mode — disaster letters, one tap", id: "Mode Darurat — surat bencana, satu ketuk" },
+  daruratHint: {
+    en: "One tap fills in the letter form with the framework for that disaster. Complete the location, time, victims/damage, then press Generate draft as usual.",
+    id: "Satu ketuk mengisi formulir surat dengan kerangka bencana itu. Lengkapi lokasi, waktu, korban/kerusakan, lalu tekan Buat draf seperti biasa.",
+  },
+  daruratBtnLaporan: { en: "Report: %s", id: "Laporan: %s" },
+  daruratBtnBantuan: { en: "Aid: %s", id: "Bantuan: %s" },
+  daruratFilled: {
+    en: "Anin: the %s framework is filled in — complete the location, time, victims/damage, then press Generate draft.",
+    id: "Anin: kerangka %s terisi — lengkapi lokasi, waktu, korban/kerusakan, lalu tekan Buat draf.",
+  },
+  // Paket 34 (Ide 8) — sakelar Bahasa Bangka di panel Anin.
+  aninBangkaLabel: { en: "Answer in Bahasa Bangka", id: "Jawab dalam Bahasa Bangka" },
+  // Paket 34 (Ide 7–9) — jawaban Anin atas pertanyaan tentang fitur baru.
+  aninFaqNotulen: {
+    en: "Paste the meeting notes in the Summarize tab, in the “Meeting minutes” panel, then press “Make minutes”. Anin arranges them into date, attendees, agenda, decisions, and follow-ups (with the person in charge when named). Nothing is invented — a part that is not in the notes stays blank. Press “Make follow-up letter” to turn the minutes into an official-letter draft. Voice dictation works only when the browser supports it; otherwise paste the text.",
+    id: "Tempel catatan rapat di tab Ringkasan, panel “Notulen Rapat”, lalu tekan “Buat notulen”. Anin menyusunnya jadi tanggal, peserta, agenda, keputusan, dan tindak lanjut (beserta penanggung jawab bila disebut). Tidak ada yang dikarang — bagian yang tidak ada di catatan tetap kosong. Tekan “Buat surat tindak lanjut” untuk mengubah notulen jadi draf surat resmi. Dikte suara hanya jalan bila peramban mendukungnya; kalau tidak, tempel teksnya.",
+  },
+  aninFaqBangka: {
+    en: "Turn on “Answer in Bahasa Bangka” at the top of this chat panel — Anin then answers in Bahasa Bangka for KTP, KK, cover letters (surat pengantar), and complaints. Only verified Bangka words are used (for example: pacak = can, dak = no, ikak = you, lom = not yet); administrative terms stay in Indonesian, and if Anin does not know a Bangka word yet she answers in Indonesian and says so. The switch is saved on this device.",
+    id: "Nyalakan “Jawab dalam Bahasa Bangka” di atas panel chat ini — Anin lalu menjawab dalam Bahasa Bangka untuk KTP, KK, surat pengantar, dan pengaduan. Hanya kata Bangka yang terverifikasi yang dipakai (contoh: pacak = bisa, dak = tidak, ikak = kamu, lom = belum); istilah administrasi tetap Bahasa Indonesia, dan bila Anin belum tahu kata Bangka-nya ia menjawab Bahasa Indonesia sambil mengatakannya. Sakelar tersimpan di perangkat ini.",
+  },
+  aninFaqDarurat: {
+    en: "In the Letters tab, under “Emergency mode”, tap the disaster (flood, fire, landslide, earthquake) and the letter type: Report or Aid request. The form is filled with that framework — complete the location, time, victims/damage, then press Generate draft as usual. You can also tell Anin: “surat darurat banjir”.",
+    id: "Di tab Surat, bagian “Mode Darurat”, ketuk bencana (banjir, kebakaran, tanah longsor, gempa bumi) dan jenis suratnya: Laporan atau Permohonan Bantuan. Formulir terisi kerangkanya — lengkapi lokasi, waktu, korban/kerusakan, lalu tekan Buat draf seperti biasa. Bisa juga bilang ke Anin: “surat darurat banjir”.",
+  },
   adopsiTitle: { en: "Adoption Pack for Other Villages", id: "Paket Adopsi Desa Lain" },
   adopsiHint: {
     en: "DesaAI is free and open-source — any village office can use it. Five steps, no account, no server: download the pack, follow the checklist, and the app is ready.",
@@ -1150,8 +1341,8 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   adopsiDownload: { en: "Download adoption pack (JSON)", id: "Unduh paket adopsi (JSON)" },
   adopsiDownloaded: { en: "Adoption pack downloaded.", id: "Paket adopsi diunduh." },
   adopsiNote: {
-    en: "The pack contains your letterhead, the 7 letter templates, and this checklist — no office data is included.",
-    id: "Paket berisi kop surat Anda, 7 template surat, dan checklist ini — tanpa data kantor.",
+    en: "The pack contains your letterhead, the 9 letter templates, and this checklist — no office data is included.",
+    id: "Paket berisi kop surat Anda, 9 template surat, dan checklist ini — tanpa data kantor.",
   },
   // Paket 28 — redesign model SIAP AKAD: sidebar biru, kartu statistik
   // cerah, grafik per desa/jabatan, banner form biru, ekspor tabel.

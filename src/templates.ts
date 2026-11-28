@@ -129,6 +129,45 @@ export const TEMPLATES: LetterTemplate[] = [
     structureId:
       "Kop surat, judul SURAT KEPUTUSAN KEPALA DESA, nomor dan tentang Pengangkatan Perangkat Desa, Menimbang, Mengingat (UU Desa dan peraturan turunannya), Memutuskan: KESATU mengangkat nama, NIK, jabatan, dan desa yang bersangkutan; KEDUA masa bhakti mulai sampai selesai; KETIGA tugas dan kewajiban; KEEMPAT keputusan berlaku sejak tanggal ditetapkan; tempat/tanggal penetapan, tanda tangan Kepala Desa.",
   },
+  // Paket 34 (Ide 9) — Mode Darurat: surat cepat untuk keadaan darurat
+  // (bencana), satu ketuk jadi. Petugas melengkapi detail (lokasi, waktu,
+  // korban/kerusakan) lalu generate seperti biasa. Template lama tidak diubah.
+  {
+    id: "darurat-laporan",
+    nameId: "Surat Laporan Kejadian Darurat",
+    nameEn: "Emergency Incident Report",
+    fields: [
+      { key: "nomor", labelId: "Nomor surat", labelEn: "Letter number", placeholder: "cth: 140/60/DS/XI/2026" },
+      { key: "tanggal", labelId: "Tanggal surat", labelEn: "Letter date", placeholder: "cth: 28 November 2026" },
+      { key: "jenisBencana", labelId: "Jenis bencana", labelEn: "Disaster type", placeholder: "cth: Banjir" },
+      { key: "lokasi", labelId: "Lokasi kejadian", labelEn: "Incident location", placeholder: "cth: Dusun Katis RT 02 RW 01, Desa Simpangkatis" },
+      { key: "tanggalKejadian", labelId: "Tanggal/waktu kejadian", labelEn: "Incident date/time", placeholder: "cth: 28 November 2026 pukul 03.00 WIB" },
+      { key: "korban", labelId: "Korban", labelEn: "Victims", placeholder: "cth: 12 kepala keluarga mengungsi; tidak ada korban jiwa" },
+      { key: "kerusakan", labelId: "Kerusakan", labelEn: "Damage", placeholder: "cth: 8 rumah terendam; 1 jembatan rusak" },
+      { key: "kebutuhan", labelId: "Kebutuhan mendesak", labelEn: "Urgent needs", placeholder: "cth: Perahu karet, makanan siap saji, selimut", type: "textarea" },
+      { key: "tujuan", labelId: "Ditujukan kepada", labelEn: "Addressed to", placeholder: "cth: Camat Simpangkatis" },
+    ],
+    structureId:
+      "Kop surat desa, nomor/tanggal/perihal Laporan Kejadian Darurat, alamat tujuan, salam pembuka, isi laporan (jenis bencana, lokasi dan waktu kejadian, korban, kerusakan, kebutuhan mendesak), penutup, tanda tangan Kepala Desa.",
+  },
+  {
+    id: "darurat-bantuan",
+    nameId: "Surat Permohonan Bantuan Darurat",
+    nameEn: "Emergency Aid Request",
+    fields: [
+      { key: "nomor", labelId: "Nomor surat", labelEn: "Letter number", placeholder: "cth: 140/61/DS/XI/2026" },
+      { key: "tanggal", labelId: "Tanggal surat", labelEn: "Letter date", placeholder: "cth: 28 November 2026" },
+      { key: "jenisBencana", labelId: "Jenis bencana", labelEn: "Disaster type", placeholder: "cth: Banjir" },
+      { key: "lokasi", labelId: "Lokasi kejadian", labelEn: "Incident location", placeholder: "cth: Dusun Katis RT 02 RW 01, Desa Simpangkatis" },
+      { key: "tanggalKejadian", labelId: "Tanggal/waktu kejadian", labelEn: "Incident date/time", placeholder: "cth: 28 November 2026 pukul 03.00 WIB" },
+      { key: "korban", labelId: "Korban", labelEn: "Victims", placeholder: "cth: 12 kepala keluarga mengungsi; tidak ada korban jiwa" },
+      { key: "kerusakan", labelId: "Kerusakan", labelEn: "Damage", placeholder: "cth: 8 rumah terendam; 1 jembatan rusak" },
+      { key: "bantuan", labelId: "Bantuan yang dimohon", labelEn: "Aid requested", placeholder: "cth: Sembako, air bersih, tenda pengungsian, obat-obatan", type: "textarea" },
+      { key: "tujuan", labelId: "Ditujukan kepada", labelEn: "Addressed to", placeholder: "cth: Bupati Bangka Tengah melalui Camat Simpangkatis" },
+    ],
+    structureId:
+      "Kop surat desa, nomor/tanggal/perihal Permohonan Bantuan Darurat, alamat tujuan, salam pembuka, isi permohonan (jenis bencana, lokasi dan waktu kejadian, korban, kerusakan, bantuan yang dimohon), penutup, tanda tangan Kepala Desa.",
+  },
 ];
 
 /** Build the prompt sent to the model for a letter draft. */
@@ -189,6 +228,38 @@ export function buildOfflineLetterBody(
     paras.push(
       "Demikian undangan ini kami sampaikan. Atas perhatian dan kehadiran Bapak/Ibu/Saudara/i, kami ucapkan terima kasih.",
     );
+    return paras.join("\n\n");
+  }
+  // Paket 34 (Ide 9) — Mode Darurat: tubuh surat laporan / permohonan
+  // bantuan darurat dari kolom formulir. Hanya memakai data yang diisi.
+  if (tpl.id === "darurat-laporan" || tpl.id === "darurat-bantuan") {
+    const jenis = v("jenisBencana") || "kejadian darurat";
+    const kapan: string[] = [];
+    if (v("tanggalKejadian")) kapan.push(`pada ${v("tanggalKejadian")}`);
+    if (v("lokasi")) kapan.push(`di ${v("lokasi")}`);
+    const tujuan = v("tujuan") || "Bapak/Ibu yang terhormat";
+    if (tpl.id === "darurat-laporan") {
+      paras.push(
+        `Dengan ini kami melaporkan bahwa telah terjadi ${jenis}${kapan.length ? ` ${kapan.join(" ")}` : ""}.`,
+      );
+      if (v("korban")) paras.push(`Korban: ${v("korban")}.`);
+      if (v("kerusakan")) paras.push(`Kerusakan: ${v("kerusakan")}.`);
+      if (v("kebutuhan")) paras.push(`Kebutuhan mendesak: ${v("kebutuhan")}.`);
+      paras.push(
+        "Demikian laporan ini kami sampaikan. Atas perhatian dan bantuan Bapak/Ibu, kami ucapkan terima kasih.",
+      );
+    } else {
+      paras.push(
+        `Sehubungan dengan terjadinya ${jenis}${kapan.length ? ` ${kapan.join(" ")}` : ""}, dengan ini kami memohon bantuan darurat kepada ${tujuan}.`,
+      );
+      if (v("korban")) paras.push(`Korban: ${v("korban")}.`);
+      if (v("kerusakan")) paras.push(`Kerusakan: ${v("kerusakan")}.`);
+      if (v("bantuan")) paras.push(`Adapun bantuan yang kami mohon sebagai berikut: ${v("bantuan")}.`);
+      paras.push(
+        "Demikian permohonan ini kami sampaikan. Atas perhatian dan bantuan Bapak/Ibu, kami ucapkan terima kasih.",
+      );
+    }
+    if (extra.trim()) paras.push(extra.trim());
     return paras.join("\n\n");
   }
   const subject = v("perihal") || v("tentang") || "";

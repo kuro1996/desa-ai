@@ -2665,6 +2665,71 @@ body.mode-warga #home-adopsi-card {
   margin-bottom: 10px;
 }
 
+/* Paket 34 (Ide 9) — Mode Darurat: blok sendiri di dalam Surat Cepat,
+ * tombol satu ketuk per bencana × jenis surat. Tetap biru-putih, dengan
+ * aksen merah tipis supaya bagian darurat langsung dikenali. */
+.darurat-box {
+  border: 1px solid #f3b8b8;
+  border-left: 5px solid #dc2626;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  background: var(--surface);
+  margin-top: 14px;
+}
+
+.darurat-box .hint {
+  margin-bottom: 10px;
+}
+
+.darurat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.darurat-btn {
+  border-color: #dc2626;
+  color: #b91c1c;
+  background: #fff;
+  font-weight: 600;
+}
+
+.darurat-btn:hover {
+  background: #fef2f2;
+  border-color: #b91c1c;
+}
+
+html[data-theme="dark"] .darurat-btn {
+  background: transparent;
+  color: #fca5a5;
+}
+
+html[data-theme="dark"] .darurat-btn:hover {
+  background: rgb(220 38 38 / 0.15);
+}
+
+/* Paket 34 (Ide 8) — sakelar Bahasa Bangka di kepala panel Anin. */
+.anin-bangka-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.anin-bangka-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--blue-strong);
+  cursor: pointer;
+}
+
 .bento-adopsi {
   border-left: 5px solid var(--blue-strong);
 }
@@ -4178,4 +4243,98 @@ html[data-theme="dark"] .verify-status.verify-missing {
 
 .adu-timeline li span {
   color: var(--muted);
+}
+
+/* ---------- Paket 34 — Anin: arsip (Ide 1), pemeriksa surat (Ide 2),
+   pengingat (Ide 3). Biru-putih, teks hitam jelas, satu font — ikut
+   token tema supaya terang + gelap sama-sama terbaca. ---------- */
+
+/* Ide 2 — hasil pemeriksaan di bawah lembar surat. */
+.check-results {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 12px 14px;
+}
+
+.check-head {
+  margin: 0 0 8px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  margin: 6px 0;
+  border-radius: 8px;
+  border-left: 4px solid var(--blue);
+  background: var(--blue-soft);
+}
+
+.check-item p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.93rem;
+  line-height: 1.45;
+}
+
+.check-item.check-error {
+  border-left-color: var(--rose);
+  background: var(--rose-soft);
+}
+
+.check-item.check-warning {
+  border-left-color: var(--amber);
+  background: var(--amber-soft);
+}
+
+.check-apply {
+  flex: 0 0 auto;
+  font-weight: 700;
+}
+
+/* Ide 3 — kartu Pengingat di panel Anin (di bawah riwayat chat). */
+.anin-reminders {
+  flex: 0 0 auto;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.anin-reminders-title {
+  margin: 0 0 8px;
+  font-weight: 700;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.anin-reminders .followup-list .notif-item {
+  cursor: pointer;
+}
+
+.anin-reminders .followup-list .notif-item:hover {
+  border-color: var(--blue);
+}
+
+/* Ide 1 — tombol arsip di tab Arsip & Draf. */
+.drafts-anin-actions {
+  margin: 12px 0 4px;
+}
+
+.drafts-anin-result {
+  margin-top: 8px;
+}
+
+.drafts-anin-result p {
+  margin: 0 0 8px;
+  white-space: pre-wrap;
 }

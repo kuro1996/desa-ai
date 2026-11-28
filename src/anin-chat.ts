@@ -6,9 +6,10 @@
 // She never invents names, numbers, or dates — a field stays empty when
 // the command does not state it clearly, and analyst answers only ever
 // contain aggregates (counts, averages, categories), never raw records.
-import { parseCepat, type CepatResult } from "./cepat";
+import { parseCepat, parseDarurat, type CepatResult } from "./cepat";
 import { matchKb, KB, type KbEntry } from "./kb";
 import { matchAninKb, ANIN_KB, type AninKbEntry } from "./anin-kb";
+import { detectLetterType } from "./anin-arsip";
 
 export type AninExpression =
   | "tersenyum"
@@ -48,6 +49,12 @@ export type AninIntent =
   | { kind: "analyst"; topic: AninAnalystTopic }
   | { kind: "appkb"; entry: AninKbEntry }
   | { kind: "kb"; entries: KbEntry[] }
+  // Paket 34 — Ide 1: next number / template from the archive.
+  | { kind: "archive"; templateId: string | null }
+  // Paket 34 — Ide 2: check the current draft against the official format.
+  | { kind: "check" }
+  // Paket 34 — Ide 3: today's reminders from local data.
+  | { kind: "reminders" }
   | { kind: "unknown" };
 
 const NAV_VERB = /\b(buka|bukakan|lihat|tampilkan|pindah|tuju|ke|buka\s+tab)\b/i;
@@ -109,6 +116,16 @@ const GREET = /^(halo|hai|hi|hei|selamat (pagi|siang|sore|malam)|assalamu'alaiku
 const THANKS = /terima kasih|makasih|thanks|thank you/i;
 const LETTER_VERB = /\b(buat|buatkan|bikin|tulis|tuliskan|tolong)\b/i;
 
+// Paket 34 — Ide 1: "nomor surat berikutnya", "template surat undangan
+// dari arsip". Ide 2: "periksa surat ini". Ide 3: "ada pengingat apa
+// hari ini". Checked before the letter/analyst rules so a question about
+// the archive is not mistaken for a letter command.
+const ARCHIVE_RE =
+  /nomor surat berikut|nomor berikut|saran.*nomor|template.*arsip|dari arsip|arsip.*(nomor|template|format)/i;
+const CHECK_RE = /\b(periksa|cek)\b.*\b(surat|draf)\b/i;
+const REMINDERS_RE =
+  /pengingat|tenggat|deadline|agenda besok|yang harus (dilakukan|dikerjakan|ditindaklanjuti)/i;
+
 /**
  * Route one user message. Order matters: greetings, navigation (explicit
  * "buka …"), letter commands, analyst questions, the app knowledge base
@@ -131,31 +148,46 @@ export function classifyAninText(raw: string): AninIntent {
     }
   }
 
-  // 2. Letter command: create verb + "surat" → Surat Cepat parser.
+  // 1b. Emergency (Paket 34, Ide 9): "surat darurat banjir" / "darurat
+  // kebakaran" — tanpa kata kerja "buat"; parseDarurat mengembalikan
+  // null bila tidak ada jenis bencana yang jelas (tidak ditebak-nebak).
+  const darurat = parseDarurat(text);
+  if (darurat) return { kind: "letter", parsed: darurat };
+
+  // 2. Paket 34 — archive / check / reminders (before letter commands:
+  // "nomor surat berikutnya" and "periksa surat ini" carry no create verb,
+  // but "buatkan surat …" must never land here).
+  if (ARCHIVE_RE.test(text)) {
+    return { kind: "archive", templateId: detectLetterType(text) };
+  }
+  if (CHECK_RE.test(text)) return { kind: "check" };
+  if (REMINDERS_RE.test(text)) return { kind: "reminders" };
+
+  // 3. Letter command: create verb + "surat" → Surat Cepat parser.
   if (LETTER_VERB.test(text) && /surat/i.test(text)) {
     const parsed = parseCepat(text);
     if (parsed) return { kind: "letter", parsed };
     return { kind: "letter-need" };
   }
 
-  // 2b. Paket 34, Ide 5 — lapor warga: "saya mau lapor", "laporkan
+  // 4. Paket 34, Ide 5 — lapor warga: "saya mau lapor", "laporkan
   // masalah", "buat pengaduan baru". Checked before the analyst rules so
   // "buat pengaduan" starts the guided report flow instead of an analysis.
   if (/\b(lapor|laporkan|melapor|mengadu)\b/i.test(text) || /buat pengaduan|pengaduan baru|komplain/i.test(text)) {
     return { kind: "lapor" };
   }
 
-  // 3. Analyst: IKM averages, top complaints, what to improve — computed
+  // 5. Analyst: IKM averages, top complaints, what to improve — computed
   // on-device from local data (main.ts), never from raw records.
   for (const rule of ANALYST_RULES) {
     if (rule.patterns.some((re) => re.test(text))) return { kind: "analyst", topic: rule.topic };
   }
 
-  // 4. App knowledge base: every feature + troubleshooting.
+  // 6. App knowledge base: every feature + troubleshooting.
   const appEntry = matchAninKb(text);
   if (appEntry) return { kind: "appkb", entry: appEntry };
 
-  // 5. Procedure guide (KB): KTP, KK, SKTM, … — offline, always available.
+  // 7. Procedure guide (KB): KTP, KK, SKTM, … — offline, always available.
   const entries = matchKb(text);
   if (entries.length > 0) return { kind: "kb", entries };
 
