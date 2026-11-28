@@ -1002,6 +1002,103 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   },
   aninChipIkm: { en: "What is the average IKM?", id: "IKM rata-rata berapa?" },
   aninChipKeluhan: { en: "Most common complaints?", id: "Keluhan terbanyak bulan ini?" },
+  // Paket 34, Ide 5 — lapor warga lewat Anin (alur chat terpandu).
+  aninChipLapor: { en: "Report a problem", id: "Saya mau lapor" },
+  laporAskJenis: {
+    en: "Of course — let's report it step by step. First, what kind of problem is it? Reply with the number:\n%s",
+    id: "Baik, kita laporkan langkah demi langkah. Pertama, masalahnya jenis apa? Balas dengan angkanya:\n%s",
+  },
+  laporAskIsi: {
+    en: "Got it — %s. Now describe the problem briefly (what happened, when, where).",
+    id: "Baik — %s. Sekarang ceritakan masalahnya secara singkat (apa yang terjadi, kapan, di mana).",
+  },
+  laporAskNama: {
+    en: "Thank you. Lastly, your name and phone number (optional) so the office can follow up — or type “lewati” to stay anonymous.",
+    id: "Terima kasih. Terakhir, nama dan nomor HP Anda (boleh kosong) supaya petugas bisa menindaklanjuti — atau ketik “lewati” bila ingin anonim.",
+  },
+  laporJenisInvalid: {
+    en: "Please reply with a number 1–%d, or the type name, e.g. “Keterlambatan”. Type “batal” to stop.",
+    id: "Balas dengan angka 1–%d, atau nama jenisnya, mis. “Keterlambatan”. Ketik “batal” untuk berhenti.",
+  },
+  laporNeedIsi: {
+    en: "Please describe the problem first — one sentence is enough. Type “batal” to stop.",
+    id: "Ceritakan dulu masalahnya — satu kalimat saja cukup. Ketik “batal” untuk berhenti.",
+  },
+  laporDone: {
+    en: "Done — your report is saved with ticket %s (status: Baru). Keep the ticket number to track it in the Complaints tab. The office also prepared a complaint letter draft from your report.",
+    id: "Selesai — laporan Anda tersimpan dengan nomor tiket %s (status: Baru). Simpan nomor tiketnya untuk melacak di tab Pengaduan. Petugas juga sudah dibuatkan draf surat pengaduan dari laporan Anda.",
+  },
+  laporCancelled: {
+    en: "Okay, the report is cancelled — nothing was saved.",
+    id: "Baik, laporan dibatalkan — tidak ada yang tersimpan.",
+  },
+  // Paket 34, Ide 4 — verifikasi surat via QR.
+  qrButton: { en: "QR Verification", id: "QR Verifikasi" },
+  qrTitle: { en: "Verification QR code", id: "Kode QR verifikasi" },
+  qrHint: {
+    en: "Scan this code to open the verification page. It only proves the letter matches the archive stored in this browser — on another device it may say “not found”.",
+    id: "Pindai kode ini untuk membuka halaman verifikasi. Kode ini hanya membuktikan surat cocok dengan arsip di browser ini — di perangkat lain bisa muncul “tidak ditemukan”.",
+  },
+  qrDownload: { en: "Download QR (PNG)", id: "Unduh QR (PNG)" },
+  qrCopy: { en: "Copy link", id: "Salin tautan" },
+  qrCopied: { en: "Verification link copied.", id: "Tautan verifikasi disalin." },
+  qrCopyFail: { en: "Could not copy the link.", id: "Tautan tidak bisa disalin." },
+  verifySubtitle: {
+    en: "Letter verification — Kecamatan Simpangkatis",
+    id: "Verifikasi surat — Kecamatan Simpangkatis",
+  },
+  verifyChecking: {
+    en: "Checking the archive…",
+    id: "Memeriksa arsip…",
+  },
+  verifyVerified: {
+    en: "✓ TERVERIFIKASI: cocok dengan arsip",
+    id: "✓ TERVERIFIKASI: cocok dengan arsip",
+  },
+  verifyTampered: {
+    en: "⚠ DITEMUKAN, tapi isinya tidak cocok dengan arsip — kemungkinan isi surat sudah diubah setelah kode QR dibuat.",
+    id: "⚠ DITEMUKAN, tapi isinya tidak cocok dengan arsip — kemungkinan isi surat sudah diubah setelah kode QR dibuat.",
+  },
+  verifyNotFound: {
+    en: "✕ TIDAK DITEMUKAN dalam arsip",
+    id: "✕ TIDAK DITEMUKAN dalam arsip",
+  },
+  verifyNotFoundHint: {
+    en: "No letter with this code exists in the archive loaded on this device. That does not by itself prove the letter is fake — it may come from another device or an archive that was deleted. Ask the office to check the original archive.",
+    id: "Tidak ada surat dengan kode ini di arsip yang dimuat perangkat ini. Itu saja belum membuktikan suratnya palsu — mungkin berasal dari perangkat lain atau arsip yang sudah dihapus. Minta petugas memeriksa arsip aslinya.",
+  },
+  verifyOpenApp: { en: "Open DesaAI", id: "Buka DesaAI" },
+  verifyId: { en: "Letter code", id: "Kode surat" },
+  verifyDate: { en: "Archived on", id: "Diarsipkan" },
+  // Paket 34, Ide 6 — Dashboard Pagi Camat.
+  camatTitle: { en: "Dashboard Pagi Camat", id: "Dashboard Pagi Camat" },
+  camatHint: {
+    en: "This morning's summary for the Camat — from the data already in this app. Officers only.",
+    id: "Ringkasan pagi untuk Camat — dari data yang sudah ada di aplikasi ini. Khusus petugas.",
+  },
+  camatNoData: {
+    en: "Belum ada data — no agenda, survey answers, complaints, or drafts yet.",
+    id: "Belum ada data — belum ada agenda, jawaban survei, pengaduan, atau draf.",
+  },
+  camatSurat: { en: "Letters (agenda)", id: "Surat (agenda)" },
+  camatHariIni: { en: "Today", id: "Hari ini" },
+  camatMingguIni: { en: "This week", id: "Minggu ini" },
+  camatMasuk: { en: "Incoming", id: "Masuk" },
+  camatKeluar: { en: "Outgoing", id: "Keluar" },
+  camatIkm: { en: "Satisfaction (IKM)", id: "Kepuasan (IKM)" },
+  camatIkmRata: { en: "Average", id: "Rata-rata" },
+  camatIkmResponden: { en: "Respondents", id: "Responden" },
+  camatAduan: { en: "Complaints", id: "Pengaduan" },
+  camatDrafts: { en: "Letter drafts waiting", id: "Draf surat menunggu" },
+  camatOpen: { en: "Open detail", id: "Buka detail" },
+  // Paket 34, Ide 5 — lacak pengaduan (nomor tiket + linimasa).
+  aduTicket: { en: "Ticket", id: "No. tiket" },
+  aduSearch: { en: "Track a complaint", id: "Lacak pengaduan" },
+  aduSearchPh: {
+    en: "Ticket number or name, e.g. ADU-2026-0001…",
+    id: "Nomor tiket atau nama, mis. ADU-2026-0001…",
+  },
+  aduTimelineTitle: { en: "Status timeline", id: "Linimasa status" },
   cepatTitle: { en: "Surat Cepat — one sentence is enough", id: "Surat Cepat — cukup satu kalimat" },
   cepatHint: {
     en: "Describe the letter in one sentence — Anin guesses the type and fills in the form. Always check the fields before generating the draft. Works offline.",

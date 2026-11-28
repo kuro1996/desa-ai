@@ -4073,3 +4073,159 @@ body.mode-warga .tab[data-tab="settings"] {
   font-size: 12px;
   color: #64748b;
 }
+
+/* ---------- Paket 34 — Ide 4/5/6 ---------- */
+
+/* Ide 4 — mode verifikasi publik: hanya halaman verifikasi yang tampil. */
+body.verify-mode .app-shell {
+  display: none;
+}
+
+body.verify-mode #login-screen {
+  display: none;
+}
+
+/* Tombol + panel Anin berada di luar .app-shell — sembunyikan juga. */
+body.verify-mode .anin-fab,
+body.verify-mode .anin-panel {
+  display: none;
+}
+
+.verify-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 16px;
+  background: var(--bg);
+}
+
+.verify-card {
+  width: 100%;
+  max-width: 640px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 24px;
+}
+
+.verify-title {
+  margin: 0;
+  color: var(--blue-strong);
+  font-size: 1.6rem;
+}
+
+.verify-sub {
+  margin: 4px 0 16px;
+  color: var(--muted);
+}
+
+.verify-status {
+  font-weight: 800;
+  font-size: 1.1rem;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  margin: 0 0 16px;
+}
+
+.verify-status.verify-ok {
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.verify-status.verify-bad {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.verify-status.verify-missing {
+  background: var(--rose-soft);
+  color: var(--rose);
+}
+
+html[data-theme="dark"] .verify-status.verify-ok {
+  color: #7ee2ae;
+}
+
+html[data-theme="dark"] .verify-status.verify-bad {
+  color: #fbbf24;
+}
+
+html[data-theme="dark"] .verify-status.verify-missing {
+  color: #fda4af;
+}
+
+.verify-content {
+  white-space: pre-wrap;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin: 12px 0 0;
+}
+
+/* Ide 4 — dialog kode QR verifikasi. */
+.qr-img {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 4px;
+}
+
+.qr-img svg {
+  width: 240px;
+  max-width: 100%;
+  height: auto;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+}
+
+.qr-url {
+  word-break: break-all;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* Ide 6 — Dashboard Pagi Camat di Beranda. */
+.bento-camat {
+  grid-column: 1 / -1;
+  border-left: 5px solid var(--blue-strong);
+}
+
+.camat-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.camat-row:first-child {
+  border-top: 0;
+}
+
+.camat-row strong {
+  min-width: 150px;
+}
+
+.camat-row span {
+  flex: 1;
+}
+
+/* Ide 5 — linimasa status di dialog detail pengaduan. */
+.adu-timeline {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.adu-timeline li {
+  margin: 6px 0;
+}
+
+.adu-timeline li span {
+  color: var(--muted);
+}

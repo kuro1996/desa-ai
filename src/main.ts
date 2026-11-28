@@ -23,6 +23,7 @@ import {
   type DesaaiBackup,
 } from "./backup";
 import { buildAdoptionPack } from "./adopsi";
+import { buildCamatDashboard } from "./dashboard-camat";
 import {
   analyzeAduan,
   analyzeIkm,
@@ -94,10 +95,12 @@ import {
 } from "./kepegawaian";
 import {
   ADUAN_JENIS,
+  aduTimeline,
   computeAduanStats,
   filterAduan,
   isAduanDemoRecord,
   loadAduan,
+  nextTicket,
   saveAduan,
   syncAduanToFirestore,
   type Aduan,
@@ -105,12 +108,26 @@ import {
 } from "./pengaduan";
 import { buildLetterPrompt, buildOfflineLetterBody, TEMPLATES, type LetterTemplate } from "./templates";
 import { makeQr } from "./qr";
+import {
+  buildVerifyUrl,
+  parseVerifyQuery,
+  verifyDraft,
+  type VerifyParams,
+} from "./verifikasi";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
   const el = document.getElementById(id);
   if (!el) throw new Error(`DesaAI: missing element #${id}`);
   return el as T;
 };
+
+// Paket 35 — bahasa tersimpan di localStorage dan bertahan setelah tutup
+// aplikasi (sebelumnya hanya variabel sesi: reload kembali ke Inggris).
+// LANG_KEY HARUS di atas `let lang = loadLang()`: loadLang() membaca
+// konstanta ini, dan akses sebelum inisialisasi (TDZ) akan ditangkap
+// try/catch-nya lalu selalu mengembalikan "en" — bahasa tersimpan tidak
+// pernah termuat (ditemukan saat Paket 34-B).
+const LANG_KEY = "desaai-lang-v1";
 
 let lang: Lang = loadLang();
 let svc: FirebaseServices | null = null;
@@ -120,10 +137,6 @@ let lastLetterText = "";
 let lastSummaryText = "";
 
 // ---------- language ----------
-
-// Paket 35 — bahasa tersimpan di localStorage dan bertahan setelah tutup
-// aplikasi (sebelumnya hanya variabel sesi: reload kembali ke Inggris).
-const LANG_KEY = "desaai-lang-v1";
 
 function loadLang(): Lang {
   try {
@@ -555,6 +568,8 @@ function applyMode(mode: AppMode): void {
   appMode = mode;
   document.body.classList.toggle("mode-warga", mode === "warga");
   $("home-warga-card").hidden = mode !== "warga";
+  // Paket 34, Ide 6 — Dashboard Pagi Camat khusus petugas.
+  renderCamatDashboard();
   updateModeButton();
   try {
     localStorage.setItem(MODE_KEY, mode);
@@ -2088,6 +2103,7 @@ function renderHome(): void {
   renderMonthlyTrend();
   renderFollowUp();
   renderBriefing();
+  renderCamatDashboard();
   renderHomeSearch();
   renderQuickStats();
   renderBackupCard();
@@ -2114,6 +2130,71 @@ function renderAnin(): void {
   else tip = t(aninRotatingTipKey(now), lang);
   $("anin-tip").textContent = tip;
   $("anin-go-aduan").hidden = aduanBaru === 0;
+}
+
+// ---------- Paket 34, Ide 6 — Dashboard Pagi Camat ----------
+// Ringkasan harian satu halaman untuk Camat di Beranda, khusus petugas
+// (disembunyikan di Mode Warga). Semua angka agregat dari data aplikasi
+// yang sudah ada; sumber yang kosong menampilkan "belum ada data", bukan
+// angka karangan.
+function renderCamatDashboard(): void {
+  const card = $("home-camat");
+  card.hidden = appMode === "warga";
+  if (appMode === "warga") return;
+  const d = buildCamatDashboard({
+    agenda: loadAgenda(),
+    ikm: loadIkm(),
+    aduan: loadAduan(),
+    drafts: listLocalDrafts(),
+  });
+  $("home-camat-empty").hidden = !d.allEmpty;
+  const body = $("home-camat-body");
+  body.innerHTML = "";
+  if (d.allEmpty) return;
+  const noData = t("camatNoData", lang);
+  const mkRow = (label: string, value: string, tab: string): void => {
+    const row = document.createElement("div");
+    row.className = "camat-row";
+    const lab = document.createElement("strong");
+    lab.textContent = label;
+    row.appendChild(lab);
+    const val = document.createElement("span");
+    val.textContent = value;
+    row.appendChild(val);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn";
+    btn.textContent = t("camatOpen", lang);
+    btn.addEventListener("click", () => activateTab(tab));
+    row.appendChild(btn);
+    body.appendChild(row);
+  };
+  mkRow(
+    t("camatSurat", lang),
+    d.hasAgenda
+      ? `${t("camatHariIni", lang)}: ${t("camatMasuk", lang)} ${d.masukHariIni} · ${t("camatKeluar", lang)} ${d.keluarHariIni} — ${t("camatMingguIni", lang)}: ${t("camatMasuk", lang)} ${d.masukMingguIni} · ${t("camatKeluar", lang)} ${d.keluarMingguIni}`
+      : noData,
+    "agenda",
+  );
+  mkRow(
+    t("camatIkm", lang),
+    d.hasIkm
+      ? `${t("camatIkmRata", lang)} ${ikmFmt(d.ikmRata)} · ${d.ikmResponden} ${t("camatIkmResponden", lang)}`
+      : noData,
+    "ikm",
+  );
+  mkRow(
+    t("camatAduan", lang),
+    d.hasAduan
+      ? `${t("aduStatusBaru", lang)} ${d.aduBaru} · ${t("aduStatusDiproses", lang)} ${d.aduDiproses} · ${t("aduStatusSelesai", lang)} ${d.aduSelesai}`
+      : noData,
+    "pengaduan",
+  );
+  mkRow(
+    t("camatDrafts", lang),
+    d.hasDrafts ? String(d.drafMenunggu) : noData,
+    "drafts",
+  );
 }
 
 function initHome(): void {
@@ -3191,6 +3272,7 @@ const ANIN_CHIP_KEYS = [
   "aninChipKeg",
   "aninChipIkm",
   "aninChipKeluhan",
+  "aninChipLapor",
 ];
 
 const ANIN_TAB_I18N: Record<string, string> = {
@@ -3296,6 +3378,141 @@ function initAninChat(): void {
   const micBtn = $("anin-mic") as HTMLButtonElement;
   let welcomed = false;
   let exprTimer: number | undefined;
+
+  // ---------- Paket 34, Ide 5 — lapor warga terpandu ----------
+  // Alur chat: jenis laporan → deskripsi → nama/kontak opsional.
+  // State hidup selama percakapan; "batal" membatalkan tanpa menyimpan.
+  let laporFlow: { step: "jenis" | "isi" | "nama"; jenis: string; isi: string } | null = null;
+
+  const laporJenisList = (): string =>
+    ADUAN_JENIS.map((j, i) => `${i + 1}. ${j}`).join("\n");
+
+  const startLapor = (): void => {
+    laporFlow = { step: "jenis", jenis: "", isi: "" };
+    setExpression("mengangguk", 2000);
+    addMessage("anin", t("laporAskJenis", lang).replace("%s", laporJenisList()));
+  };
+
+  const finishLapor = async (nama: string, kontak: string): Promise<void> => {
+    if (!laporFlow) return;
+    const now = Date.now();
+    const items = loadAduan();
+    const ticket = nextTicket(items);
+    const aduan: Aduan = {
+      id: `adu-${now}`,
+      ticket,
+      nama,
+      jenis: laporFlow.jenis,
+      jenisSurat: "pengantar",
+      isi: laporFlow.isi,
+      kontak,
+      status: "baru",
+      createdAt: now,
+      riwayat: [{ status: "baru", at: now }],
+    };
+    const next = [...items, aduan];
+    saveAduan(next);
+    if (svc) void syncAduanToFirestore(svc, next).then(() => setFirebaseChip());
+    renderPengaduan();
+    // (b) Draf surat pengaduan dari laporan itu — masuk arsip Draf Surat.
+    const tanggal = new Date(now).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+    const letter = [
+      "KECAMATAN SIMPANGKATIS",
+      "",
+      `Perihal: Pengaduan — ${aduan.jenis} (Tiket ${ticket})`,
+      `Tanggal: ${tanggal}`,
+      "",
+      "Yth. Camat Simpangkatis",
+      "di tempat",
+      "",
+      "Dengan hormat,",
+      `Bersama surat ini saya menyampaikan pengaduan terkait ${aduan.jenis.toLowerCase()}:`,
+      "",
+      aduan.isi,
+      "",
+      `Pelapor: ${nama || "Anonim"}${kontak ? ` (${kontak})` : ""}`,
+      `Nomor tiket: ${ticket}`,
+      "",
+      "Mohon pengaduan ini ditindaklanjuti. Atas perhatiannya, terima kasih.",
+      "",
+      "Pelapor,",
+      nama || "Anonim",
+    ].join("\n");
+    if (svc) {
+      await saveDraft(svc, "letter", `Surat Pengaduan — ${aduan.jenis} (${ticket})`, letter);
+    } else {
+      const all = listLocalDrafts();
+      all.unshift({
+        id: `d-${now}-${Math.random().toString(36).slice(2, 8)}`,
+        kind: "letter",
+        title: `Surat Pengaduan — ${aduan.jenis} (${ticket})`,
+        content: letter,
+        createdAt: now,
+        source: "local",
+      });
+      replaceLocalDrafts(all);
+    }
+    await refreshDrafts();
+    laporFlow = null;
+    setExpression("senang", 3000);
+    addMessage("anin", t("laporDone", lang).replace("%s", ticket));
+  };
+
+  const handleLaporStep = async (text: string): Promise<void> => {
+    if (!laporFlow) return;
+    if (/^\s*batal\s*$/i.test(text)) {
+      laporFlow = null;
+      addMessage("anin", t("laporCancelled", lang));
+      return;
+    }
+    if (laporFlow.step === "jenis") {
+      const num = Number(text.trim());
+      let jenis: string | undefined;
+      if (Number.isInteger(num) && num >= 1 && num <= ADUAN_JENIS.length) {
+        jenis = ADUAN_JENIS[num - 1];
+      } else {
+        jenis = ADUAN_JENIS.find(
+          (j) => j.toLowerCase() === text.trim().toLowerCase(),
+        );
+      }
+      if (!jenis) {
+        addMessage(
+          "anin",
+          t("laporJenisInvalid", lang).replace("%d", String(ADUAN_JENIS.length)),
+        );
+        return;
+      }
+      laporFlow.jenis = jenis;
+      laporFlow.step = "isi";
+      addMessage("anin", t("laporAskIsi", lang).replace("%s", jenis));
+      return;
+    }
+    if (laporFlow.step === "isi") {
+      if (text.trim().length < 3) {
+        addMessage("anin", t("laporNeedIsi", lang));
+        return;
+      }
+      laporFlow.isi = text.trim();
+      laporFlow.step = "nama";
+      addMessage("anin", t("laporAskNama", lang));
+      return;
+    }
+    // step === "nama": "lewati" = anonim; nomor HP saja = kontak; lainnya nama.
+    if (/^\s*(lewati|skip|anonim|-)\s*$/i.test(text)) {
+      await finishLapor("", "");
+    } else {
+      const v = text.trim();
+      const phoneLike = /^[+0][0-9\s\-()]{7,}$/.test(v);
+      await finishLapor(
+        phoneLike ? "" : v,
+        phoneLike ? v.replace(/[\s\-()]/g, "") : "",
+      );
+    }
+  };
 
   const setExpression = (expr: AninExpression, holdMs = 0): void => {
     const file = `./${ANIN_FACE_FILE[expr]}`;
@@ -3571,6 +3788,12 @@ function initAninChat(): void {
     if (!text) return;
     addMessage("user", text);
     input.value = "";
+    // Paket 34, Ide 5 — alur lapor terpandu sedang berjalan: pesan ini
+    // menjawab langkah berikutnya, bukan perintah baru.
+    if (laporFlow) {
+      await handleLaporStep(text);
+      return;
+    }
     const intent = classifyAninText(text);
 
     if (intent.kind === "greet") {
@@ -3614,6 +3837,10 @@ function initAninChat(): void {
     if (intent.kind === "letter-need") {
       setExpression("bingung", 2500);
       addMessage("anin", t("aninChatLetterNeed", lang));
+      return;
+    }
+    if (intent.kind === "lapor") {
+      startLapor();
       return;
     }
     if (intent.kind === "analyst") {
@@ -3678,6 +3905,105 @@ function initAninChat(): void {
     }
   });
   renderAninChips();
+}
+
+// ---------- Paket 34, Ide 4 — Verifikasi surat via QR ----------
+
+let currentQrUrl = "";
+let currentQrPng: ((cellSize?: number) => string) | null = null;
+
+/** Buka dialog kode QR verifikasi untuk satu surat arsip. */
+function openQrDialog(d: Draft): void {
+  currentQrUrl = buildVerifyUrl(d);
+  const qr = makeQr(currentQrUrl);
+  $("qr-dialog-title").textContent = `${t("qrTitle", lang)} — ${d.title}`;
+  const img = $("qr-dialog-img");
+  img.innerHTML = "";
+  if (qr) {
+    img.innerHTML = qr.svg;
+    currentQrPng = qr.dataUrl;
+  } else {
+    img.textContent = currentQrUrl;
+    currentQrPng = null;
+  }
+  $("qr-dialog-url").textContent = currentQrUrl;
+  setStatus($("qr-status"), "");
+  const dlg = $("qr-dialog") as HTMLDialogElement;
+  if (!dlg.open) dlg.showModal();
+}
+
+/**
+ * Halaman verifikasi publik (?verifikasi=<id>&c=<checksum>): tampilkan isi
+ * surat + status keaslian dari arsip yang sudah dimuat di browser ini.
+ * Jujur: tanpa id yang cocok, tulis "TIDAK DITEMUKAN dalam arsip" — jangan
+ * pernah mengklaim palsu/asli tanpa data.
+ */
+async function showVerifyPage(
+  params: VerifyParams,
+  svcForVerify: FirebaseServices | null,
+): Promise<void> {
+  const page = $("verify-page");
+  page.hidden = false;
+  const statusEl = $("verify-status");
+  const body = $("verify-body");
+  const note = $("verify-note");
+  const drafts = svcForVerify
+    ? await listDrafts(svcForVerify)
+    : listLocalDrafts();
+  const res = verifyDraft(drafts, params.id, params.checksum);
+  statusEl.classList.remove("verify-ok", "verify-bad", "verify-missing");
+  if (res.status === "verified" && res.draft) {
+    statusEl.classList.add("verify-ok");
+    statusEl.textContent = t("verifyVerified", lang);
+    note.textContent = "";
+    body.hidden = false;
+    const meta = $("verify-meta");
+    meta.innerHTML = "";
+    for (const [k, v] of [
+      [t("verifyId", lang), res.draft.id],
+      [t("printFieldPerihal", lang), res.draft.title],
+      [
+        t("verifyDate", lang),
+        new Date(res.draft.createdAt).toLocaleString(),
+      ],
+    ] as const) {
+      const dt = document.createElement("dt");
+      dt.textContent = k;
+      const dd = document.createElement("dd");
+      dd.textContent = v;
+      meta.appendChild(dt);
+      meta.appendChild(dd);
+    }
+    $("verify-content").textContent = res.draft.content;
+  } else if (res.status === "tampered" && res.draft) {
+    statusEl.classList.add("verify-bad");
+    statusEl.textContent = t("verifyTampered", lang);
+    note.textContent = "";
+    body.hidden = false;
+    const meta = $("verify-meta");
+    meta.innerHTML = "";
+    for (const [k, v] of [
+      [t("verifyId", lang), res.draft.id],
+      [t("printFieldPerihal", lang), res.draft.title],
+      [
+        t("verifyDate", lang),
+        new Date(res.draft.createdAt).toLocaleString(),
+      ],
+    ] as const) {
+      const dt = document.createElement("dt");
+      dt.textContent = k;
+      const dd = document.createElement("dd");
+      dd.textContent = v;
+      meta.appendChild(dt);
+      meta.appendChild(dd);
+    }
+    $("verify-content").textContent = res.draft.content;
+  } else {
+    statusEl.classList.add("verify-missing");
+    statusEl.textContent = t("verifyNotFound", lang);
+    note.textContent = t("verifyNotFoundHint", lang);
+    body.hidden = true;
+  }
 }
 
 // ---------- drafts ----------
@@ -3757,6 +4083,15 @@ async function refreshDrafts(): Promise<void> {
         await shareLetterViaWhatsApp(d.content, $("drafts-status"));
       });
       actions.appendChild(waBtn);
+      // Paket 34, Ide 4 — kode QR verifikasi untuk surat arsip ini.
+      const qrBtn = document.createElement("button");
+      qrBtn.type = "button";
+      qrBtn.className = "btn draft-qr-btn";
+      qrBtn.textContent = t("qrButton", lang);
+      qrBtn.addEventListener("click", () => {
+        openQrDialog(d);
+      });
+      actions.appendChild(qrBtn);
     }
     const delBtn = document.createElement("button");
     delBtn.type = "button";
@@ -4028,6 +4363,27 @@ function initDrafts(): void {
   // Paket 15 — print the archived letter shown in the preview.
   $("archive-print-do").addEventListener("click", doArchivePrint);
   $("archive-print-close").addEventListener("click", closeArchivePrint);
+  // Paket 34, Ide 4 — unduh QR verifikasi (PNG) + salin tautan.
+  $("qr-download").addEventListener("click", () => {
+    if (!currentQrPng) {
+      setStatus($("qr-status"), t("qrCopyFail", lang), true);
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = currentQrPng(8);
+    a.download = "desaai-qr-verifikasi.png";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+  $("qr-copy").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(currentQrUrl);
+      setStatus($("qr-status"), t("qrCopied", lang));
+    } catch {
+      setStatus($("qr-status"), t("qrCopyFail", lang), true);
+    }
+  });
   $("backup-export").addEventListener("click", async () => {
     const backup = {
       app: "DesaAI",
@@ -5120,7 +5476,11 @@ function renderPengaduan(): void {
     jenisFilterSel.appendChild(opt);
   });
   jenisFilterSel.value = prevJenisFilter;
-  const list = filterAduan(aduItems, prevFilter, prevJenisFilter);
+  // Paket 34, Ide 5 — lacak berdasarkan nomor tiket / nama / isi.
+  const searchQuery = (
+    $("adu-search") as HTMLInputElement
+  ).value;
+  const list = filterAduan(aduItems, prevFilter, prevJenisFilter, searchQuery);
   const wrap = $("adu-list");
   wrap.innerHTML = "";
   $("adu-empty").hidden = list.length > 0;
@@ -5140,7 +5500,9 @@ function renderPengaduan(): void {
     const meta = document.createElement("p");
     const tpl = TEMPLATES.find((tp) => tp.id === a.jenisSurat);
     const suratName = tpl ? (lang === "id" ? tpl.nameId : tpl.nameEn) : a.jenisSurat;
-    meta.textContent = `${a.jenis} • ${suratName} • ${new Date(a.createdAt).toLocaleString()}${a.kontak ? ` • ${a.kontak}` : ""}`;
+    // Paket 34, Ide 5 — nomor tiket lacak ditampilkan di tiap pengaduan.
+    const ticketPart = a.ticket ? `${t("aduTicket", lang)} ${a.ticket} • ` : "";
+    meta.textContent = `${ticketPart}${a.jenis} • ${suratName} • ${new Date(a.createdAt).toLocaleString()}${a.kontak ? ` • ${a.kontak}` : ""}`;
     div.appendChild(meta);
     const isi = document.createElement("p");
     isi.textContent = a.isi;
@@ -5218,6 +5580,7 @@ function aduShowDetail(a: Aduan): void {
   const suratName = tpl ? (lang === "id" ? tpl.nameId : tpl.nameEn) : a.jenisSurat;
   $("adu-detail-title").textContent = `${t("aduDetailTitle", lang)} — ${a.nama || t("ikmAnon", lang)}`;
   const rows: Array<[string, string]> = [
+    ...(a.ticket ? ([[t("aduTicket", lang), a.ticket]] as Array<[string, string]>) : []),
     [t("aduJenis", lang), a.jenis],
     [t("aduLetterType", lang), suratName],
     [t("aduFilterStatus", lang), pill.text],
@@ -5235,6 +5598,20 @@ function aduShowDetail(a: Aduan): void {
     body.appendChild(dd);
   }
   $("adu-detail-isi").textContent = a.isi;
+  // Paket 34, Ide 5 — linimasa status Baru → Diproses → Selesai.
+  const timeline = $("adu-detail-timeline");
+  timeline.innerHTML = "";
+  for (const step of aduTimeline(a)) {
+    const li = document.createElement("li");
+    const pill = aduStatusPill(step.status);
+    const strong = document.createElement("strong");
+    strong.textContent = pill.text;
+    li.appendChild(strong);
+    const when = document.createElement("span");
+    when.textContent = ` — ${new Date(step.at).toLocaleString()}`;
+    li.appendChild(when);
+    timeline.appendChild(li);
+  }
   if (!dlg.open) dlg.showModal();
 }
 
@@ -5242,6 +5619,8 @@ function initPengaduan(): void {
   renderPengaduan();
   $("adu-filter-status").addEventListener("change", renderPengaduan);
   $("adu-filter-jenis").addEventListener("change", renderPengaduan);
+  // Paket 34, Ide 5 — ketik nomor tiket / nama untuk melacak.
+  $("adu-search").addEventListener("input", renderPengaduan);
   $("adu-export").addEventListener("click", () => {
     const rows = [
       ["Tanggal", "Nama", "Jenis", "Layanan surat", "Status", "Kontak", "Isi"],
@@ -5286,7 +5665,14 @@ function initPengaduan(): void {
     if (!sel || !sel.dataset.id) return;
     const next = sel.value as AduanStatus;
     aduItems = aduItems.map((a) =>
-      a.id === sel.dataset.id ? { ...a, status: next } : a,
+      a.id === sel.dataset.id
+        ? {
+            ...a,
+            status: next,
+            // Paket 34, Ide 5 — tiap perubahan status masuk linimasa.
+            riwayat: [...(a.riwayat ?? []), { status: next, at: Date.now() }],
+          }
+        : a,
     );
     saveAduan(aduItems);
     if (svc) void syncAduanToFirestore(svc, aduItems).then(() => setFirebaseChip());
@@ -5304,6 +5690,8 @@ function initPengaduan(): void {
     }
     const aduan: Aduan = {
       id: `adu-${Date.now()}`,
+      // Paket 34, Ide 5 — tiap pengaduan baru dapat nomor tiket lacak.
+      ticket: nextTicket(aduItems),
       nama: ($("adu-in-nama") as HTMLInputElement).value.trim(),
       jenis,
       jenisSurat,
@@ -5311,6 +5699,7 @@ function initPengaduan(): void {
       kontak: ($("adu-in-kontak") as HTMLInputElement).value.trim(),
       status: "baru",
       createdAt: Date.now(),
+      riwayat: [{ status: "baru", at: Date.now() }],
     };
     aduItems = [...aduItems, aduan];
     saveAduan(aduItems);
@@ -5700,9 +6089,17 @@ function initAgenda(): void {
 // ---------- boot ----------
 
 async function boot(): Promise<void> {
+  // Paket 34, Ide 4 — mode verifikasi publik: ?verifikasi=<id>&c=<checksum>
+  // membuka halaman verifikasi SAJA (tanpa gerbang login, tanpa aplikasi
+  // penuh). Arsip diperiksa dari localStorage dulu, lalu dari Firestore
+  // bila sudah terhubung.
+  const verifyParams = parseVerifyQuery(location.search);
+  const verifyMode = verifyParams !== null;
+  if (verifyMode) document.body.classList.add("verify-mode");
   // Paket 36 — pasang gerbang login dulu (sebelum await Firebase yang
   // lambat), supaya formulir bisa dipakai walau boot belum selesai.
   initLogin();
+  if (verifyMode) hideLogin();
   initTabs();
   initHome();
   initLetters();
@@ -5766,6 +6163,10 @@ async function boot(): Promise<void> {
     });
   }
 
+  // Paket 34, Ide 4 — di mode verifikasi, tampilkan hasil dari arsip lokal
+  // dulu (cepat + offline); salinan Firestore menyusul di bawah.
+  if (verifyMode && verifyParams) void showVerifyPage(verifyParams, null);
+
   // Firebase init (skipped silently in demo mode — no network calls).
   try {
     svc = await initFirebase();
@@ -5801,6 +6202,9 @@ async function boot(): Promise<void> {
   applyLang();
   setFirebaseChip();
   setDeviceChip(onDevice);
+  // Paket 34, Ide 4 — periksa ulang dengan arsip gabungan (lokal +
+  // Firestore) begitu Firebase siap.
+  if (verifyMode && verifyParams) await showVerifyPage(verifyParams, svc);
 }
 
 boot().catch((e) => {

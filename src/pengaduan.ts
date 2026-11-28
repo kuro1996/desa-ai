@@ -20,6 +20,8 @@ export const ADUAN_JENIS = [
 
 export interface Aduan {
   id: string;
+  /** Nomor tiket lacak, mis. "ADU-2026-0001" (Paket 34, Ide 5). */
+  ticket?: string;
   nama: string; // "" = anonymous
   jenis: string; // one of ADUAN_JENIS
   jenisSurat: string; // letter template id
@@ -27,6 +29,34 @@ export interface Aduan {
   kontak: string; // "" = not given
   status: AduanStatus;
   createdAt: number; // epoch ms
+  /** Riwayat perubahan status (Paket 34, Ide 5 — linimasa lacak).
+   * Entri pertama selalu { status: "baru", at: createdAt }. */
+  riwayat?: Array<{ status: AduanStatus; at: number }>;
+}
+
+/** Nomor tiket berikutnya untuk tahun berjalan: ADU-YYYY-NNNN. */
+export function nextTicket(items: Aduan[], year = new Date().getFullYear()): string {
+  let max = 0;
+  for (const a of items) {
+    const m = /^ADU-(\d{4})-(\d+)$/.exec(a.ticket ?? "");
+    if (m && Number(m[1]) === year) max = Math.max(max, Number(m[2]));
+  }
+  return `ADU-${year}-${String(max + 1).padStart(4, "0")}`;
+}
+
+/** Linimasa status untuk dilacak warga/petugas: Baru → Diproses → Selesai,
+ * dengan tanggal tiap langkah. Data lama tanpa riwayat tetap menampilkan
+ * langkah Baru dari createdAt. */
+export function aduTimeline(a: Aduan): Array<{ status: AduanStatus; at: number }> {
+  const steps: Array<{ status: AduanStatus; at: number }> = [
+    { status: "baru", at: a.createdAt },
+  ];
+  for (const r of a.riwayat ?? []) {
+    const last = steps[steps.length - 1];
+    if (last && last.status === r.status) continue;
+    steps.push({ status: r.status, at: r.at });
+  }
+  return steps;
 }
 
 // 6 SAMPLE complaints (mixed statuses: 3 baru, 2 diproses, 1 selesai).
@@ -116,10 +146,18 @@ export function filterAduan(
   items: Aduan[],
   status: AduanStatus | "",
   jenis = "",
+  query = "",
 ): Aduan[] {
   const sorted = [...items].sort((a, b) => b.createdAt - a.createdAt);
+  const q = query.trim().toLowerCase();
   return sorted.filter(
-    (a) => (!status || a.status === status) && (!jenis || a.jenis === jenis),
+    (a) =>
+      (!status || a.status === status) &&
+      (!jenis || a.jenis === jenis) &&
+      (!q ||
+        (a.ticket ?? "").toLowerCase().includes(q) ||
+        a.nama.toLowerCase().includes(q) ||
+        a.isi.toLowerCase().includes(q)),
   );
 }
 

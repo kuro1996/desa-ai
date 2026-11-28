@@ -94,6 +94,27 @@
         /* Tanpa sesi yang valid — tetap di layar masuk. */
       }
     </script>
+    <!-- Paket 34, Ide 4 — Halaman verifikasi surat (publik, tanpa login):
+      dibuka lewat ?verifikasi=<id>&c=<checksum> dari kode QR. main.ts
+      mengisi status + isi surat; tanpa data arsip yang cocok halaman ini
+      jujur menulis "TIDAK DITEMUKAN dalam arsip". -->
+    <section id="verify-page" class="verify-page" hidden aria-label="Verifikasi surat">
+      <div class="verify-card">
+        <h1 class="verify-title">DesaAI</h1>
+        <p class="verify-sub" data-i18n="verifySubtitle">Verifikasi surat — Kecamatan Simpangkatis</p>
+        <p id="verify-status" class="verify-status" role="status" data-i18n="verifyChecking">Memeriksa arsip…</p>
+        <div id="verify-body" hidden>
+          <dl id="verify-meta" class="detail-rows"></dl>
+          <p id="verify-content" class="verify-content"></p>
+        </div>
+        <p id="verify-note" class="hint"></p>
+        <div class="actions">
+          <a id="verify-open-app" class="btn btn-primary" href="./">
+            <span data-i18n="verifyOpenApp">Buka DesaAI</span>
+          </a>
+        </div>
+      </div>
+    </section>
     <div class="app-shell">
       <aside class="sidebar">
         <header class="hero">
@@ -348,6 +369,20 @@
                   </button>
                 </div>
                 <div id="home-briefing-status" class="status" aria-live="polite"></div>
+              </div>
+
+              <!-- Paket 34, Ide 6 — Dashboard Pagi Camat: ringkasan harian
+                   satu halaman untuk Camat, khusus petugas (disembunyikan
+                   di Mode Warga). Diisi main.ts dari data aplikasi. -->
+              <div id="home-camat" class="bento-card bento-camat" hidden>
+                <p class="bento-label" data-i18n="camatTitle">Dashboard Pagi Camat</p>
+                <p class="hint" data-i18n="camatHint">
+                  Ringkasan pagi untuk Camat — dari data yang sudah ada di aplikasi ini. Khusus petugas.
+                </p>
+                <div id="home-camat-body"></div>
+                <p id="home-camat-empty" class="hint" hidden data-i18n="camatNoData">
+                  Belum ada data — belum ada agenda, jawaban survei, pengaduan, atau draf.
+                </p>
               </div>
 
               <div id="home-warga-card" class="bento-card bento-warga" hidden>
@@ -999,6 +1034,28 @@
                 </button>
               </div>
             </div>
+            <!-- Paket 34, Ide 4 — dialog kode QR verifikasi untuk satu surat
+              arsip (diisi main.ts: gambar QR + tautan + unduh PNG). -->
+            <dialog id="qr-dialog" class="detail-dialog qr-dialog">
+              <h3 id="qr-dialog-title"></h3>
+              <p class="hint" data-i18n="qrHint">
+                Pindai kode ini untuk membuka halaman verifikasi. Kode ini hanya membuktikan surat cocok dengan arsip di browser ini — di perangkat lain bisa muncul “tidak ditemukan”.
+              </p>
+              <div id="qr-dialog-img" class="qr-img"></div>
+              <p id="qr-dialog-url" class="qr-url"></p>
+              <div class="actions">
+                <button id="qr-download" class="btn btn-primary" type="button">
+                  <span data-i18n="qrDownload">Unduh QR (PNG)</span>
+                </button>
+                <button id="qr-copy" class="btn" type="button">
+                  <span data-i18n="qrCopy">Salin tautan</span>
+                </button>
+                <form method="dialog">
+                  <button class="btn" type="submit" data-i18n="close">Close</button>
+                </form>
+              </div>
+              <div id="qr-status" class="status" aria-live="polite"></div>
+            </dialog>
             <!-- Print-only rendering of the archived letter (filled in by JS before window.print()). -->
             <div id="archive-print-area" class="print-only" aria-hidden="true">
               <div class="print-kop">
@@ -1528,6 +1585,16 @@
                 <span data-i18n="aduFilterJenis">All types</span>
                 <select id="adu-filter-jenis"></select>
               </label>
+              <!-- Paket 34, Ide 5 — lacak pengaduan berdasarkan nomor tiket/nama. -->
+              <label class="field field-wide">
+                <span data-i18n="aduSearch">Lacak pengaduan</span>
+                <input
+                  id="adu-search"
+                  type="text"
+                  data-i18n-ph="aduSearchPh"
+                  placeholder="Nomor tiket atau nama, mis. ADU-2026-0001…"
+                />
+              </label>
             </div>
             <div id="adu-list" class="drafts-list"></div>
             <p id="adu-empty" class="hint" hidden data-i18n="aduEmpty">
@@ -1545,6 +1612,9 @@
               <h3 id="adu-detail-title"></h3>
               <dl id="adu-detail-body" class="detail-rows"></dl>
               <p id="adu-detail-isi" class="detail-text"></p>
+              <!-- Paket 34, Ide 5 — linimasa status Baru → Diproses → Selesai. -->
+              <h4 class="subhead" data-i18n="aduTimelineTitle">Linimasa status</h4>
+              <ol id="adu-detail-timeline" class="adu-timeline"></ol>
               <form method="dialog" class="actions">
                 <button class="btn" type="submit" data-i18n="close">Close</button>
               </form>

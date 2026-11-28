@@ -44,6 +44,7 @@ export type AninIntent =
   | { kind: "nav"; tab: string }
   | { kind: "letter"; parsed: CepatResult }
   | { kind: "letter-need" }
+  | { kind: "lapor" }
   | { kind: "analyst"; topic: AninAnalystTopic }
   | { kind: "appkb"; entry: AninKbEntry }
   | { kind: "kb"; entries: KbEntry[] }
@@ -134,6 +135,13 @@ export function classifyAninText(raw: string): AninIntent {
     const parsed = parseCepat(text);
     if (parsed) return { kind: "letter", parsed };
     return { kind: "letter-need" };
+  }
+
+  // 2b. Paket 34, Ide 5 — lapor warga: "saya mau lapor", "laporkan
+  // masalah", "buat pengaduan baru". Checked before the analyst rules so
+  // "buat pengaduan" starts the guided report flow instead of an analysis.
+  if (/\b(lapor|laporkan|melapor|mengadu)\b/i.test(text) || /buat pengaduan|pengaduan baru|komplain/i.test(text)) {
+    return { kind: "lapor" };
   }
 
   // 3. Analyst: IKM averages, top complaints, what to improve — computed
