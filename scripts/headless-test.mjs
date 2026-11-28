@@ -4744,20 +4744,9 @@ async function main() {
     check("Tanya shows Anin's face (Anin answers here)", qaAninImgOk);
     await page.$eval("#qa-input", (el) => { el.value = ""; });
     await page.type("#qa-input", "Bagaimana cara mengurus KK baru?");
-    const qaDebugQ = await page.$eval("#qa-input", (el) => el.value);
-    console.log("DEBUG 9d question value:", JSON.stringify(qaDebugQ));
     await page.click("#qa-ask");
     await sleep(600);
     const qaAninOutput = await page.$eval("#qa-output", (el) => el.textContent);
-    console.log("DEBUG 9d output @600ms:", JSON.stringify(qaAninOutput.slice(0, 150)));
-    const qaDebugLater = await page.evaluate(async () => {
-      await new Promise((r) => setTimeout(r, 9000));
-      return {
-        out: (document.getElementById("qa-output")?.textContent ?? "").slice(0, 150),
-        status: document.getElementById("qa-status")?.textContent ?? "",
-      };
-    });
-    console.log("DEBUG 9d output @~10s:", JSON.stringify(qaDebugLater));
     check(
       "Tanya answers a KK question from the offline guide (Anin takeover)",
       /Kartu Keluarga/.test(qaAninOutput) && /Surat pengantar/.test(qaAninOutput),

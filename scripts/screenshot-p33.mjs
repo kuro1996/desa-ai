@@ -80,7 +80,7 @@ async function main() {
   await page.click("#letter-generate");
   await sleep(900);
   await page.evaluate(() => {
-    document.getElementById("letter-output-wrap")?.scrollIntoView({ block: "start" });
+    document.getElementById("letter-whatsapp")?.scrollIntoView({ block: "center" });
   });
   await sleep(300);
   await page.screenshot({ path: join(OUT, "desaai-p33-wa-light-mobile.png") });
@@ -89,7 +89,7 @@ async function main() {
   // Sama, mode GELAP 390px.
   await setTheme("dark");
   await page.evaluate(() => {
-    document.getElementById("letter-output-wrap")?.scrollIntoView({ block: "start" });
+    document.getElementById("letter-whatsapp")?.scrollIntoView({ block: "center" });
   });
   await sleep(300);
   await page.screenshot({ path: join(OUT, "desaai-p33-wa-dark-mobile.png") });
@@ -99,7 +99,7 @@ async function main() {
   // 980px terang — baris aksi + tombol WhatsApp tetap rapi.
   await page.setViewport({ width: 980, height: 900 });
   await page.evaluate(() => {
-    document.getElementById("letter-output-wrap")?.scrollIntoView({ block: "start" });
+    document.getElementById("letter-whatsapp")?.scrollIntoView({ block: "center" });
   });
   await sleep(300);
   await page.screenshot({ path: join(OUT, "desaai-p33-wa-light-980.png") });
