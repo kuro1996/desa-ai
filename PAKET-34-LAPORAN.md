@@ -1,4 +1,4 @@
-# Paket 34 — Laporan Konsolidasi: Ide 1–9 (SELESAI dibangun, belum deploy)
+# Paket 34 — Laporan Konsolidasi: Ide 1–9 (SELESAI dibangun, LIVE 28 Nov 2026)
 
 Perintah Bos 28 Nov 00:09 WIB: ide 1–9 masuk semua kalau bisa, ide 10 (kiosk
 loket) ditunda. Semua gratis, dalam aplikasi, tanpa server/backend baru, tanpa
@@ -288,3 +288,25 @@ fitur Paket 34 maupun Paket 37–40 yang dibuang:
 - Bila pola nomor surat kecamatan ternyata berbeda dari pola arsip yang dibaca
   Anin (mis. urutan bukan segmen kedua), kabari polanya supaya parser
   disesuaikan.
+
+## Addendum deploy — LIVE 28 Nov 2026 ~14:20 WIB (Gas Bos "Deploy semuanya" 14:13 WIB)
+
+- Build dari worktree bersih di main HEAD `b9ec262` (`src/firebase-config.js`
+  disalin ke worktree, tidak pernah di-commit). `npm run build` lolos.
+  Satu gangguan: exec pertama terputus karena service restart — build sempat
+  terpotong sebelum bundle JS terbentuk (dist hanya berisi file public);
+  build diulang penuh dan lolos.
+- Deploy ke gh-pages dari fresh clone: bundle lama
+  (`index-Cs_7aeTP.js`, `index-D8p1o6Vf.css`) dihapus, `dist/*` baru disalin.
+  `git status` hanya menunjukkan perubahan yang dimaksud (tanpa node_modules/src).
+- gh-pages: `8c3538e` → **`713bf80`** ("Deploy Paket 34 … (main b9ec262)"),
+  `git ls-remote origin gh-pages` terverifikasi sama:
+  `713bf80dc1852eae361ce40b304624300249e1a5`.
+- Cek live https://kuro1996.github.io/desa-ai/ (~1 menit setelah push):
+  **index 200**, bundle baru `assets/index-bIzYHLsW.js` **200** +
+  `assets/index-C3MSQanM.css` **200**, keduanya dirujuk index live;
+  "Contact Person" tetap ada di index live; penanda Paket 34 terkonfirmasi
+  di bundle live: "Bahasa Bangka" 3×, "Verifikasi surat" + QR.
+- Worktree + clone deploy sudah dibersihkan.
+- Status "Gas untuk deploy" di atas kini SELESAI. Yang masih butuh Bos tetap:
+  verifikasi frasa Bahasa Bangka + uji dikte suara notulen dari HP.
