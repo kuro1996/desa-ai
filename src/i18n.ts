@@ -48,6 +48,11 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   homeMonthLetters: { en: "Letters saved", id: "Surat tersimpan" },
   homeMonthIkm: { en: "Survey answers", id: "Jawaban survei" },
   homeMonthAduan: { en: "Complaints", id: "Pengaduan" },
+  // Paket 42 — label kartu statistik AIDEN di Beranda.
+  homeStatLetters: { en: "Letters this month", id: "Surat bulan ini" },
+  homeStatMasa: { en: "Terms of office", id: "Masa bhakti" },
+  homeStatMasaAkan: { en: "expiring", id: "akan habis" },
+  homeStatMasaHabis: { en: "expired", id: "sudah habis" },
   homeReportTitle: { en: "Monthly report", id: "Laporan bulanan" },
   // Paket 38 — tombol lipat kartu Beranda.
   homeCollapse: { en: "Collapse card", id: "Kecilkan kartu" },
@@ -588,6 +593,13 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     en: "Scale 1–4 (4 = best). Green ≥ 3.5, amber 2.5–3.5, red below 2.5.",
     id: "Skala 1–4 (4 = terbaik). Hijau ≥ 3,5, kuning 2,5–3,5, merah di bawah 2,5.",
   },
+  // Paket 42 (e) — tren IKM pindah dari Beranda ke tab IKM.
+  ikmTrendTitle: { en: "IKM trend — score over time", id: "Tren IKM — skor dari waktu ke waktu" },
+  ikmTrendHint: {
+    en: "Cumulative IKM score after each survey answer.",
+    id: "Skor IKM kumulatif setelah tiap jawaban survei.",
+  },
+  ikmTrendEmpty: { en: "Not enough answers yet for a trend.", id: "Belum cukup jawaban untuk tren." },
   // Pengaduan: type filter + detail dialog
   aduFilterJenis: { en: "All types", id: "Semua jenis" },
   aduDetailTitle: { en: "Complaint detail", id: "Detail pengaduan" },

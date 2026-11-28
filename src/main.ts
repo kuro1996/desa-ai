@@ -1041,6 +1041,68 @@ function monthNameId(d = new Date()): string {
   return d.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 }
 
+// Paket 42 (e) — dipulihkan dari riwayat git (induk ade308f): garis tren
+// IKM pindah dari Beranda ke tab Kepuasan/IKM. Logika sama persis, hanya
+// id wadahnya baru (ikm-trend / ikm-trend-empty) agar tidak bentrok.
+/** Cumulative IKM score after each answer (answers sorted by date). */
+function ikmTrendPoints(
+  items: IkmResponse[],
+): Array<{ date: string; score: number; count: number }> {
+  const sorted = [...items].sort((a, b) => a.createdAt - b.createdAt);
+  return sorted.map((r, i) => ({
+    date: new Date(r.createdAt).toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "short",
+    }),
+    score: computeIkm(sorted.slice(0, i + 1)).overall,
+    count: i + 1,
+  }));
+}
+
+function renderTrend(): void {
+  const wrap = $("ikm-trend");
+  const pts = ikmTrendPoints(loadIkm());
+  $("ikm-trend-empty").hidden = pts.length >= 2;
+  if (pts.length < 2) {
+    wrap.innerHTML = "";
+    return;
+  }
+  // Hand-rolled SVG line chart (no dependency): score 25–100 on the Y axis.
+  const W = 600;
+  const H = 180;
+  const L = 40;
+  const R = 10;
+  const T = 14;
+  const B = 26;
+  const y = (s: number): number => T + (1 - (s - 25) / 75) * (H - T - B);
+  const x = (i: number): number => L + (i / (pts.length - 1)) * (W - L - R);
+  const grid = [25, 50, 75, 100]
+    .map(
+      (v) =>
+        `<line x1="${L}" y1="${y(v)}" x2="${W - R}" y2="${y(v)}" class="trend-grid"/>` +
+        `<text x="${L - 6}" y="${y(v) + 4}" class="trend-axis" text-anchor="end">${v}</text>`,
+    )
+    .join("");
+  const line = pts
+    .map((p, i) => `${x(i).toFixed(1)},${y(p.score).toFixed(1)}`)
+    .join(" ");
+  const circles = pts
+    .map(
+      (p, i) =>
+        `<circle cx="${x(i).toFixed(1)}" cy="${y(p.score).toFixed(1)}" r="4" ` +
+        `data-score="${p.score.toFixed(2)}" data-date="${p.date}">` +
+        `<title>${p.date}: ${ikmFmt(p.score)} (${p.count})</title></circle>`,
+    )
+    .join("");
+  wrap.innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Tren IKM" ` +
+    `preserveAspectRatio="none" style="width:100%;height:auto;display:block">` +
+    `${grid}<polyline points="${line}" class="trend-line"/>${circles}` +
+    `<text x="${L}" y="${H - 6}" class="trend-axis">${pts[0].date}</text>` +
+    `<text x="${W - R}" y="${H - 6}" class="trend-axis" text-anchor="end">${pts[pts.length - 1].date}</text>` +
+    `</svg>`;
+}
+
 interface MonthlyReport {
   monthLabel: string;
   letters: number;
@@ -1733,6 +1795,10 @@ function renderHome(): void {
             ? IKM_ELEMENTS[ikmStats.minIdx].labelId
             : IKM_ELEMENTS[ikmStats.minIdx].labelEn
         } (${ikmFmt(ikmStats.perElement[ikmStats.minIdx])})`;
+  // Paket 42 — cermin angka ke kartu statistik AIDEN di atas Beranda.
+  $("home-stat-ikm").textContent =
+    ikmStats.count === 0 ? "–" : ikmFmt(ikmStats.overall);
+  $("home-stat-ikm-sub").textContent = `${ikmStats.count} ${t("ikmRespondents", lang)}`;
   // Paket 41 — kartu "Surat hari ini" dihapus dari Beranda; draf hari ini
   // tetap terlihat di tab Draf Surat (panel-letters + panel-drafts).
   const drafts = listLocalDrafts();
@@ -1740,6 +1806,7 @@ function renderHome(): void {
   $("home-aduan-baru").textContent = String(
     computeAduanStats(loadAduan()).baru,
   );
+  $("home-stat-aduan").textContent = $("home-aduan-baru").textContent;
   // Oldest unresolved complaints (waiting longest first).
   const openAduan = loadAduan()
     .filter((a) => a.status !== "selesai")
@@ -1771,6 +1838,13 @@ function renderHome(): void {
   $("home-masa-habis").textContent = String(
     notifs.filter((n) => n.kind === "habis").length,
   );
+  $("home-stat-masa").textContent = String(
+    notifs.filter((n) => n.kind === "akan-habis").length +
+      notifs.filter((n) => n.kind === "habis").length,
+  );
+  $("home-stat-masa-sub").textContent =
+    `${$("home-masa-akan").textContent} ${t("homeStatMasaAkan", lang)} · ` +
+    `${$("home-masa-habis").textContent} ${t("homeStatMasaHabis", lang)}`;
   const masaList = $("home-masa-list");
   masaList.innerHTML = "";
   $("home-masa-empty").hidden = notifs.length > 0;
@@ -1793,6 +1867,8 @@ function renderHome(): void {
   $("home-month-letters").textContent = String(
     drafts.filter((d) => d.kind === "letter" && inMonth(d.createdAt, now)).length,
   );
+  $("home-stat-letters").textContent = $("home-month-letters").textContent;
+  $("home-stat-letters-sub").textContent = monthNameId(now);
   $("home-month-ikm").textContent = String(
     loadIkm().filter((r) => inMonth(r.createdAt, now)).length,
   );
@@ -1906,6 +1982,13 @@ function initHome(): void {
   renderHome();
   // Paket 38 — tombol lipat kartu Beranda (semua kartu punya data-card).
   initHomeCollapse();
+  // Paket 42 — kartu statistik AIDEN: ketuk tile membuka tab terkait.
+  document.querySelectorAll<HTMLButtonElement>(".home-stat").forEach((tile) => {
+    tile.addEventListener("click", () => {
+      const tab = tile.dataset.tab;
+      if (tab) activateTab(tab);
+    });
+  });
   ($("home-search") as HTMLInputElement).addEventListener("input", (ev) => {
     homeSearchQuery = (ev.target as HTMLInputElement).value;
     renderHomeSearch();
@@ -5494,6 +5577,8 @@ function renderIkm(): void {
     stats.count === 0
       ? "–"
       : `${elLabel(stats.maxIdx)} (${ikmFmt(stats.perElement[stats.maxIdx])})`;
+  // Paket 42 (e) — garis tren IKM (dipindah dari Beranda) di bawah batang.
+  renderTrend();
   // Keep the survey-type select in sync with the current language.
   const suratSel = $("ikm-in-surat") as HTMLSelectElement;
   const prevSurat = suratSel.value;

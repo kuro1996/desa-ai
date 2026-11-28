@@ -526,19 +526,24 @@ async function main() {
         p41letters.panel && p41letters.generate && p41drafts.panel && p41drafts.list,
       JSON.stringify({ p41keg, p41aduan, p41agenda, p41letters, p41drafts }),
     );
-    // Paket 41 — tab Kepuasan/IKM menampilkan skor + unsur, tanpa grafik
-    // tren kumulatif (yang memang hanya ada di Beranda — dicatat di laporan).
+    // Paket 42 (e) — DIBALIK dari Paket 41: garis tren IKM kini ADA di tab
+    // Kepuasan/IKM (dipindah dari Beranda), di bawah batang per unsur.
+    // 12 jawaban contoh → 12 titik pada garis.
     await page.click('[data-tab="ikm"]');
     await sleep(300);
-    const p41ikm = await page.evaluate(() => ({
+    const p42ikm = await page.evaluate(() => ({
       score: document.getElementById("ikm-score") !== null,
       bars: document.querySelectorAll("#ikm-bars .ikm-fill").length,
-      noTrend: document.getElementById("home-ikm-trend") === null,
+      hasSvg: document.querySelector("#ikm-trend svg") !== null,
+      points: document.querySelectorAll("#ikm-trend circle").length,
+      hasLine: document.querySelector("#ikm-trend polyline") !== null,
+      homeTrendGone: document.getElementById("home-ikm-trend") === null,
     }));
     check(
-      "Paket 41: IKM tab still shows score + per-element bars, no cumulative trend chart",
-      p41ikm.score && p41ikm.bars > 0 && p41ikm.noTrend,
-      JSON.stringify(p41ikm),
+      "Paket 42: IKM tab now shows the cumulative trend chart (moved from Beranda) + per-element bars",
+      p42ikm.score && p42ikm.bars > 0 && p42ikm.hasSvg && p42ikm.points === 12 &&
+        p42ikm.hasLine && p42ikm.homeTrendGone,
+      JSON.stringify(p42ikm),
     );
     // Paket 41 — header Dashboard kantor di 390px: tidak ada overflow
     // horizontal, pil tanggal + lonceng + tombol ⌘K terlihat utuh.
@@ -568,6 +573,113 @@ async function main() {
       p41head.docOverflow <= 0 && p41head.headRight <= 390 && p41head.headLeft >= 0 &&
         p41head.paletteRight <= 390 && p41head.paletteVisible && p41head.dateVisible,
       JSON.stringify(p41head),
+    );
+    await page.setViewport({ width: 1280, height: 900 });
+    await sleep(300);
+    // Paket 42 — baris statistik AIDEN: 4 kartu berwarna, angka live =
+    // cermin kartu Beranda (IKM, surat bulan ini, pengaduan baru, masa
+    // bhakti total), tiap kartu beda warna.
+    const p42stats = await page.evaluate(() => {
+      const tiles = [...document.querySelectorAll("#home-stat-row .home-stat")];
+      const txt = (id) => document.getElementById(id)?.textContent ?? "";
+      const akan = Number(txt("home-masa-akan") || "0");
+      const habis = Number(txt("home-masa-habis") || "0");
+      return {
+        count: tiles.length,
+        variants: tiles.map((t) =>
+          [...t.classList].find((c) => c.startsWith("home-stat-") && c !== "home-stat"),
+        ),
+        ikm: txt("home-stat-ikm") === txt("home-ikm-score") && txt("home-stat-ikm") !== "",
+        letters: txt("home-stat-letters") === txt("home-month-letters"),
+        aduan: txt("home-stat-aduan") === txt("home-aduan-baru"),
+        masa: txt("home-stat-masa") === String(akan + habis),
+        masaSub: txt("home-stat-masa-sub"),
+        ikmSub: txt("home-stat-ikm-sub"),
+        lettersSub: txt("home-stat-letters-sub"),
+      };
+    });
+    check(
+      "Paket 42: AIDEN stat row has 4 colored tiles mirroring live Beranda numbers",
+      p42stats.count === 4 &&
+        new Set(p42stats.variants).size === 4 &&
+        p42stats.ikm && p42stats.letters && p42stats.aduan && p42stats.masa &&
+        (/akan habis|expiring/.test(p42stats.masaSub)) &&
+        (/responden|respondent/.test(p42stats.ikmSub)) &&
+        p42stats.lettersSub.length > 0,
+      JSON.stringify(p42stats),
+    );
+    // Paket 42 — ketuk tile statistik membuka tab terkait.
+    await page.click(".home-stat-teal");
+    await sleep(300);
+    const p42nav1 = await page.evaluate(() => ({
+      lettersVisible: !document.getElementById("panel-letters").hidden,
+      homeHidden: document.getElementById("panel-home").hidden,
+    }));
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    await page.click(".home-stat-blue");
+    await sleep(300);
+    const p42nav2 = await page.evaluate(() => ({
+      ikmVisible: !document.getElementById("panel-ikm").hidden,
+      trendStillThere: document.querySelector("#ikm-trend svg") !== null,
+    }));
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    check(
+      "Paket 42: tapping a stat tile opens its tab (Surat → Draf Surat, IKM → Kepuasan)",
+      p42nav1.lettersVisible && p42nav1.homeHidden && p42nav2.ikmVisible && p42nav2.trendStillThere,
+      JSON.stringify({ p42nav1, p42nav2 }),
+    );
+    // Paket 42 — panel dua kolom di desktop 1280px: Laporan + Pengaduan
+    // berdampingan (baris 1), Briefing + Pengingat berdampingan (baris 2).
+    const p42cols = await page.evaluate(() => {
+      const r = (sel) => document.querySelector(sel)?.getBoundingClientRect();
+      const rep = r(".bento-report");
+      const adu = r(".bento-kpi");
+      const bri = r(".bento-briefing");
+      const rem = r("#home-reminder-card");
+      const sameRow = (a, b) => a && b && Math.abs(a.top - b.top) < 4 && b.left > a.right;
+      return {
+        repAdu: sameRow(rep, adu),
+        briRem: sameRow(bri, rem),
+        repTop: rep ? Math.round(rep.top) : -1,
+        aduTop: adu ? Math.round(adu.top) : -1,
+        briTop: bri ? Math.round(bri.top) : -1,
+        remTop: rem ? Math.round(rem.top) : -1,
+        cards: document.querySelectorAll("#panel-home .bento-card").length,
+      };
+    });
+    check(
+      "Paket 42: Beranda panels sit two-column on desktop (report+complaints, briefing+reminder)",
+      p42cols.repAdu && p42cols.briRem && p42cols.cards === 11,
+      JSON.stringify(p42cols),
+    );
+    // Paket 42 — HP 390px: kartu statistik tetap 2 per baris, panel
+    // menumpuk 1 kolom, tanpa overflow horizontal.
+    await page.setViewport({ width: 390, height: 844 });
+    await sleep(400);
+    const p42mob = await page.evaluate(() => {
+      const tiles = [...document.querySelectorAll("#home-stat-row .home-stat")].map((el) => {
+        const r = el.getBoundingClientRect();
+        return { top: Math.round(r.top), left: Math.round(r.left), right: Math.round(r.right) };
+      });
+      // Kartu tersembunyi (warga di mode Petugas) punya rect 0 — saring.
+      const cards = [...document.querySelectorAll("#panel-home .bento-card")]
+        .filter((el) => el.getBoundingClientRect().width > 0)
+        .map((el) => Math.round(el.getBoundingClientRect().left));
+      return {
+        tiles,
+        twoPerRow: tiles.length === 4 && tiles[0].top === tiles[1].top &&
+          tiles[2].top > tiles[1].top && tiles[2].top === tiles[3].top,
+        allInside: tiles.every((t) => t.left >= 0 && t.right <= 390),
+        cardsOneCol: new Set(cards).size === 1,
+        docOverflow: document.documentElement.scrollWidth - 390,
+      };
+    });
+    check(
+      "Paket 42: at 390px stat tiles stay 2-per-row, panels stack 1 column, no horizontal overflow",
+      p42mob.twoPerRow && p42mob.allInside && p42mob.cardsOneCol && p42mob.docOverflow <= 0,
+      JSON.stringify(p42mob),
     );
     await page.setViewport({ width: 1280, height: 900 });
     await sleep(300);

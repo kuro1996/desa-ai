@@ -1994,11 +1994,22 @@ html[data-theme="dark"] ::placeholder {
 
 /* ---------- home dashboard: bento grid ---------- */
 
+/* Paket 42 — layout AIDEN: Beranda dua kolom di desktop (kartu-kartu
+ * berdampingan berpasangan), satu kolom di bawah 900px. Baris stat AIDEN
+ * + kartu pencarian membentang penuh; sisanya 1 kolom grid masing-masing. */
 .bento {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
   margin-top: 16px;
+}
+
+/* Paket 42 — baris statistik AIDEN (di dalam .bento, membentang penuh). */
+.home-stat-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
 }
 
 .bento-card {
@@ -2085,7 +2096,6 @@ html[data-theme="dark"] ::placeholder {
 }
 
 .bento-briefing {
-  grid-column: 1 / -1;
   border-left: 5px solid var(--blue-strong);
 }
 
@@ -2108,8 +2118,6 @@ html[data-theme="dark"] ::placeholder {
 }
 
 .bento-ikm {
-  grid-column: span 2;
-  grid-row: span 2;
   background: linear-gradient(135deg, #2563eb 0%, var(--blue-dark) 100%);
   color: #fff;
   border-color: transparent;
@@ -2123,22 +2131,6 @@ html[data-theme="dark"] ::placeholder {
 .bento-ikm .badge {
   background: rgb(255 255 255 / 0.22);
   color: #fff;
-}
-
-.bento-kpi {
-  grid-column: span 2;
-}
-
-.bento-masa {
-  grid-column: span 2;
-}
-
-.bento-month {
-  grid-column: span 2;
-}
-
-.bento-report {
-  grid-column: 1 / -1;
 }
 
 .bento-label {
@@ -2268,10 +2260,10 @@ html[data-theme="dark"] ::placeholder {
   }
 }
 
-/* Paket 30 — di bawah 1100px (termasuk HP yang membuka tampilan desktop)
-   bento jadi satu kolom: kartu tidak lagi berdesakan tiga kolom dengan
-   tinggi tak rata. */
-@media (max-width: 1100px) {
+/* Paket 30 — di bawah 900px (termasuk HP yang membuka tampilan desktop)
+   bento jadi satu kolom. Paket 42: batas diturunkan dari 1100px karena
+   layout dua kolom tetap lega sampai 900px; di bawah itu kartu menumpuk. */
+@media (max-width: 900px) {
   .bento {
     grid-template-columns: 1fr;
   }
@@ -2285,6 +2277,129 @@ html[data-theme="dark"] ::placeholder {
     grid-column: 1 / -1;
     grid-row: auto;
   }
+}
+
+/* ---------- Paket 42 — kartu statistik AIDEN di Beranda ---------- */
+
+/* Empat kartu berwarna sejajar (biru, teal, biru muda, oranye — seperti
+ * AIDEN): label + angka besar + sub. Tile adalah tombol — ketuk membuka
+ * tab terkait. Teks tetap terbaca: kartu biru muda memakai teks gelap
+ * di mode terang. */
+.home-stat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  min-height: 118px;
+  padding: 16px 16px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: #fff;
+}
+
+.home-stat:hover {
+  filter: brightness(1.07);
+}
+
+.home-stat:focus-visible {
+  outline: 2px solid var(--blue-strong);
+  outline-offset: 2px;
+}
+
+.home-stat-blue {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+}
+
+.home-stat-teal {
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+}
+
+.home-stat-light {
+  background: #dbeafe;
+  color: #0f172a;
+  border-color: #bfdbfe;
+}
+
+.home-stat-orange {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.home-stat-open {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 18px;
+  height: 18px;
+  opacity: 0.75;
+}
+
+.home-stat-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding-right: 24px;
+}
+
+.home-stat-num {
+  font-size: clamp(1.7rem, 4vw, 2.2rem);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-stat-light .home-stat-num {
+  color: #1e40af;
+}
+
+.home-stat-sub {
+  font-size: 0.82rem;
+  opacity: 0.92;
+}
+
+.home-stat-light .home-stat-sub {
+  color: #475569;
+  opacity: 1;
+}
+
+html[data-theme="dark"] .home-stat-light {
+  background: linear-gradient(135deg, #1e40af 0%, #172554 100%);
+  color: #fff;
+  border-color: transparent;
+}
+
+html[data-theme="dark"] .home-stat-light .home-stat-num {
+  color: #fff;
+}
+
+html[data-theme="dark"] .home-stat-light .home-stat-sub {
+  color: rgb(255 255 255 / 0.85);
+}
+
+@media (max-width: 700px) {
+  .home-stat-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .home-stat {
+    min-height: 104px;
+    padding: 14px 12px 12px;
+  }
+
+  .home-stat-num {
+    font-size: 1.6rem;
+  }
+}
+
+/* ---------- Paket 42 (e) — tren IKM di tab Kepuasan/IKM ---------- */
+
+.ikm-trend-wrap {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
 }
 
 /* ---------- global search (home) ---------- */
@@ -2610,7 +2725,6 @@ body.mode-warga #home-adopsi-card {
 /* ---------- Paket 27 — Anin, Surat Cepat, Paket Adopsi ---------- */
 
 .bento-anin {
-  grid-column: 1 / -1;
   display: flex;
   gap: 16px;
   align-items: flex-start;
@@ -4232,7 +4346,6 @@ html[data-theme="dark"] .verify-status.verify-missing {
 
 /* Ide 6 — Dashboard Pagi Camat di Beranda. */
 .bento-camat {
-  grid-column: 1 / -1;
   border-left: 5px solid var(--blue-strong);
 }
 
