@@ -192,8 +192,40 @@ export const ANIN_KB: AninKbEntry[] = [
     id: "suara",
     titleId: "Bicara dengan Anin",
     titleEn: "Talking to Anin",
-    keywords: ["suara anin", "bicara", "mikrofon", "bacakan", "voice", "ngomong", "dengarkan"],
+    keywords: ["suara anin", "bicara", "mikrofon", "bacakan", "voice", "ngomong", "dengarkan", "tanya pakai suara", "tanya dengan suara", "tanya suara", "mikrofon tanya", "tanya prosedur suara", "jawab dengan suara", "jawaban suara"],
     answerKey: "aninFaqSuara",
+  },
+  // Paket 46 — Lacak Surat, Radar Tenggat, Statistik Warga, TTE demo.
+  // "lacak-surat" diletakkan SEBELUM "pengaduan-selesai" supaya
+  // pertanyaan "lacak pengaduan" yang imbang skornya dijawab oleh
+  // pelacak status, bukan alur penyelesaian.
+  {
+    id: "lacak-surat",
+    titleId: "Lacak Status Surat",
+    titleEn: "Track a letter",
+    keywords: ["lacak surat", "lacak pengaduan", "cek status surat", "status surat", "nomor tiket", "lacak tiket", "cek tiket", "tiket aduan", "lacak nomor surat", "cek pengaduan", "pengaduan saya di mana", "surat saya sampai mana"],
+    answerKey: "aninFaqLacak",
+  },
+  {
+    id: "radar-tenggat",
+    titleId: "Radar Tenggat Surat",
+    titleEn: "Letter deadline radar",
+    keywords: ["radar tenggat", "tenggat surat", "jatuh tempo", "surat mendekati tenggat", "deadline surat", "surat lewat tenggat", "pengingat tenggat", "surat hampir telat", "batas waktu surat"],
+    answerKey: "aninFaqRadar",
+  },
+  {
+    id: "statistik-warga",
+    titleId: "Statistik Kecamatan",
+    titleEn: "Subdistrict statistics",
+    keywords: ["statistik kecamatan", "statistik warga", "data kecamatan", "jumlah surat bulan", "statistik desaai", "angka kecamatan", "statistik pelayanan", "data terbuka"],
+    answerKey: "aninFaqStatistik",
+  },
+  {
+    id: "tte-demo",
+    titleId: "Tanda Tangan Elektronik (TTE)",
+    titleEn: "Electronic signature (TTE)",
+    keywords: ["tte", "tanda tangan elektronik", "tanda tangan digital", "tandatangan elektronik", "e-sign", "verifikasi tanda tangan", "tte demo", "contoh tte"],
+    answerKey: "aninFaqTte",
   },
   // Paket 32 — KB dimaksimalkan (28 Nov 00:20): beranda, Tanya Prosedur,
   // dan Paket Adopsi Desa Lain juga tercakup, tanpa celah.

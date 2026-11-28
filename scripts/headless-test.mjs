@@ -311,15 +311,18 @@ async function main() {
     // Tren IKM, dan Surat Hari Ini dihapus dari Beranda. Dicek sebagai
     // himpunan, bukan sekadar jumlah, supaya detail kegagalan menunjukkan
     // kartu mana yang hilang/lebih.
+    // Paket 46 — +3 kartu: Lacak Status Surat, Radar Tenggat, Statistik
+    // Kecamatan untuk Warga → 14 kartu.
     const expectCards = [
       "bento-search", "home-anin", "home-briefing", "home-camat",
       "home-warga-card", "bento-ikm", "bento-kpi",
       "bento-masa", "bento-month", "bento-report",
       "home-reminder-card",
+      "bento-lacak", "bento-radar", "bento-statistik",
     ];
     check(
-      "bento shows 11 cards with live numbers (IKM = dashboard, 3 new complaints, 12 IKM + 6 complaints this month)",
-      bento.cards.length === 11 &&
+      "bento shows 14 cards with live numbers (IKM = dashboard, 3 new complaints, 12 IKM + 6 complaints this month)",
+      bento.cards.length === 14 &&
         expectCards.every((c) => bento.cards.includes(c)) &&
         !bento.cards.includes("home-backup-card") &&
         !bento.cards.includes("home-letterhead-card") &&
@@ -420,8 +423,8 @@ async function main() {
       };
     });
     check(
-      "every Beranda card has a collapse button (11 of 11)",
-      collapseInfo.total === 11 && collapseInfo.withBtn === 11,
+      "every Beranda card has a collapse button (14 of 14)",
+      collapseInfo.total === 14 && collapseInfo.withBtn === 14,
       `total=${collapseInfo.total} withBtn=${collapseInfo.withBtn}`,
     );
     check(
@@ -696,7 +699,7 @@ async function main() {
       JSON.stringify(p44nav),
     );
     // Paket 44 — panel kembali SATU KOLOM di desktop 1280px (batalkan
-    // grid 2 kolom Paket 42); 11 kartu tetap ada.
+    // grid 2 kolom Paket 42); 14 kartu tetap ada (Paket 46: +3).
     const p44cols = await page.evaluate(() => {
       const lefts = [...document.querySelectorAll("#panel-home .bento-card")]
         .filter((el) => el.getBoundingClientRect().width > 0)
@@ -707,8 +710,8 @@ async function main() {
       };
     });
     check(
-      "Paket 44: Beranda panels back to one column on desktop, 11 cards stay",
-      p44cols.cards === 11 && p44cols.lefts.length === 1,
+      "Paket 44: Beranda panels back to one column on desktop, 14 cards stay",
+      p44cols.cards === 14 && p44cols.lefts.length === 1,
       JSON.stringify(p44cols),
     );
     // Paket 44 — HP 390px: grid ikon 3 per baris, panel menumpuk
@@ -1981,7 +1984,9 @@ async function main() {
     check("Q&A lists KB sources", /KTP Elektronik/.test(qaSources), qaSources);
 
     // KB guide section renders (8 original + 2 kepegawaian + 6 administrasi
-    // umum Paket 32.1)
+    // umum Paket 32.1) — ini panduan PROSEDUR (kb.ts), bukan FAQ fitur;
+    // FAQ fitur Paket 46 hidup di KB Anin (anin-kb.ts) dan diuji lewat
+    // chat Anin, bukan di sini.
     const kbItems = await page.$$eval("#kb-list .kb-item", (els) => els.length);
     check("offline procedure guide renders", kbItems === 16, `${kbItems} entries`);
 
@@ -2012,6 +2017,130 @@ async function main() {
       /Perangkat Desa/.test(qaOutput2) && /masa bhakti/i.test(qaOutput2),
       qaOutput2.slice(0, 80),
     );
+
+    // 4b. Paket 46 — Lacak Status Surat (publik, tanpa login).
+    // Nomor ada (tiket contoh ADU-2026-0003, status Diproses) → status +
+    // linimasa tampil; nomor tidak ada → pesan jujur; nomor agenda juga
+    // terlacak dari nomor suratnya.
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    await page.type("#lacak-input", "ADU-2026-0003");
+    await page.click("#lacak-btn");
+    await sleep(300);
+    const lacakFound = await page.evaluate(() => ({
+      result: document.getElementById("lacak-result")?.textContent ?? "",
+      notFoundHidden: document.getElementById("lacak-notfound")?.hidden ?? false,
+      steps: document.querySelectorAll("#lacak-result .lacak-timeline li").length,
+    }));
+    check(
+      "Paket 46: lacak nomor ada → status + linimasa tampil",
+      /Diproses|In progress/.test(lacakFound.result) && lacakFound.notFoundHidden &&
+        // ADU-2026-0003: Baru (15 Nov, ada tanggal) + Diproses (tanggal
+        // perubahan tidak tercatat → tampil tanpa tanggal).
+        lacakFound.steps === 2,
+      `${lacakFound.result.slice(0, 80)} steps=${lacakFound.steps}`,
+    );
+    await page.$eval("#lacak-input", (el) => { el.value = ""; });
+    await page.type("#lacak-input", "ADU-2026-9999");
+    await page.click("#lacak-btn");
+    await sleep(300);
+    const lacakMissing = await page.evaluate(() => ({
+      notFound: document.getElementById("lacak-notfound")?.textContent ?? "",
+      notFoundHidden: document.getElementById("lacak-notfound")?.hidden ?? true,
+      resultEmpty: (document.getElementById("lacak-result")?.textContent ?? "").trim() === "",
+    }));
+    check(
+      "Paket 46: lacak nomor tidak ada → pesan jujur, tanpa data pribadi",
+      !lacakMissing.notFoundHidden && /tidak ditemukan|not found/i.test(lacakMissing.notFound) &&
+        lacakMissing.resultEmpty,
+      lacakMissing.notFound.slice(0, 80),
+    );
+    await page.$eval("#lacak-input", (el) => { el.value = ""; });
+    await page.type("#lacak-input", "470/12/DS-KTS/XI/2026");
+    await page.click("#lacak-btn");
+    await sleep(300);
+    const lacakAgenda = await page.$eval("#lacak-result", (el) => el.textContent);
+    check(
+      "Paket 46: lacak nomor surat agenda → status tampil",
+      /Agenda surat|Mail register/.test(lacakAgenda) && /470\/12\/DS-KTS\/XI\/2026/.test(lacakAgenda),
+      lacakAgenda.slice(0, 80),
+    );
+
+    // 4c. Paket 46 — Radar Tenggat Surat: badge jumlah = jumlah baris;
+    // bila 0, empty state jujur tampil. Statistik Warga: 4 baris dari data
+    // nyata, TANPA angka skor IKM (skor hanya sekali di Beranda, di kartu
+    // SKOR IKM — aturan Paket 44).
+    const radar = await page.evaluate(() => ({
+      count: document.getElementById("home-radar-count")?.textContent ?? "",
+      items: document.querySelectorAll("#home-radar-groups .notif-item").length,
+      emptyHidden: document.getElementById("home-radar-empty")?.hidden ?? true,
+      emptyText: document.getElementById("home-radar-empty")?.textContent ?? "",
+    }));
+    check(
+      "Paket 46: radar tenggat — badge = jumlah baris, atau empty state jujur",
+      Number(radar.count) === radar.items &&
+        (radar.items > 0 ? radar.emptyHidden : !radar.emptyHidden && /Belum ada surat|No letters near/.test(radar.emptyText)),
+      `count=${radar.count} items=${radar.items} emptyHidden=${radar.emptyHidden}`,
+    );
+    const stat = await page.evaluate(() => {
+      const card = document.querySelector('[data-card="statistik"]');
+      return {
+        rows: document.querySelectorAll("#home-stat-rows .stat-row").length,
+        text: card?.textContent ?? "",
+      };
+    });
+    check(
+      "Paket 46: statistik warga tampil 4 baris dari data nyata, tanpa skor IKM",
+      stat.rows === 4 && !/\d+,\d+/.test(stat.text) && /Data aplikasi DesaAI|DesaAI app's own data/.test(stat.text),
+      `rows=${stat.rows} ${stat.text.slice(0, 100)}`,
+    );
+
+    // 4d. Paket 46 — TTE CONTOH DEMO: lembar draf surat (ter-render saat
+    // mengetik di formulir, tanpa AI) memuat blok demo berlabel jelas.
+    // Bungkus lembar baru terlihat setelah draf dibuat — klik Buat draf
+    // dulu (fallback offline di headless), lalu cek bloknya terlihat.
+    await page.click('[data-tab="letters"]');
+    await sleep(200);
+    await page.select("#letter-template", "undangan");
+    await sleep(200);
+    await page.type("#letter-field-acara", "Musyawarah Desa");
+    await sleep(400);
+    await page.click("#letter-generate");
+    await sleep(800);
+    const tte = await page.evaluate(() => {
+      const box = document.getElementById("letter-tte-demo");
+      return {
+        present: box !== null,
+        visible: box !== null && box.offsetParent !== null,
+        text: box?.textContent ?? "",
+      };
+    });
+    check(
+      "Paket 46: blok TTE demo berlabel CONTOH DEMO di lembar surat",
+      tte.present && tte.visible && /CONTOH DEMO|DEMO EXAMPLE/.test(tte.text) &&
+        /bukan tanda tangan elektronik resmi|not an official electronic signature/.test(tte.text) && /CONTOH-XXXX-0000/.test(tte.text),
+      tte.text.slice(0, 120),
+    );
+
+    // 4e. Paket 46 — Anin Suara di Tanya Prosedur: tombol mikrofon ada;
+    // Chromium headless tanpa SpeechRecognition → pesan jujur "Browser ini
+    // belum mendukung suara" (atau pesan error mikrofon yang jujur bila
+    // API-nya ada tapi gagal).
+    await page.click('[data-tab="qa"]');
+    await sleep(200);
+    const micExists = await page.$eval("#qa-mic", (el) => el !== null);
+    await page.click("#qa-mic");
+    await sleep(600);
+    const micStatus = await page.$eval("#qa-status", (el) => el.textContent);
+    check(
+      "Paket 46: Anin Suara — tombol mikrofon ada + fallback jujur bila API tidak tersedia",
+      micExists && /belum mendukung suara|does not support voice|couldn'?t be used|could not be used|tidak bisa dipakai/i.test(micStatus),
+      micStatus.slice(0, 80),
+    );
+
+    // 4f. Paket 46 — FAQ fitur baru hidup di KB Anin (anin-kb.ts), BUKAN
+    // di panduan prosedur Tanya Prosedur (kb.ts) — diuji lewat chat Anin
+    // di bagian Anin (aninAsk), bukan di sini.
 
     // Language toggle to Indonesian
     await page.click("#lang-toggle");
@@ -5261,6 +5390,39 @@ async function main() {
       "Anin explains Tanya Prosedur itself (new KB entry)",
       /Tanya Prosedur/.test(tanyaAnswer),
       tanyaAnswer.slice(0, 120),
+    );
+    // Paket 46 — FAQ fitur baru di KB Anin: lacak surat, radar tenggat,
+    // statistik warga, TTE demo.
+    const lacakAnswer = await aninAsk("Bagaimana cara melacak status surat saya?");
+    check(
+      "Paket 46: Anin menjawab FAQ lacak surat dari KB Anin",
+      /Lacak Status Surat|Track a Letter/.test(lacakAnswer) && /ADU-2026-0001/.test(lacakAnswer),
+      lacakAnswer.slice(0, 120),
+    );
+    // "tenggat"/"deadline" memicu ringkasan Pengingat (langkah 2, sebelum
+    // KB Anin) — jadi tanya radar lewat frasa "jatuh tempo", yang hanya
+    // cocok di kata kunci entri ini.
+    const radarAnswer = await aninAsk("Surat apa yang jatuh temponya sudah dekat?");
+    check(
+      "Paket 46: Anin menjawab FAQ radar tenggat dari KB Anin",
+      /Radar Tenggat|Deadline Radar/.test(radarAnswer) && /3 hari|3 days/.test(radarAnswer),
+      radarAnswer.slice(0, 120),
+    );
+    // Tanpa kata "warga" — kata itu saja sudah seri skor dengan entri
+    // Mode Warga yang lebih dulu di KB.
+    const statAnswer = await aninAsk("Di mana saya bisa melihat statistik kecamatan?");
+    check(
+      "Paket 46: Anin menjawab FAQ statistik warga dari KB Anin",
+      /Statistik Kecamatan|Subdistrict Statistics/.test(statAnswer) &&
+        /data aplikasi DesaAI|DesaAI app's own data/i.test(statAnswer),
+      statAnswer.slice(0, 120),
+    );
+    const tteAnswer = await aninAsk("Apa itu tanda tangan elektronik?");
+    check(
+      "Paket 46: Anin menjawab FAQ TTE demo dari KB Anin",
+      /CONTOH DEMO|DEMO EXAMPLE/.test(tteAnswer) &&
+        /bukan tanda tangan elektronik resmi|not an official electronic signature/.test(tteAnswer),
+      tteAnswer.slice(0, 120),
     );
     const adopsiAnswer = await aninAsk("Apakah aplikasi ini bisa dipakai desa lain?");
     check(

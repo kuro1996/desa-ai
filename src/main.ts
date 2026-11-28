@@ -1481,6 +1481,15 @@ function printMonthlyReport(): void {
     "",
     "Data contoh ditandai pada masing-masing modul (bukan data asli).",
   );
+  // Paket 46 — TTE CONTOH DEMO di lembar laporan (bukan TTE resmi).
+  lines.push(
+    "",
+    `${t("tteDemoTitle", lang)} — ${t("tteDemoLabel", lang)}`,
+    `${t("tteDemoSigner", lang)}: ${lh.camatNama.trim() || "—"}`,
+    `${t("tteDemoTime", lang)}: 01 Jan 2026 00:00 (CONTOH)`,
+    `${t("tteDemoCode", lang)}: CONTOH-XXXX-0000`,
+    t("tteDemoNote", lang),
+  );
   $("report-print-body").textContent = lines.join("\n");
   document.body.dataset.printTarget = "report";
   window.print();
@@ -2036,6 +2045,9 @@ function renderHome(): void {
   renderAnin();
   // Paket 34 Ide 3 — widget "Pengingat hari ini" di Beranda.
   renderHomeReminders();
+  // Paket 46 — Radar Tenggat + Statistik Warga (data lokal nyata).
+  renderRadar();
+  renderStatistik();
 }
 
 // Paket 27 — Anin, pemandu DesaAI: sapaan menurut jam + satu tips kontekstual
@@ -2127,6 +2139,232 @@ function renderCamatDashboard(): void {
   );
 }
 
+// ---------- Paket 46 — Lacak Status Surat + Radar Tenggat +
+// Statistik Kecamatan untuk Warga + TTE demo ----------
+// Semua angka dari data lokal nyata; skor IKM SENGAJA tidak ditulis di
+// kartu statistik (aturan Paket 44: skor hanya sekali di Beranda, di kartu
+// SKOR IKM) — yang tampil hanya jumlah responden + tombol ke tab IKM.
+
+type TrackResult =
+  | { kind: "aduan"; aduan: Aduan }
+  | { kind: "agenda"; entry: AgendaEntry }
+  | null;
+
+/** Cari pengaduan (tiket ADU-YYYY-NNNN) atau agenda (nomor surat / nomor
+ * agenda) berdasarkan nomor yang diketik warga. Pencocokan persis, tanpa
+ * membedakan huruf besar/kecil. */
+function findTrackable(query: string): TrackResult {
+  const q = query.trim().toLowerCase();
+  if (!q) return null;
+  const aduan = loadAduan().find((a) => (a.ticket ?? "").toLowerCase() === q);
+  if (aduan) return { kind: "aduan", aduan };
+  const entry = loadAgenda().find(
+    (e) => e.nomorSurat.toLowerCase() === q || e.nomorAgenda.toLowerCase() === q,
+  );
+  if (entry) return { kind: "agenda", entry };
+  return null;
+}
+
+function fmtTanggalSingkat(ts: number): string {
+  return new Date(ts).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/** Isi kartu Lacak Status Surat dari hasil pencarian. Hanya status surat
+ * itu yang tampil — tanpa nama/kontak pelapor (data pribadi). */
+function renderTrackResult(): void {
+  const input = $("lacak-input") as HTMLInputElement;
+  const result = $("lacak-result");
+  const notFound = $("lacak-notfound");
+  const q = input.value.trim();
+  result.innerHTML = "";
+  if (!q) {
+    notFound.textContent = t("lacakNeedInput", lang);
+    notFound.hidden = false;
+    return;
+  }
+  const found = findTrackable(q);
+  if (!found) {
+    notFound.textContent = t("lacakNotFound", lang);
+    notFound.hidden = false;
+    return;
+  }
+  notFound.hidden = true;
+  const head = document.createElement("p");
+  head.className = "lacak-head";
+  const kind = document.createElement("strong");
+  if (found.kind === "aduan") {
+    kind.textContent = `${t("lacakAduanKind", lang)} ${found.aduan.ticket ?? ""}`;
+  } else {
+    kind.textContent = `${t("lacakAgendaKind", lang)} ${found.entry.nomorSurat || found.entry.nomorAgenda}`;
+  }
+  head.appendChild(kind);
+  const pill = aduStatusPill(found.kind === "aduan" ? found.aduan.status : found.entry.status);
+  const pillEl = document.createElement("span");
+  pillEl.className = `status-pill ${pill.cls}`;
+  pillEl.textContent = pill.text;
+  head.appendChild(pillEl);
+  result.appendChild(head);
+  const dl = document.createElement("dl");
+  dl.className = "lacak-dl";
+  const addRow = (label: string, value: string): void => {
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    dd.textContent = value;
+    dl.append(dt, dd);
+  };
+  if (found.kind === "aduan") {
+    addRow(t("lacakJenisSurat", lang), found.aduan.jenisSurat);
+    addRow(t("p34ReminderAduanTitle", lang), found.aduan.jenis);
+    addRow(t("lacakTanggal", lang), fmtTanggalSingkat(found.aduan.createdAt));
+    result.appendChild(dl);
+    const tlTitle = document.createElement("p");
+    tlTitle.className = "lacak-tl-title";
+    tlTitle.textContent = t("lacakTimeline", lang);
+    result.appendChild(tlTitle);
+    const ol = document.createElement("ol");
+    ol.className = "lacak-timeline";
+    for (const step of aduTimeline(found.aduan)) {
+      const li = document.createElement("li");
+      const b = document.createElement("strong");
+      b.textContent = aduStatusPill(step.status).text;
+      li.appendChild(b);
+      // Tanggal tampil hanya bila ada datanya (null = tanggal perubahan
+      // status tidak tercatat; jangan karang).
+      if (step.at != null) {
+        li.appendChild(document.createTextNode(` — ${fmtTanggalSingkat(step.at)}`));
+      }
+      ol.appendChild(li);
+    }
+    result.appendChild(ol);
+  } else {
+    addRow(t("lacakPerihal", lang), found.entry.perihal);
+    addRow(t("lacakPihak", lang), found.entry.pihak);
+    addRow(t("lacakTanggal", lang), fmtTanggalSingkat(new Date(found.entry.tanggal).getTime()));
+    result.appendChild(dl);
+  }
+}
+
+/** Radar Tenggat Surat: surat/agenda yang jatuh temponya dekat (≤3 hari)
+ * atau sudah lewat, dari sumber yang sama dengan Pengingat (Paket 34 Ide 3)
+ * — tapi tampil dengan tanggal jatuh tempo yang eksplisit, dikelompokkan
+ * "Lewat tenggat" lalu "Mendekati tenggat". */
+function renderRadar(): void {
+  const s = computeReminders(new Date(), loadAgenda(), loadAduan());
+  const count = $("home-radar-count");
+  const groups = $("home-radar-groups");
+  const empty = $("home-radar-empty");
+  count.textContent = String(s.total);
+  groups.innerHTML = "";
+  empty.hidden = s.total > 0;
+  if (s.total === 0) return;
+  const overdue = s.items.filter((r) => r.kind === "agenda-lewat" || r.kind === "aduan-lama");
+  const soon = s.items.filter((r) => r.kind === "agenda-besok" || r.kind === "agenda-dekat");
+  const mkGroup = (title: string, items: Reminder[]): void => {
+    if (items.length === 0) return;
+    const h = document.createElement("p");
+    h.className = "radar-group-title";
+    h.textContent = title;
+    groups.appendChild(h);
+    const ul = document.createElement("ul");
+    ul.className = "notif-list";
+    for (const r of items) {
+      const li = document.createElement("li");
+      li.className = "notif-item";
+      li.dataset.tab = r.tab;
+      const strong = document.createElement("strong");
+      strong.textContent =
+        r.kind === "aduan-lama" ? `${t("p34ReminderAduanTitle", lang)}: ${r.title}` : r.title;
+      li.appendChild(strong);
+      const detail = document.createElement("span");
+      const due = fmtTanggalSingkat(r.dueAt);
+      if (r.kind === "agenda-lewat") {
+        detail.textContent = `${r.detail} — ${t("radarDue", lang)} ${due} · ${r.days} ${t("radarDaysOverdue", lang)}`;
+      } else if (r.kind === "agenda-besok") {
+        detail.textContent = `${r.detail} — ${t("radarDue", lang)} ${due} · ${lang === "id" ? "besok" : "tomorrow"}`;
+      } else if (r.kind === "agenda-dekat") {
+        detail.textContent = `${r.detail} — ${t("radarDue", lang)} ${due} · ${r.days} ${t("radarDaysLeft", lang)}`;
+      } else {
+        detail.textContent = `${t("radarDue", lang)} ${due} · ${r.days} ${t("radarWaiting", lang)}`;
+      }
+      li.appendChild(detail);
+      ul.appendChild(li);
+    }
+    groups.appendChild(ul);
+  };
+  mkGroup(t("radarOverdue", lang), overdue);
+  mkGroup(t("radarSoon", lang), soon);
+}
+
+/** Statistik Kecamatan untuk Warga: angka terbuka dari data lokal nyata
+ * bulan berjalan + pengaduan selesai (total). Tanpa skor IKM (aturan
+ * Paket 44); jumlah responden IKM saja + tombol ke tab IKM. */
+function renderStatistik(): void {
+  const d = monthlyReportData(new Date());
+  const rows = $("home-stat-rows");
+  rows.innerHTML = "";
+  const mkRow = (label: string, value: string): void => {
+    const row = document.createElement("div");
+    row.className = "stat-row";
+    const lab = document.createElement("strong");
+    lab.textContent = label;
+    const val = document.createElement("span");
+    val.textContent = value;
+    row.append(lab, val);
+    rows.appendChild(row);
+  };
+  mkRow(t("statLetters", lang), String(d.letters));
+  mkRow(
+    t("statAgenda", lang),
+    `${t("camatMasuk", lang)} ${d.agsMasuk} · ${t("camatKeluar", lang)} ${d.agsKeluar}`,
+  );
+  mkRow(
+    t("statIkm", lang),
+    d.ikmCount === 0 ? t("statIkmNone", lang) : `${d.ikmCount} ${t("ikmRespondents", lang)}`,
+  );
+  const aduAll = computeAduanStats(loadAduan());
+  mkRow(t("statAduSelesai", lang), `${aduAll.selesai} / ${aduAll.total}`);
+}
+
+/** Paket 46 — blok TTE CONTOH DEMO di lembar surat. BUKAN TTE resmi:
+ * penandatangan dari kop surat (kosong = "—"), waktu + kode verifikasi
+ * CONTOH yang tetap (bukan data asli, bukan hasil verifikasi). */
+function renderTteDemoBlock(): HTMLElement {
+  const lh = loadLetterhead();
+  const box = document.createElement("div");
+  box.className = "tte-demo";
+  box.id = "letter-tte-demo";
+  const title = document.createElement("p");
+  title.className = "tte-demo-title";
+  title.textContent = t("tteDemoTitle", lang);
+  const label = document.createElement("p");
+  label.className = "tte-demo-label";
+  label.textContent = t("tteDemoLabel", lang);
+  box.append(title, label);
+  const rows: Array<[string, string]> = [
+    [t("tteDemoSigner", lang), lh.camatNama.trim() || "—"],
+    [t("tteDemoTime", lang), "01 Jan 2026 00:00 (CONTOH)"],
+    [t("tteDemoCode", lang), "CONTOH-XXXX-0000"],
+  ];
+  for (const [k, v] of rows) {
+    const p = document.createElement("p");
+    p.className = "tte-demo-row";
+    const strong = document.createElement("strong");
+    strong.textContent = `${k}: `;
+    p.append(strong, document.createTextNode(v));
+    box.appendChild(p);
+  }
+  const note = document.createElement("p");
+  note.className = "tte-demo-note";
+  note.textContent = t("tteDemoNote", lang);
+  box.appendChild(note);
+  return box;
+}
+
 function initHome(): void {
   renderHome();
   // Paket 38 — tombol lipat kartu Beranda (semua kartu punya data-card).
@@ -2203,6 +2441,25 @@ function initHome(): void {
   );
   $("anin-go-aduan").addEventListener("click", () =>
     document.querySelector<HTMLButtonElement>('[data-tab="pengaduan"]')?.click(),
+  );
+  // Paket 46 — Lacak Status Surat (tombol + Enter) + Radar Tenggat
+  // (klik baris → tab sumbernya) + Statistik Warga (tombol ke tab IKM).
+  $("lacak-btn").addEventListener("click", renderTrackResult);
+  ($("lacak-input") as HTMLInputElement).addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      renderTrackResult();
+    }
+  });
+  $("home-radar-groups").addEventListener("click", (ev) => {
+    const li = (ev.target as HTMLElement).closest<HTMLElement>("li[data-tab]");
+    if (!li) return;
+    document
+      .querySelector<HTMLButtonElement>(`[data-tab="${li.dataset.tab}"]`)
+      ?.click();
+  });
+  $("home-stat-ikm").addEventListener("click", () =>
+    document.querySelector<HTMLButtonElement>('[data-tab="ikm"]')?.click(),
   );
 }
 
@@ -2801,6 +3058,8 @@ function renderLetterSheet(): void {
     sign.appendChild(printSignBlock(values.tanggal ?? ""));
   }
   sheet.appendChild(sign);
+  // Paket 46 — TTE CONTOH DEMO di bawah tanda tangan (bukan TTE resmi).
+  sheet.appendChild(renderTteDemoBlock());
 }
 
 // Shared by Surat Cepat and Anin: apply a parsed one-sentence request to
@@ -3344,6 +3603,20 @@ function initQa(): void {
   // Pertanyaan terakhir — dipakai tombol "Lanjutkan dengan Anin".
   let lastQuestion = "";
 
+  // Paket 46 — Anin Suara di Tanya Prosedur: bila pertanyaan masuk lewat
+  // mikrofon, jawaban dibacakan otomatis (speechSynthesis, di perangkat).
+  let qaVoiceAsked = false;
+  async function speakQaAnswerIfVoiceAsked(): Promise<void> {
+    if (!qaVoiceAsked) return;
+    qaVoiceAsked = false;
+    const text = ($("qa-output").textContent ?? "").trim();
+    if (!text) return;
+    const ok = await speakText(text);
+    if (!ok && ($("qa-status").textContent ?? "") === "") {
+      setStatus($("qa-status"), t("aninVoiceNoVoice", lang));
+    }
+  }
+
   $("qa-ask").addEventListener("click", async () => {
     const btn = $("qa-ask") as HTMLButtonElement;
     const status = $("qa-status");
@@ -3387,6 +3660,7 @@ function initQa(): void {
     if (!svc || svc.status !== "ready" || isOfflineOnly()) {
       if (!answerFromGuide()) answerNoneFound();
       setStatus(status, t("aninQaAiFailed", lang));
+      void speakQaAnswerIfVoiceAsked();
       return;
     }
 
@@ -3422,12 +3696,14 @@ function initQa(): void {
         sources.textContent = `${t("sourcesLabel", lang)}${matches.map((m) => m.titleId).join(", ")}`;
       }
       setStatus(status, "");
+      await speakQaAnswerIfVoiceAsked();
     } catch (e) {
       console.error("DesaAI: Q&A failed", e);
       // AI gagal — inilah yang terjadi di HP Bos: Firebase siap, tapi
       // panggilan cloud gagal. Anin mengambil alih dengan panduan offline.
       if (!answerFromGuide()) answerNoneFound();
       setStatus(status, t("aninQaAiFailed", lang));
+      void speakQaAnswerIfVoiceAsked();
     } finally {
       btn.disabled = false;
     }
@@ -3445,6 +3721,65 @@ function initQa(): void {
     }
     const ok = await speakText(text);
     if (!ok) setStatus($("qa-status"), t("aninVoiceNoVoice", lang));
+  });
+
+  // Paket 46 — Anin Suara di Tanya Prosedur: tanya pakai suara
+  // (SpeechRecognition, di perangkat saja — audio tidak dikirim ke server).
+  // Hasil ucapan diisi ke kotak pertanyaan lalu dijawab seperti biasa, dan
+  // jawabannya dibacakan otomatis. Browser tanpa SR → pesan jujur.
+  const qaMicBtn = $("qa-mic") as HTMLButtonElement;
+  qaMicBtn.addEventListener("click", () => {
+    const w = window as unknown as {
+      SpeechRecognition?: AninRecognitionCtor;
+      webkitSpeechRecognition?: AninRecognitionCtor;
+    };
+    const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    const status = $("qa-status");
+    if (!SR) {
+      setStatus(status, t("aninVoiceNoMic", lang));
+      return;
+    }
+    try {
+      const rec = new SR();
+      rec.lang = lang === "id" ? "id-ID" : "en-US";
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      qaMicBtn.classList.add("listening");
+      qaMicBtn.disabled = true;
+      setStatus(status, t("qaMicListening", lang));
+      rec.onresult = (ev) => {
+        const said = ev.results[0]?.[0]?.transcript ?? "";
+        if (said.trim()) {
+          ($("qa-input") as HTMLInputElement).value = said.trim();
+          qaVoiceAsked = true;
+          $("qa-ask").click();
+        }
+      };
+      rec.onerror = (ev) => {
+        setStatus(
+          status,
+          t("aninVoiceMicError", lang).replace("%s", String(ev.error ?? "?")),
+        );
+      };
+      rec.onend = () => {
+        qaMicBtn.classList.remove("listening");
+        qaMicBtn.disabled = false;
+        // Jangan menimpa status jawaban yang sudah tampil; hapus hanya
+        // pesan "Mendengarkan…" bila belum ada jawaban.
+        if (status.textContent === t("qaMicListening", lang)) setStatus(status, "");
+      };
+      rec.start();
+    } catch (e) {
+      qaMicBtn.classList.remove("listening");
+      qaMicBtn.disabled = false;
+      setStatus(
+        status,
+        t("aninVoiceMicError", lang).replace(
+          "%s",
+          e instanceof Error ? e.message : "?",
+        ),
+      );
+    }
   });
 
   // Lanjutkan dengan Anin: buka panel chat dengan pertanyaan yang sama —
@@ -4746,6 +5081,8 @@ function renderArchiveSheet(): void {
     sign.appendChild(printSignBlock(printForm.tanggal));
   }
   sheet.appendChild(sign);
+  // Paket 46 — TTE CONTOH DEMO di bawah tanda tangan (bukan TTE resmi).
+  sheet.appendChild(renderTteDemoBlock());
 }
 
 function buildArchivePrintFields(): void {
@@ -6167,9 +6504,13 @@ function aduShowDetail(a: Aduan): void {
     const strong = document.createElement("strong");
     strong.textContent = pill.text;
     li.appendChild(strong);
-    const when = document.createElement("span");
-    when.textContent = ` — ${new Date(step.at).toLocaleString()}`;
-    li.appendChild(when);
+    // Paket 46 — tanggal tampil hanya bila ada datanya (null = perubahan
+    // status tidak tercatat tanggalnya, jangan karang).
+    if (step.at != null) {
+      const when = document.createElement("span");
+      when.textContent = ` — ${new Date(step.at).toLocaleString()}`;
+      li.appendChild(when);
+    }
     timeline.appendChild(li);
   }
   if (!dlg.open) dlg.showModal();
@@ -6266,7 +6607,12 @@ function initPengaduan(): void {
     if (svc) void syncAduanToFirestore(svc, aduItems).then(() => setFirebaseChip());
     ($("adu-form") as HTMLFormElement).reset();
     renderPengaduan();
-    setStatus($("adu-form-status"), t("aduSaved", lang));
+    // Paket 46 — sebut nomor tiketnya supaya warga bisa langsung melacak
+    // status pengaduan di kartu Lacak Status Surat (Beranda).
+    setStatus(
+      $("adu-form-status"),
+      t("aduSavedTicket", lang).replace("%s", aduan.ticket ?? ""),
+    );
   });
 }
 

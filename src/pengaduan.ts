@@ -47,14 +47,21 @@ export function nextTicket(items: Aduan[], year = new Date().getFullYear()): str
 /** Linimasa status untuk dilacak warga/petugas: Baru → Diproses → Selesai,
  * dengan tanggal tiap langkah. Data lama tanpa riwayat tetap menampilkan
  * langkah Baru dari createdAt. */
-export function aduTimeline(a: Aduan): Array<{ status: AduanStatus; at: number }> {
-  const steps: Array<{ status: AduanStatus; at: number }> = [
+export function aduTimeline(a: Aduan): Array<{ status: AduanStatus; at: number | null }> {
+  const steps: Array<{ status: AduanStatus; at: number | null }> = [
     { status: "baru", at: a.createdAt },
   ];
   for (const r of a.riwayat ?? []) {
     const last = steps[steps.length - 1];
     if (last && last.status === r.status) continue;
     steps.push({ status: r.status, at: r.at });
+  }
+  // Paket 46 — status saat ini selalu tampil, walau riwayat perubahan
+  // statusnya tidak tercatat (data contoh lama): tanggalnya null — bukan
+  // tanggal karangan — dan perender menampilkannya tanpa tanggal.
+  const lastStep = steps[steps.length - 1];
+  if (lastStep && lastStep.status !== a.status) {
+    steps.push({ status: a.status, at: null });
   }
   return steps;
 }
@@ -63,6 +70,9 @@ export function aduTimeline(a: Aduan): Array<{ status: AduanStatus; at: number }
 export const ADUAN_SEED: Aduan[] = [
   {
     id: "adu-demo-1",
+    // Paket 46 — tiket lacak diisi pada data contoh supaya warga bisa
+    // mencoba Lacak Status Surat langsung (ADU-2026-0001..0006).
+    ticket: "ADU-2026-0001",
     nama: "",
     jenis: "Keterlambatan",
     jenisSurat: "pengantar",
@@ -73,6 +83,7 @@ export const ADUAN_SEED: Aduan[] = [
   },
   {
     id: "adu-demo-2",
+    ticket: "ADU-2026-0002",
     nama: "Warga Katis",
     jenis: "Persyaratan tidak jelas",
     jenisSurat: "keterangan",
@@ -83,6 +94,7 @@ export const ADUAN_SEED: Aduan[] = [
   },
   {
     id: "adu-demo-3",
+    ticket: "ADU-2026-0003",
     nama: "",
     jenis: "Pelayanan kurang ramah",
     jenisSurat: "surat-dinas",
@@ -93,6 +105,7 @@ export const ADUAN_SEED: Aduan[] = [
   },
   {
     id: "adu-demo-4",
+    ticket: "ADU-2026-0004",
     nama: "Sinta",
     jenis: "Biaya tidak sesuai",
     jenisSurat: "sk",
@@ -103,6 +116,7 @@ export const ADUAN_SEED: Aduan[] = [
   },
   {
     id: "adu-demo-5",
+    ticket: "ADU-2026-0005",
     nama: "",
     jenis: "Lainnya",
     jenisSurat: "undangan",
@@ -113,6 +127,7 @@ export const ADUAN_SEED: Aduan[] = [
   },
   {
     id: "adu-demo-6",
+    ticket: "ADU-2026-0006",
     nama: "Bapak RT 03",
     jenis: "Keterlambatan",
     jenisSurat: "keterangan",

@@ -557,6 +557,67 @@
                   <span><strong id="home-month-aduan">0</strong> <span data-i18n="homeMonthAduan">Complaints</span></span>
                 </p>
               </div>
+              <!-- Paket 46 — Lacak Status Surat (publik, tanpa login):
+                   warga masukkan nomor tiket pengaduan (ADU-YYYY-NNNN) atau
+                   nomor surat agenda → status Baru → Diproses → Selesai. -->
+              <div class="bento-card bento-lacak" data-card="lacak">
+                <p class="bento-label" data-i18n="lacakTitle">Lacak Status Surat</p>
+                <p class="hint" data-i18n="lacakHint">
+                  Masukkan nomor tiket pengaduan atau nomor surat — tanpa login.
+                </p>
+                <label class="field">
+                  <span data-i18n="lacakLabel">Nomor tiket / nomor surat</span>
+                  <input
+                    id="lacak-input"
+                    type="text"
+                    data-i18n-ph="lacakPh"
+                    placeholder="mis. ADU-2026-0001"
+                  />
+                </label>
+                <div class="actions">
+                  <button id="lacak-btn" class="btn btn-primary" type="button">
+                    <span data-i18n="lacakBtn">Lacak</span>
+                  </button>
+                </div>
+                <p id="lacak-notfound" class="hint" hidden data-i18n="lacakNotFound">
+                  Nomor tidak ditemukan — periksa lagi atau tanya petugas.
+                </p>
+                <div id="lacak-result" class="lacak-result" aria-live="polite"></div>
+              </div>
+              <!-- Paket 46 — Radar Tenggat Surat: surat/agenda yang jatuh
+                   temponya ≤3 hari lagi atau sudah lewat, dari data lokal.
+                   Sama sumbernya dengan Pengingat (Paket 34 Ide 3), tapi
+                   tampil dengan tanggal jatuh tempo yang eksplisit. -->
+              <div class="bento-card bento-radar" data-card="radar">
+                <p class="bento-label">
+                  <span data-i18n="radarTitle">Radar Tenggat Surat</span>
+                  <span class="followup-badge" id="home-radar-count">0</span>
+                </p>
+                <p class="hint" data-i18n="radarHint">
+                  Surat dan pengaduan yang jatuh temponya dekat atau sudah lewat.
+                </p>
+                <div id="home-radar-groups"></div>
+                <p class="hint" id="home-radar-empty" hidden data-i18n="radarEmpty">
+                  Belum ada surat yang mendekati tenggat.
+                </p>
+              </div>
+              <!-- Paket 46 — Statistik Kecamatan untuk Warga: angka terbuka
+                   dari data lokal nyata (berlabel sumbernya). Sengaja TANPA
+                   angka skor IKM di sini — skor hanya sekali di Beranda, di
+                   kartu SKOR IKM (aturan Paket 44); yang tampil hanya jumlah
+                   responden + tombol ke tab IKM. -->
+              <div class="bento-card bento-statistik" data-card="statistik">
+                <p class="bento-label" data-i18n="statTitle">Statistik Kecamatan</p>
+                <p class="hint" data-i18n="statHint">
+                  Angka terbuka untuk warga — dari data aplikasi DesaAI.
+                </p>
+                <div id="home-stat-rows" class="stat-rows"></div>
+                <div class="actions">
+                  <button id="home-stat-ikm" class="btn" type="button">
+                    <span data-i18n="statOpenIkm">Lihat detail IKM</span>
+                  </button>
+                </div>
+              </div>
               <div id="home-warga-card" class="bento-card bento-warga" data-card="warga" hidden>
                 <p class="bento-label" data-i18n="wargaCardTitle">Layanan warga</p>
                 <p class="hint bento-keep" data-i18n="wargaCardHint">
@@ -866,6 +927,12 @@
             <div class="actions">
               <button id="qa-ask" class="btn btn-primary" type="button">
                 ✨ <span data-i18n="askBtn">Ask</span>
+              </button>
+              <!-- Paket 46 — Anin Suara di Tanya Prosedur: tanya pakai suara
+                   (Web Speech API, di perangkat saja). Bila browser tidak
+                   mendukung, tampilkan pesan jujur — bukan diam. -->
+              <button id="qa-mic" class="btn" type="button" aria-label="Tanya dengan suara">
+                🎤 <span data-i18n="qaMic">Tanya dengan suara</span>
               </button>
             </div>
             <div class="chip-row" id="qa-suggestions" aria-label="Example questions"></div>

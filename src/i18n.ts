@@ -77,6 +77,75 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   reportAgendaList: { en: "Mail register this month", id: "Agenda surat bulan ini" },
   reportExportDocxFail: { en: "Word export failed — try again.", id: "Ekspor Word gagal — coba lagi." },
   kegExportedDocx: { en: "Personnel Word file downloaded.", id: "Daftar pegawai Word (.docx) diunduh." },
+  // Paket 46 — Lacak Status Surat + Radar Tenggat + Statistik Warga +
+  // Anin Suara (Tanya Prosedur) + TTE demo.
+  lacakTitle: { en: "Track a Letter", id: "Lacak Status Surat" },
+  lacakHint: {
+    en: "Enter a complaint ticket or a letter number — no login needed.",
+    id: "Masukkan nomor tiket pengaduan atau nomor surat — tanpa login.",
+  },
+  lacakLabel: { en: "Ticket / letter number", id: "Nomor tiket / nomor surat" },
+  lacakPh: { en: "e.g. ADU-2026-0001", id: "mis. ADU-2026-0001" },
+  lacakBtn: { en: "Track", id: "Lacak" },
+  lacakNotFound: {
+    en: "Number not found — check it again or ask an officer.",
+    id: "Nomor tidak ditemukan — periksa lagi atau tanya petugas.",
+  },
+  lacakNeedInput: {
+    en: "Enter a ticket or letter number first.",
+    id: "Masukkan nomor tiket atau nomor surat dulu.",
+  },
+  lacakAduanKind: { en: "Complaint", id: "Pengaduan" },
+  lacakAgendaKind: { en: "Mail register entry", id: "Agenda surat" },
+  lacakTimeline: { en: "Status timeline", id: "Linimasa status" },
+  lacakPerihal: { en: "Subject", id: "Perihal" },
+  lacakPihak: { en: "From / To", id: "Dari / Tujuan" },
+  lacakTanggal: { en: "Letter date", id: "Tanggal surat" },
+  lacakJenisSurat: { en: "Letter service", id: "Layanan surat" },
+  radarTitle: { en: "Letter Deadline Radar", id: "Radar Tenggat Surat" },
+  radarHint: {
+    en: "Letters and complaints whose deadlines are near or already past.",
+    id: "Surat dan pengaduan yang jatuh temponya dekat atau sudah lewat.",
+  },
+  radarEmpty: {
+    en: "No letters near their deadline.",
+    id: "Belum ada surat yang mendekati tenggat.",
+  },
+  radarOverdue: { en: "Past deadline", id: "Lewat tenggat" },
+  radarSoon: { en: "Due within 3 days", id: "Mendekati tenggat (≤3 hari)" },
+  radarDue: { en: "Due", id: "Jatuh tempo" },
+  radarDaysLeft: { en: "day(s) left", id: "hari lagi" },
+  radarDaysOverdue: { en: "day(s) overdue", id: "hari lewat" },
+  radarWaiting: { en: "day(s) waiting (3-day limit)", id: "hari menunggu (batas 3 hari)" },
+  statTitle: { en: "Subdistrict Statistics", id: "Statistik Kecamatan" },
+  statHint: {
+    en: "Open figures for residents — from the DesaAI app's own data.",
+    id: "Angka terbuka untuk warga — dari data aplikasi DesaAI.",
+  },
+  statLetters: { en: "Letters saved this month", id: "Surat tersimpan bulan ini" },
+  statAgenda: { en: "Mail register this month", id: "Agenda surat bulan ini" },
+  statIkm: { en: "IKM respondents this month", id: "Responden IKM bulan ini" },
+  statIkmNone: { en: "No survey answers this month yet", id: "Belum ada jawaban survei bulan ini" },
+  statAduSelesai: { en: "Complaints resolved (total)", id: "Pengaduan selesai (total)" },
+  statOpenIkm: { en: "See IKM details", id: "Lihat detail IKM" },
+  qaMic: { en: "Ask by voice", id: "Tanya dengan suara" },
+  qaMicListening: { en: "Listening…", id: "Mendengarkan…" },
+  tteDemoTitle: { en: "Electronic Signature (TTE)", id: "Tanda Tangan Elektronik (TTE)" },
+  tteDemoLabel: {
+    en: "DEMO EXAMPLE — not an official electronic signature and not legally binding",
+    id: "CONTOH DEMO — bukan tanda tangan elektronik resmi dan tidak berkekuatan hukum",
+  },
+  tteDemoSigner: { en: "Signer (example)", id: "Penandatangan (contoh)" },
+  tteDemoTime: { en: "Time (example)", id: "Waktu (contoh)" },
+  tteDemoCode: { en: "Verification code (example)", id: "Kode verifikasi (contoh)" },
+  tteDemoNote: {
+    en: "An official TTE is issued by a certified provider (e.g. BSrE) — this app is not integrated with one. This block only shows how it would look.",
+    id: "TTE resmi diterbitkan penyelenggara tersertifikasi (mis. BSrE) — aplikasi ini belum terintegrasi. Blok ini hanya contoh tampilan.",
+  },
+  aduSavedTicket: {
+    en: "Complaint saved. Your tracking number is %s — keep it to check the status.",
+    id: "Pengaduan tersimpan. Nomor lacak Anda: %s — simpan nomor ini untuk melacak status.",
+  },
   // Paket 18 — Grafik Tren Bulanan (6 bulan terakhir)
   homeMonthTrendTitle: { en: "Monthly trend — last 6 months", id: "Tren bulanan — 6 bulan terakhir" },
   homeMonthTrendHint: {
@@ -924,6 +993,24 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     en: "Monthly report: open the Home dashboard, find the “Monthly report” card, pick the month, and the recap appears — letters, mail register, IKM score per element, and complaints, all from the data already in this app. “Print report” prints the official sheet (or Save as PDF); “Export Word (.docx)” downloads a real Word file with the office letterhead. A month with no data says so honestly instead of showing made-up zeros.",
     id: "Laporan bulanan: buka Beranda, cari kartu “Laporan bulanan”, pilih bulan, dan rekapnya muncul — surat, agenda, skor IKM per unsur, dan pengaduan, semuanya dari data yang sudah ada di aplikasi. “Cetak laporan” mencetak lembar resmi (atau Simpan sebagai PDF); “Ekspor Word (.docx)” mengunduh berkas Word asli dengan kop surat kantor. Bulan yang belum ada datanya ditulis jujur, bukan angka nol karangan.",
   },
+  // Paket 46 — FAQ untuk Lacak Surat, Radar Tenggat, Statistik Warga,
+  // Anin Suara di Tanya Prosedur, dan TTE demo.
+  aninFaqLacak: {
+    en: "Track a letter: on the Home dashboard, find the “Track a Letter” card and enter the complaint ticket (for example ADU-2026-0001) or a letter number from the mail register — no login needed. You will see the status — New, In progress, or Done — with the date of each step. If the number is not found, check it again or ask an officer. Only the letter's own status is shown, never other people's personal data.",
+    id: "Lacak surat: di Beranda, cari kartu “Lacak Status Surat” lalu masukkan nomor tiket pengaduan (contoh ADU-2026-0001) atau nomor surat dari buku agenda — tanpa login. Statusnya tampil — Baru, Diproses, atau Selesai — beserta tanggal tiap langkah. Bila nomor tidak ditemukan, periksa lagi atau tanya petugas. Yang tampil hanya status surat itu, bukan data pribadi orang lain.",
+  },
+  aninFaqRadar: {
+    en: "The Letter Deadline Radar on the Home dashboard lists letters and complaints whose deadlines are near (within 3 days) or already past, from the app's own data. A mail-register entry is due 3 days after its letter date; a complaint is due 3 days after it was filed. When nothing is near its deadline, the card says so honestly.",
+    id: "Radar Tenggat Surat di Beranda menampilkan surat dan pengaduan yang jatuh temponya dekat (≤3 hari) atau sudah lewat, dari data aplikasi sendiri. Surat agenda jatuh tempo 3 hari setelah tanggal suratnya; pengaduan jatuh tempo 3 hari setelah dilaporkan. Bila tidak ada yang mendekati tenggat, kartunya menulis jujur.",
+  },
+  aninFaqStatistik: {
+    en: "The Subdistrict Statistics card on the Home dashboard shows open figures for residents — letters saved this month, mail-register entries this month, IKM respondents, and resolved complaints — all from the DesaAI app's own data. The IKM score itself is shown only once on the Home dashboard, in the IKM Score card; the statistics card shows the number of respondents and a button to the IKM tab.",
+    id: "Kartu Statistik Kecamatan di Beranda menampilkan angka terbuka untuk warga — surat tersimpan bulan ini, agenda surat bulan ini, responden IKM, dan pengaduan selesai — semuanya dari data aplikasi DesaAI sendiri. Skor IKM sendiri hanya tampil sekali di Beranda, di kartu SKOR IKM; kartu statistik menampilkan jumlah responden dan tombol ke tab IKM.",
+  },
+  aninFaqTte: {
+    en: "The Electronic Signature (TTE) block on a letter sheet is a DEMO EXAMPLE only — it is not an official electronic signature and has no legal force. An official TTE is issued by a certified provider (for example BSrE); this app is not integrated with one. The block only shows how a signed letter would look, with an example signer, example time, and an example verification code.",
+    id: "Blok Tanda Tangan Elektronik (TTE) di lembar surat hanya CONTOH DEMO — bukan tanda tangan elektronik resmi dan tidak berkekuatan hukum. TTE resmi diterbitkan penyelenggara tersertifikasi (misalnya BSrE); aplikasi ini belum terintegrasi. Blok itu hanya contoh tampilan surat yang ditandatangani, dengan penandatangan, waktu, dan kode verifikasi contoh.",
+  },
   aninFaqIkm: {
     en: "IKM is the satisfaction survey: residents answer it in the Satisfaction (IKM) tab, and the score appears on the home dashboard. Share the survey link or QR code at the counter to collect more answers.",
     id: "IKM adalah survei kepuasan: warga mengisinya di tab Kepuasan (IKM), dan skornya tampil di beranda. Bagikan tautan atau QR survei di loket untuk mengumpulkan lebih banyak jawaban.",
@@ -998,8 +1085,8 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     id: "Di formulir surat, tekan “Nomor otomatis” — Anin mengisi nomor surat berikutnya untuk jenis surat itu secara otomatis.",
   },
   aninFaqSuara: {
-    en: "You can talk to Anin: press the microphone button in the chat and speak in Indonesian — Anin types what you said. Press “Bacakan” on any of my answers and I'll read it aloud.",
-    id: "Anda bisa bicara dengan Anin: tekan tombol mikrofon di chat lalu ucapkan dalam Bahasa Indonesia — Anin mengetik apa yang Anda ucapkan. Tekan “Bacakan” pada jawaban saya, saya akan membacakannya.",
+    en: "You can talk to Anin: press the microphone button in the chat and speak in Indonesian — Anin types what you said. Press “Bacakan” on any of my answers and I'll read it aloud. In the “Ask about Procedures” tab there is also a “Ask by voice” microphone: speak your question and Anin answers it aloud too. Voice stays on the device — nothing is sent to a server. If the browser does not support voice, the app says so plainly.",
+    id: "Anda bisa bicara dengan Anin: tekan tombol mikrofon di chat lalu ucapkan dalam Bahasa Indonesia — Anin mengetik apa yang Anda ucapkan. Tekan “Bacakan” pada jawaban saya, saya akan membacakannya. Di tab “Tanya Prosedur” juga ada mikrofon “Tanya dengan suara”: ucapkan pertanyaan dan Anin membacakan jawabannya. Suara diproses di perangkat — tidak ada yang dikirim ke server. Bila browser tidak mendukung suara, aplikasi memberitahukannya dengan jelas.",
   },
   // Paket 32 — KB dimaksimalkan (28 Nov 00:20): beranda, Tanya Prosedur,
   // dan Paket Adopsi Desa Lain juga tercakup, tanpa celah.

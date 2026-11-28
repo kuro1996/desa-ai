@@ -2185,6 +2185,143 @@ html[data-theme="dark"] ::placeholder {
   cursor: pointer;
 }
 
+/* Paket 46 — Lacak Status Surat + Radar Tenggat + Statistik Warga. */
+.bento-lacak .field {
+  margin-top: 8px;
+}
+
+.lacak-result {
+  margin-top: 10px;
+}
+
+.lacak-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 8px;
+}
+
+.lacak-dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+}
+
+.lacak-dl dt {
+  color: var(--muted);
+}
+
+.lacak-dl dd {
+  margin: 0;
+}
+
+.lacak-tl-title {
+  margin: 8px 0 4px;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.lacak-timeline {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.92rem;
+}
+
+.lacak-timeline li {
+  margin: 2px 0;
+}
+
+.radar-group-title {
+  margin: 10px 0 4px;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+#home-radar-groups .notif-item {
+  cursor: pointer;
+}
+
+.stat-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+  font-size: 0.92rem;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+
+.stat-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.stat-row span {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Paket 46 — TTE CONTOH DEMO di lembar surat: blok bergaris tegas supaya
+   jelas ini contoh, bukan tanda tangan resmi. */
+.tte-demo {
+  margin-top: 24px;
+  padding: 14px;
+  border: 2px dashed var(--accent);
+  border-radius: 10px;
+  background: var(--surface-muted);
+}
+
+.tte-demo-title {
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+
+.tte-demo-label {
+  margin: 0 0 10px;
+  font-weight: 700;
+  color: var(--danger);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
+.tte-demo-row {
+  margin: 2px 0;
+  font-size: 0.92rem;
+}
+
+.tte-demo-note {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* Paket 46 — tombol mikrofon Anin Suara: berdenyut saat mendengarkan. */
+#qa-mic.listening {
+  border-color: var(--danger);
+  color: var(--danger);
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(220, 38, 38, 0);
+  }
+}
+
 .report-preview {
   margin: 8px 0;
 }

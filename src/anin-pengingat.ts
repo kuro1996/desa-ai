@@ -20,6 +20,10 @@ export interface Reminder {
   detail: string;
   /** Days until the agenda date (negative = overdue) or days waiting. */
   days: number;
+  /** Jatuh tempo (epoch ms): tanggal surat untuk agenda, dibuat + 3 hari
+   * (batas tindak lanjut) untuk pengaduan. Dipakai Radar Tenggat
+   * (Paket 46) supaya tanggalnya tampil eksplisit. */
+  dueAt: number;
   tab: "agenda" | "pengaduan";
 }
 
@@ -68,6 +72,7 @@ export function computeReminders(
         title: e.perihal,
         detail: e.pihak,
         days: -diff,
+        dueAt: startOfDay(new Date(e.tanggal)),
         tab: "agenda",
       });
     } else if (diff === 1) {
@@ -77,6 +82,7 @@ export function computeReminders(
         title: e.perihal,
         detail: e.pihak,
         days: 1,
+        dueAt: startOfDay(new Date(e.tanggal)),
         tab: "agenda",
       });
     } else if (diff <= AGENDA_SOON_DAYS) {
@@ -86,6 +92,7 @@ export function computeReminders(
         title: e.perihal,
         detail: e.pihak,
         days: diff,
+        dueAt: startOfDay(new Date(e.tanggal)),
         tab: "agenda",
       });
     }
@@ -101,6 +108,7 @@ export function computeReminders(
         title: a.jenis,
         detail: a.nama || "Anonim",
         days: waiting,
+        dueAt: a.createdAt + ADUAN_STALE_DAYS * DAY_MS,
         tab: "pengaduan",
       });
     }
