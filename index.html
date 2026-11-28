@@ -34,8 +34,8 @@
         /* storage unavailable — light theme by default */
       }
     </script>
-    <script type="module" crossorigin src="./assets/index-DHly0phl.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-Dl6UUe7c.css">
+    <script type="module" crossorigin src="./assets/index-OnxCXOiD.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-KPZd4XpQ.css">
   </head>
   <body>
     <div class="app-shell">
@@ -249,29 +249,21 @@
                    satu tips kontekstual + langkah berikutnya. -->
               <div id="home-anin" class="bento-card bento-anin">
                 <div class="anin-face" aria-hidden="true">
-                  <svg viewBox="0 0 120 120" role="img" aria-label="Anin, pemandu DesaAI">
-                    <path d="M34 98 Q60 84 86 98 L86 120 L34 120 Z" fill="#0f766e" />
-                    <path d="M52 96 L60 104 L68 96" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-                    <circle cx="60" cy="58" r="32" fill="#ffd9a3" />
-                    <path d="M30 54 Q30 24 60 24 Q90 24 90 54 L90 58 L30 58 Z" fill="#1f2937" />
-                    <path d="M38 36 Q48 28 60 28" fill="none" stroke="#4b5563" stroke-width="2.5" stroke-linecap="round" />
-                    <circle cx="48" cy="58" r="3.6" fill="#1f2937" />
-                    <circle cx="72" cy="58" r="3.6" fill="#1f2937" />
-                    <circle cx="41" cy="68" r="4" fill="#f59e0b" opacity="0.45" />
-                    <circle cx="79" cy="68" r="4" fill="#f59e0b" opacity="0.45" />
-                    <path d="M49 70 Q60 79 71 70" fill="none" stroke="#1f2937" stroke-width="3" stroke-linecap="round" />
-                    <g transform="translate(80,88)">
-                      <rect width="28" height="19" rx="2" fill="#ffffff" stroke="#0f766e" stroke-width="2" />
-                      <path d="M2 3 L14 12 L26 3" fill="none" stroke="#0f766e" stroke-width="2" stroke-linejoin="round" />
-                    </g>
-                  </svg>
+                  <img
+                    id="home-anin-img"
+                    src="./anin-face-tersenyum.png"
+                    alt="Anin, pemandu DesaAI"
+                  />
                 </div>
                 <div class="anin-text">
                   <p class="bento-label"><span data-i18n="aninTitle">Anin — pemandu DesaAI</span></p>
                   <p id="anin-greeting" class="anin-greeting"></p>
                   <p id="anin-tip" class="anin-tip"></p>
                   <div class="actions">
-                    <button id="anin-go-letters" class="btn btn-primary" type="button">
+                    <button id="anin-go-chat" class="btn btn-primary" type="button">
+                      <span data-i18n="aninChatAsk">Tanya Anin</span>
+                    </button>
+                    <button id="anin-go-letters" class="btn" type="button">
                       <span data-i18n="aninGoLetters">Buat surat</span>
                     </button>
                     <button id="anin-go-aduan" class="btn" type="button" hidden>
@@ -782,6 +774,25 @@
               Answers are grounded in the built-in procedure guide — and the guide itself
               works fully offline.
             </p>
+            <!-- Paket 32 — Anin mengambil alih Tanya Prosedur: pertanyaan
+                 warga dijawab Anin (dari panduan offline bila AI cloud belum
+                 aktif), dan jawabannya bisa dibacakan atau dilanjutkan di chat. -->
+            <div class="qa-anin">
+              <img
+                id="qa-anin-img"
+                class="qa-anin-face"
+                src="./anin-face-tersenyum.png"
+                alt="Anin"
+              />
+              <div>
+                <strong data-i18n="aninQaAninTitle">Dijawab Anin — pemandu aplikasi</strong>
+                <p data-i18n="aninQaAninHint">
+                  Tanyakan prosedur apa pun — Anin menjawab dari panduan resmi di bawah.
+                  Saat AI cloud tidak bisa dihubungi, Anin tetap menjawab dari panduan
+                  (offline), dan bisa membacakan jawabannya atau membantu lanjut di chat.
+                </p>
+              </div>
+            </div>
             <label class="field field-wide">
               <span data-i18n="qaLabel">Your question</span>
               <input
@@ -806,6 +817,14 @@
               </div>
               <div id="qa-output" class="output-text" aria-live="polite"></div>
               <p id="qa-sources" class="sources"></p>
+              <div class="actions">
+                <button id="qa-read" class="btn" type="button">
+                  🔊 <span data-i18n="aninVoiceRead">Bacakan</span>
+                </button>
+                <button id="qa-ask-anin" class="btn" type="button">
+                  <span data-i18n="aninQaAskAnin">Lanjutkan dengan Anin</span>
+                </button>
+              </div>
             </div>
             <details class="kb">
               <summary data-i18n="kbTitle">Built-in procedure guide (works offline)</summary>
@@ -1566,6 +1585,53 @@
       <ul id="palette-list" class="palette-list" role="listbox" aria-label="Commands"></ul>
       <p class="palette-hint" data-i18n="paletteHint">↑↓ untuk memilih • Enter untuk membuka • Esc untuk menutup</p>
     </dialog>
+
+    <!-- Paket 32 — Anin chat: tombol mengambang + panel, terlihat di semua tab.
+         Wajah Anin adalah crop dari ilustrasi Bos (public/anin-face-*.png);
+         ekspresi berubah mengikuti keadaan (lihat src/anin-chat.ts). -->
+    <button
+      id="anin-fab"
+      class="anin-fab"
+      type="button"
+      aria-label="Tanya Anin"
+      aria-expanded="false"
+      aria-controls="anin-panel"
+    >
+      <img id="anin-fab-img" src="./anin-face-tersenyum.png" alt="" />
+      <span class="anin-fab-label" data-i18n="aninChatAsk">Tanya Anin</span>
+    </button>
+    <section id="anin-panel" class="anin-panel" hidden aria-label="Chat dengan Anin">
+      <header class="anin-panel-head">
+        <img
+          id="anin-panel-face"
+          class="anin-panel-face"
+          src="./anin-face-tersenyum.png"
+          alt="Anin"
+        />
+        <div class="anin-panel-title">
+          <strong>Anin</strong>
+          <span id="anin-panel-status" class="anin-panel-status" data-i18n="aninChatStatusReady">Siap membantu</span>
+        </div>
+        <button id="anin-panel-close" class="anin-panel-close" type="button" aria-label="Tutup chat Anin">✕</button>
+      </header>
+      <div id="anin-messages" class="anin-messages" aria-live="polite"></div>
+      <div id="anin-chips" class="anin-chips" aria-label="Contoh pertanyaan"></div>
+      <form id="anin-form" class="anin-form">
+        <button id="anin-mic" class="anin-mic" type="button" title="Bicara" aria-label="Bicara">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10v1a7 7 0 0 0 14 0v-1" /><path d="M12 18v4" /></svg>
+        </button>
+        <input
+          id="anin-input"
+          type="text"
+          data-i18n-ph="aninChatPh"
+          placeholder="Tanya Anin tentang aplikasi ini…"
+          autocomplete="off"
+        />
+        <button id="anin-send" class="btn btn-primary" type="submit">
+          <span data-i18n="aninChatSend">Kirim</span>
+        </button>
+      </form>
+    </section>
 
   </body>
 </html>

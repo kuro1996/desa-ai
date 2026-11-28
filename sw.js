@@ -17,7 +17,7 @@
 // (Paket 30: daftar PRECACHE tidak berubah — hanya pola runtime untuk
 // woff2 — jadi nama cache tetap v1; file sw.js yang berubah sudah cukup
 // memicu update worker di browser.)
-const CACHE_NAME = "desaai-v1";
+const CACHE_NAME = "desaai-v2";
 
 // Content-stable shell files. index.html is deliberately NOT here.
 const PRECACHE = [
@@ -28,6 +28,18 @@ const PRECACHE = [
   "./icon-192.png",
   "./icon-512.png",
   "./icon-512-maskable.png",
+  // Paket 32 — Anin faces (cropped from Bos's character sheet) + full body.
+  "./anin-face-tersenyum.png",
+  "./anin-face-senang.png",
+  "./anin-face-terkagum.png",
+  "./anin-face-sedih.png",
+  "./anin-face-marah.png",
+  "./anin-face-bingung.png",
+  "./anin-face-takut.png",
+  "./anin-face-malu.png",
+  "./anin-face-bersemangat.png",
+  "./anin-face-mengangguk.png",
+  "./anin-depan.png",
 ];
 
 const HASHED_ASSET = /\/assets\/[^/]+\.(?:js|css)$/;
