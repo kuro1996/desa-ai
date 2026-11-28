@@ -45,6 +45,9 @@ Strip `quick-stats` **disembunyikan HANYA saat tab Beranda aktif**; di tab lain 
 - Perbaikan ini menyembunyikan strip, bukan menghapusnya: bila suatu hari Bos ingin strip lama hilang total dari semua tab, itu satu baris CSS lagi — tapi selama strip masih berguna di tab lain (ringkasan cepat tanpa membuka Beranda), menyembunyikan hanya di Beranda adalah pilihan yang paling aman.
 - Angka di screenshot bukti sedikit berbeda dari suite headless (mis. "Complaints resolved 1" vs "2") karena script screenshot memakai profil browser segar dengan data contoh bawaan, sementara suite headless memakai data seed-nya sendiri — bukan bug, hanya beda data awal.
 
-## 7. Deploy (belum dilakukan)
+## 7. Deploy — SELESAI (live 28 Nov ~15:37 WIB)
 
-Paket ini **belum di-deploy** ke gh-pages. Live masih Paket 42 (`47e57b7`). Deploy menunggu Gas baru dari Bos; jalurnya sama seperti Paket 41/42 (worktree bersih di commit Paket 43 → clone gh-pages → salin dist → push → verifikasi ls-remote + cek live).
+- **gh-pages baru: `2fb594b`** (commit "Deploy Paket 43 (main 8a001a9)", `47e57b7..2fb594b`); `git ls-remote origin gh-pages` terkonfirmasi `2fb594b8b2ab0a7329d22e1a3fa64fa43a1a3aac`.
+- **Cek live (28 Nov ~15:37 WIB, setelah ~60 detik propagasi):** index 200, bundle baru `index-CbSUZul-.js` 200, CSS baru `index-CSdlRDOk.css` 200, bundle lama Paket 42 `index-BShGUjss.js` 404; live index.html merujuk bundle baru.
+- Deploy dilanjutkan atas izin eksplisit Bos "Ya lanjtkan aja" (15:35 WIB) setelah disclosure bahwa langkah build gagal pemeriksaan keamanan sistem. Catatan teknis: worktree baru tidak membawa `node_modules` (build pertama gagal `tsc: not found`) — deploy ini menjalankan `npm ci` dulu di worktree sebelum `npm run build`.
+- Worktree + clone sudah dibersihkan. Situs live: https://kuro1996.github.io/desa-ai/ — kini melayani Paket 43.
