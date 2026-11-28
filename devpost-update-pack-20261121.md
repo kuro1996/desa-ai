@@ -1,63 +1,139 @@
 # Devpost Update Pack — DesaAI (project 1305863)
-Disiapkan 2026-11-21 (Paket 6). **Diperbarui 2026-11-27 (Paket 29)** — Paket
-26–28 LIVE, Paket 29 kode selesai (tes 323/323), deploy menunggu Gas Bos.
+Disiapkan 2026-11-21 (Paket 6). **Diperbarui 2026-11-28 (Paket 44 LIVE)** —
+Paket 30–44 LIVE di https://kuro1996.github.io/desa-ai/ (gh-pages
+`0fea5e3`, main `1ac26a4`); Paket 45 (Laporan Bulanan .docx) SELESAI
+dibangun (main `4136a99`, headless 426/426, PWA 16/16) tapi BELUM
+di-deploy — JANGAN klaim di Devpost sebelum LIVE.
 **Bos yang edit + submit sendiri** di
 https://devpost.com/software/desaai — batas edit **1 Des 2026 05:00 WIB**.
 Live: https://kuro1996.github.io/desa-ai/ — Repo: https://github.com/kuro1996/desa-ai
 
 ## 1. Deskripsi proyek — versi baru (tempel ke kolom Description)
 
+> Draf ini disusun mengikuti keempat kriteria penjurian resmi
+> #BuildHybridAI (Stage 2, bobot sama 1–5: Technological Implementation,
+> Design, Potential Impact, Quality of the Idea). Bahasa Inggris, karena
+> submission berbahasa Inggris. Jangan tempel bagian "Catatan jujur" (§4)
+> ke Devpost — itu hanya untuk Bos.
+
 **DesaAI — offline-first AI clerk for Indonesian village & subdistrict offices.**
 
 Village offices run on paper, WhatsApp, and memory. DesaAI is a single-page
-web app that drafts formal official letters, summarizes long documents, and
-answers procedure questions — with **Firebase AI Logic hybrid inference**:
-short, private prompts run **on-device (Gemini Nano 4)** when available, and
-long or complex prompts fall back to **cloud Gemini**. Every answer shows a
-visible routing badge ("On-device • private" vs "Cloud") and the reason it
-routed that way, so staff always know where their data went.
+web app for a real subdistrict office — Kecamatan Simpangkatis, Bangka
+Tengah, Indonesia — that drafts formal official letters, summarizes long
+documents, and answers procedure questions. It is built around **Firebase
+AI Logic hybrid inference**: short, private prompts run **on-device
+(Gemini Nano 4)** when available, and long or complex prompts fall back
+to **cloud Gemini**. Every answer shows a visible routing badge
+("On-device • private" vs "Cloud") and the reason it routed that way, so
+staff always know where their data went — and the office keeps working
+even when the internet does not.
 
-**What it does (9 tabs):**
-- **Draft Letters** — 7 templates (Surat Dinas, SK, Undangan, Pengantar,
-  Surat Keterangan, **SKTM — Surat Keterangan Tidak Mampu**, SK Pengangkatan
-  Perangkat Desa), automatic per-template letter numbering, editable drafts,
-  print-ready formal layout, letter archive. **Hasil draf kini tampil
-  sebagai lembar surat resmi** (kop + Nomor/Tanggal/Perihal + tabel rincian
-  undangan + Tembusan + tanda tangan, seperti surat dinas asli) yang langsung
-  digulir ke layar setelah Generate; kolom **Tembusan (opsional)** di Surat
-  Dinas + Undangan; teks mentah tetap bisa dibuka dan diedit.
-- **Summarize** — paste minutes, regulations, or reports; get a concise
-  summary (long inputs route to cloud automatically).
-- **Procedure Q&A** — KTP, KK, domisili, SKTM, birth/death certificates,
-  moving, business certificates — grounded in a built-in knowledge base
-  that works fully offline, with tickable document checklists.
-- **Personnel / Kepegawaian (SIAP AKAD)** — staff of the Simpangkatis
-  subdistrict office and village officers of its 10 villages; automatic
-  term-of-office status (Aktif / Akan habis / Habis), expiry notifications,
-  per-village cards, 6 village institutions, "Buat SK" prefills the
-  appointment decree from any record.
-- **IKM — community satisfaction survey** (PermenPAN-RB 14/2017, 9 elements,
-  score = mean × 25, categories A–D) with a shareable link + locally
-  generated QR code for the service counter, CSV export, and a cumulative
-  trend chart.
-- **Pengaduan (Complaints)** — anonymous reporting, Baru → Diproses →
-  Selesai tracking, status/type filters, detail dialog, CSV export.
-- **Home dashboard** — bento grid: live IKM, letters today, **oldest
-  unresolved complaints with waiting time**, expiring terms, monthly
-  totals, IKM trend, and a **printable monthly report** (now with a
-  "Perlu perhatian" action section).
-- **My Drafts** — local library + JSON backup of all data.
+### Technological Implementation — hybrid inference, actually called at runtime
 
-**Built for real offices:** bilingual UI (English/Indonesian), dark mode,
-deep links per tab (`#ikm` for the survey), global search, mobile-first,
-no external fonts or CDNs (only Firebase). Sample data is clearly labelled
-"Data Contoh — bukan data asli" in every module. AI drafts must be reviewed
-by a human officer before use.
+- **Firebase AI Logic, not just imported:** `getAI` + `GoogleAIBackend`
+  are called at runtime for every AI feature (letter drafting,
+  summarization, procedure Q&A, Anin chat, personnel summary).
+  Cloud model is `gemini-3.8-flash`, configurable without redeploy via
+  Remote Config (`cloud_model`).
+- **On-device (Gemini Nano 4):** the app probes the Chrome Prompt API
+  directly (`LanguageModel.availability()`), starts the on-device model
+  download on a user gesture (`initializeDeviceModel()`), and runs the
+  model in `PREFER_ON_DEVICE` mode. Short, private prompts prefer
+  on-device; the UI shows the live on-device status in the header chip.
+- **Routing with a reason:** prompts longer than the Remote Config
+  threshold (`on_device_max_chars`, default 12,000 characters) go
+  straight to the cloud-only model; the SDK reports the real source in
+  `response.inferenceSource`, which the UI displays as the routing badge
+  plus the fallback reason.
+- **Offline knowledge base:** a built-in 43-entry procedure guide (KTP,
+  KK, SKTM, domisili, birth/death certificates, and more) answers
+  fully offline, with tickable document checklists. Rule-based Surat
+  Cepat turns one sentence into a filled letter form with no AI call,
+  and an offline letter-draft builder guarantees a draft is produced
+  from the form even when AI is unreachable — a draft is never an empty
+  screen.
+- **Data:** Firestore (asia-southeast2, per-user rules, anonymous auth)
+  mirrors letters, personnel, IKM answers, complaints, and the mail
+  register; localStorage-first, so everything keeps working offline and
+  syncs when the connection returns. App Check is enabled with a
+  reCAPTCHA Enterprise key; enforcement is currently paused until
+  21 Jan 2027 while the allowlist is fixed (limited-use tokens were
+  blocking AI calls — removed in Paket 32.2; debug tokens are accepted
+  for submissions).
+
+### Architectural Rationale — why each task runs where it runs
+
+| Task | Runs | Why |
+|---|---|---|
+| Short / private prompts (quick letter instructions, personal questions) | On-device (Gemini Nano 4) | Privacy — personal data never leaves the device; fast; works with no connection |
+| Procedure Q&A from the built-in guide | On-device (offline knowledge base) | Zero cost, zero latency, always available at the service counter |
+| Long / complex drafts and document summaries | Cloud (Gemini) | Quality — long documents need the full cloud model (on-device is capped at 9,216 input tokens) |
+| Letter drafts when AI is unreachable | Offline draft builder (rule-based) | Reliability — village internet is unstable; the officer must never be left with an empty draft |
+| IKM survey, complaints, mail register, personnel | Local-first + Firestore mirror | The office record must survive offline hours and sync later |
+
+This split exists because the office it serves has unstable internet,
+tight costs, and citizens' personal data — so privacy, offline
+availability, and cost decide the routing, not convenience.
+
+### Design — one font, blue-white, readable on a phone
+
+- Blue-white light theme with black text and a single bundled font
+  (Plus Jakarta Sans, by an Indonesian designer, OFL) applied to every
+  element; a real dark mode (black background, white text) with the
+  letter sheet staying white paper in both themes.
+- Mobile-first and tidy on a phone: single-column Home, collapsible
+  cards (state saved per card), an icon menu grid for all 11 tabs, and
+  transparent state feedback — routing badges, Firebase sync chip
+  ("Firebase: connected · Synced …"), and Online/Offline chip in the
+  header.
+- Bilingual UI (English/Indonesian, persisted), deep links per tab,
+  global search (⌘K command palette), and all settings consolidated in
+  one Settings tab.
+- Sample data is clearly labelled "Data Contoh — bukan data asli" in
+  every module, and AI drafts must be reviewed by a human officer
+  before use.
+
+### Potential Impact — a real office, real users, real workflows
+
+- Built for and with Kecamatan Simpangkatis (Bangka Tengah): letter
+  drafting (9 templates incl. SKTM and emergency letters), IKM
+  community-satisfaction survey (PermenPAN-RB 14/2017, 9 elements,
+  score = mean × 25), complaints tracked Baru → Diproses → Selesai,
+  mail register with agenda numbers and disposition, personnel
+  administration for 10 villages, and a monthly report.
+- Real usage, not a demo dataset: survey answers are already being
+  written to Firestore from the office (14 answers verified in the
+  database), and the app is live at https://kuro1996.github.io/desa-ai/.
+- Built to outlive the hackathon: an Adoption Pack (downloadable JSON +
+  5-step checklist) lets any other village office adopt DesaAI for
+  free, with its own letterhead and no office data included.
+
+### Quality of the Idea — an AI clerk for village administration
+
+- A government-office assistant that speaks the office's language:
+  formal Indonesian letters, procedure answers in Indonesian, and Anin
+  — the in-app guide — answering in Bahasa Bangka too.
+- Offline-first for places where connectivity is weak: the guide, the
+  letter builder, and the office record all work with no connection,
+  and the cloud is used only where it is genuinely better.
+- Anin, the in-app agent, learns from the letter archive (next letter
+  number, templates used), checks drafts against the official format,
+  reminds staff about overdue agenda items and complaints, drafts
+  meeting minutes from pasted notes, and answers in Bahasa Bangka.
+
+**What it does (11 tabs):** Beranda (Home dashboard) · Draf Surat
+(Letter drafting) · Ringkasan (Summarize + meeting minutes) · Tanya
+Prosedur (Procedure Q&A) · Arsip & Draf (Archive) · Data Kepegawaian
+(Personnel) · Kepuasan / IKM (Satisfaction survey) · Pengaduan
+(Complaints) · Agenda Surat (Mail register) · Contact Person · Pengaturan
+(Settings).
 
 **Tech:** Vite + TypeScript, Firebase AI Logic (Gemini Nano 4 on-device +
-Gemini cloud fallback), Firestore mirror (best-effort), localStorage-first
-so the office keeps working offline. 339 automated checks on every build
-(323 headless-Chrome + 16 PWA; 1 known flaky check, see §4).
+cloud Gemini fallback), Firestore mirror (best-effort), localStorage-first
+so the office keeps working offline. 435 automated checks on every build
+(426 headless-Chrome + 16 PWA; see §4 for the one known flaky check).
+Apache-2.0, public repo with a headless-Chrome verification script.
 
 ## 2. Yang baru sejak submit (untuk kolom "What's new" / pembaruan deskripsi)
 
@@ -398,46 +474,210 @@ so the office keeps working offline. 339 automated checks on every build
   dan diedit. Tes: **323/323 hijau** (headless 307/307 + PWA 16/16;
   5 cek baru); commit main 3c0ea92 ter-push. **Status (27 Nov):
   KODE SELESAI — deploy menunggu Gas Bos.****
+- **Paket 30 (27 Nov malam): Draf surat offline + biru-putih-hitam +
+  font Plus Jakarta Sans** — draf surat kini dibuat dari formulir
+  (offline) bila AI gagal, jadi draf tidak pernah kosong; font Plus
+  Jakarta Sans (karya desainer Indonesia, dibundel lokal) diterapkan ke
+  semua elemen; tema terang biru-putih-teks hitam; judul "Administrasi
+  Kecamatan Simpangkatis"; menu jadi "Data Kepegawaian"; kata "SIAP
+  AKAD" dihapus dari semua tulisan terlihat. Bonus: bug nyata kartu
+  bento terjepit 42px di HP 390px diperbaiki. Tes: **329/329 hijau**,
+  PWA 16/16. **Status: LIVE (ikut deploy-deploy berikutnya).**
+- **Paket 31 (27 Nov malam): Mode gelap sungguhan + banner page-head +
+  dua logo** — mode gelap benar (latar hitam, teks putih; lembar surat
+  tetap putih-kertas); page-head jadi banner gradien biru + foto kantor;
+  logo Kabupaten Bangka Tengah + logo Kecamatan Simpangkatis
+  berdampingan di blok brand sidebar (logo kabupaten resolusi tinggi
+  3095×4022, diperkecil ke 512px). Nama aplikasi tetap "DesaAI"
+  (rename sempat masuk lalu dibatalkan Bos 23:41 WIB). Tes: **331/331
+  hijau**, PWA 16/16. **Status: LIVE.**
+- **Paket 32 (28 Nov dini hari): Anin, agent dalam aplikasi** —
+  pemandu Anin (ilustrasi Bos, 11 ekspresi, animasi) lewat tombol
+  mengambang "Tanya Anin" di semua tab; menjawab, mengisi formulir
+  surat lewat perintah, membuka tab, menganalisis IKM + pengaduan;
+  sumber jawaban berlapis on-device → cloud → KB offline → panduan
+  prosedur (tidak pernah buntu); input + bacakan suara gratis (Web
+  Speech API); Anin mengambil alih Tanya Prosedur — bila AI gagal,
+  Anin menjawab dari panduan offline dan error mentah tidak pernah
+  tampil ke pengguna. Diagnosis cloud: nama model `gemini-3.8-flash`
+  VALID; penyebab gagal paling mungkin AI Logic belum di-provision /
+  domain reCAPTCHA belum mencakup `kuro1996.github.io`. Tes:
+  **359/359 hijau**, PWA 16/16. **Status: LIVE (gh-pages e7c583c).**
+- **Paket 32.1 (28 Nov pagi): Anin makin pintar offline** — basis
+  pengetahuan Anin 10 → **43 entri** (semua fitur + administrasi umum
+  di luar aplikasi: alur pengaduan Baru → Diproses → Selesai, KTP/KK,
+  surat masuk/keluar); jawaban tidak pernah buntu; Anin tidak mengarang
+  tarif, nomor regulasi, atau nama pejabat. **Status: LIVE (deploy
+  gabung 32.1 + 32.2 + 33, gh-pages a636e0e).**
+- **Paket 32.2 (28 Nov pagi): Cloud diperbaiki** — `useLimitedUseAppCheckTokens`
+  dilepas dari `getAI()` (token App Check mematikan semua panggilan AI
+  di sisi klien); tes Node dengan Referer situs mengembalikan jawaban
+  Gemini asli = **CLOUD OK**. App Check enforcement OFF sampai
+  21 Jan 2027 — tindak lanjut: perbaiki allowlist reCAPTCHA Enterprise
+  untuk `kuro1996.github.io`, lalu aktifkan lagi. **Status: LIVE.**
+- **Paket 33 (28 Nov pagi): Kirim draf ke WhatsApp** — tombol "Kirim
+  ke WhatsApp" di lembar draf + tiap surat arsip (tautan `wa.me`,
+  fallback salin-tempel untuk surat sangat panjang); Anin tahu fitur
+  ini (KB kini 26 entri). Tes: **374/374 hijau**, PWA 16/16.
+  **Status: LIVE (gh-pages a636e0e; bundle mengandung `wa.me`).**
+- **Paket 34 (28 Nov siang): 9 ide Anin/aplikasi** — (1) Anin belajar
+  dari arsip (nomor surat berikutnya, template yang pernah dipakai);
+  (2) Anin pemeriksa surat (format resmi + EYD, perbaikan per temuan
+  hanya bila petugas menekan "Terapkan"); (3) Anin pengingat (agenda +
+  pengaduan lewat tenggat); (4) verifikasi surat via QR (halaman
+  verifikasi publik); (5) lapor warga + lacak tiket terpandu Anin;
+  (6) Dashboard pagi Camat; (7) notulen rapat otomatis dari catatan
+  (parser offline, tidak mengarang; dikte suara — transkripsi live
+  belum terbukti di VM, butuh uji HP Bos); (8) Anin Bahasa Bangka
+  (sakelar, frasa terverifikasi — yang "cukup yakin" masih butuh
+  koreksi Bos); (9) Mode Darurat (8 tombol bencana, 2 template baru,
+  total 9 template). Ide 10 (kiosk loket) ditunda. Bonus: bug
+  `applyLang()` telat di boot diperbaiki. Tes: **413/413 hijau**,
+  PWA 16/16. **Status: LIVE (gh-pages 713bf80).**
+- **Paket 35 (28 Nov pagi): Tab Pengaturan + Kartu Kontak** — tab
+  Pengaturan baru (8 kelompok: Akun, Tampilan, Bahasa, Anin, Mode,
+  Kop Surat, Data & Privasi, Bantuan & Tentang; bahasa kini tersimpan
+  `desaai-lang-v1`, tema auto, ukuran teks, mode offline saja,
+  hapus data dua langkah); kartu Kontak di Beranda dengan data persis
+  dari Bos (alamat, telepon `tel:`, email `mailto:`, 3 sosmed teks
+  saja tanpa URL karangan). Keamanan login sungguhan DITUNDA Bos
+  ("Nanti kalau udah mantap kita bisa buat keamanan nya"). Tes:
+  **392/392 hijau**, PWA 16/16. **Status: LIVE (gh-pages 6f6f9a6,
+  deploy gabung 35+36).**
+- **Paket 36 (28 Nov pagi): Layar Masuk Demo** — kartu login putih di
+  atas gradien biru (judul "DesaAI", subjudul "Administrasi Kecamatan
+  Simpangkatis"), akun demo `demo` / `demo123`, sesi localStorage.
+  **Ini DEMO, bukan keamanan sungguhan** — tertulis jelas di kartu.
+  Tes: **401/401 hijau**, PWA 16/16. **Status: LIVE (gh-pages
+  6f6f9a6).**
+- **Paket 37 (28 Nov siang): Beranda makin ringkas** — kartu Data &
+  Backup dan Kop Surat pindah dari Beranda ke Pengaturan; Restore
+  pindah ke Pengaturan → Data & Privasi (logika lama dipakai ulang).
+  Bonus: bug halaman verifikasi surat menutupi Beranda diperbaiki.
+  Tes: **403/403 hijau**, PWA 16/16. **Status: LIVE (gh-pages
+  8c3538e, deploy gabung 37–40).**
+- **Paket 38 (28 Nov siang): Kartu Beranda bisa dilipat** — tombol
+  −/+ di tiap kartu (kecuali Tren IKM); saat terlipat judul + angka
+  ringkas tetap terlihat; status tersimpan di localStorage
+  (`desaai-home-collapsed-v1`). Tes: **410/410 hijau**, PWA 16/16.
+  **Status: LIVE (gh-pages 8c3538e).**
+- **Paket 39 (28 Nov siang): Hapus 3 kartu duplikat Beranda** —
+  Complaints by Type, Officers per Village, Composition by Position
+  (datanya tetap terjangkau di tab Pengaduan / Data Kepegawaian).
+  Beranda 18 → 15 kartu. Tes: **409/409 hijau**, PWA 16/16.
+  **Status: LIVE (gh-pages 8c3538e).**
+- **Paket 40 (28 Nov siang): Tab Contact Person** — kartu Hubungi Kami
+  dihapus dari Beranda; tab Contact Person baru tepat di atas
+  Pengaturan (halaman penuh, 6 baris kontak persis dari Bos, terlihat
+  juga di Mode Warga); sidebar kini 11 tab; deep link `#kontak`. Tes:
+  **413/413 hijau**, PWA 16/16. **Status: LIVE (gh-pages 8c3538e).**
+- **Paket 41 (28 Nov sore): Hapus 4 kartu + rapikan header** —
+  Adoption Pack (DIPINDAH ke Pengaturan → Bantuan & Tentang, bukan
+  dihapus), Needs Follow-Up, Tren IKM (dari Beranda), Surat Hari Ini —
+  semuanya terverifikasi terjangkau di menu terkait; header "Dashboard
+  kantor" direstrukturasi 3 baris rapi, foto kantor kini kelihatan
+  (gradien dilonggarkan). Beranda 15 → 11 kartu. Tes: **413/413
+  hijau**, PWA 16/16. **Status: LIVE (gh-pages b6dc5e4).**
+- **Paket 42 (28 Nov sore): Layout Beranda AIDEN + tren IKM pindah**
+  — baris 4 kartu statistik berwarna (IKM / Surat bulan ini /
+  Pengaduan baru / Masa bhakti, ketuk → buka tab), panel dua kolom di
+  desktop, dan garis tren IKM kumulatif dipindah ke dalam tab
+  Kepuasan/IKM (12 titik). Tes: **417/417 hijau**, PWA 16/16.
+  **Status: LIVE (gh-pages 47e57b7) — TAPI desain Berandanya
+  dibatalkan Paket 44 (Bos menilai tidak rapi di HP); tren IKM di tab
+  IKM dipertahankan.**
+- **Paket 43 (28 Nov sore): Rapikan baris statistik ganda** — strip
+  quick-stats disembunyikan HANYA saat tab Beranda aktif (tetap tampil
+  di tab lain, tetap di DOM dengan binding live). Tes: **419/419
+  hijau**, PWA 16/16. **Status: LIVE (gh-pages 2fb594b) — TAPI
+  dibatalkan Paket 44 (strip dikembalikan tampil).**
+- **Paket 44 (28 Nov sore): Balik ke tampilan lama + grid ikon +
+  IKM sekali saja** — atas perintah Bos setelah cek HP: strip
+  quick-stats kembali tampil, baris AIDEN dihapus, panel kembali satu
+  kolom; grid ikon menu baru di Beranda (10 tile, ikon SVG + label
+  saja, tanpa angka, ketuk → buka tab); skor IKM kini hanya 1× di
+  Beranda (di kartu SKOR IKM — tile quick-stats IKM diganti "Draf
+  surat", fragmen IKM dihapus dari ringkasan Briefing Pagi, baris
+  Camat kini hanya "12 Responden"); garis tren IKM TETAP di tab IKM.
+  Tes: **419/419 hijau**, PWA 16/16. **Status: LIVE (gh-pages
+  0fea5e3, main 3c7eb30 + addendum 1ac26a4) — INI yang live sekarang.**
+- **Paket 45 (28 Nov sore, SELESAI DIBANGUN — main `4136a99`,
+  headless 426/426, PWA 16/16 — tapi BELUM LIVE):**
+  Laporan Bulanan Otomatis — rekap surat/IKM/pengaduan per bulan,
+  ekspor **.docx asli** + cetak PDF; menutup celah lama "Export Word"
+  yang masih mengunduh CSV (termasuk tombol Export Word di tabel
+  kepegawaian — kini .docx asli). **Hanya sebut di Devpost bila Paket 45
+  sudah LIVE sebelum Bos submit.****
 
 ## 3. Checklist sebelum Bos tekan submit
 
-- [ ] Tempel deskripsi baru (bagian 1) ke Devpost.
-- [ ] Pastikan link live https://kuro1996.github.io/desa-ai/ masih diisi.
-- [ ] (Opsional) Tambah screenshot baru: Beranda bento + daftar pengaduan.
+- [ ] Tempel deskripsi baru (bagian 1) ke Devpost — ganti seluruh
+      kolom Description dengan draf §1 (bukan ditambah di bawah yang
+      lama).
+- [ ] Pastikan link live https://kuro1996.github.io/desa-ai/ dan repo
+      https://github.com/kuro1996/desa-ai masih terisi.
+- [ ] Cek HP dulu (lihat §4): badge "Cloud" di Tanya Prosedur + Anin
+      menjawab soal pengaduan — bila sudah "Cloud", klaim cloud di §1
+      sudah terbukti penuh.
+- [ ] Video demo baru — dibuat TERAKHIR, setelah semua fix selesai
+      (perintah Bos 28 Nov 17:05 WIB). Jangan submit video lama bila
+      video baru sudah jadi; ganti link YouTube-nya di Devpost.
+- [ ] Bila Paket 45 sudah LIVE sebelum submit: tambahkan satu baris
+      ke §1 ("Monthly report exports a real .docx") dan ke §2.
+      Bila belum live: JANGAN sebut .docx di Devpost.
+- [ ] Tambah screenshot baru (opsional tapi dianjurkan): Beranda
+      Paket 44 (grid ikon + strip quick-stats) + panel chat Anin +
+      tab IKM (tren).
 - [ ] Submit sebelum **1 Des 2026 05:00 WIB**.
 
 ## 4. Catatan jujur (jangan ditulis di Devpost, untuk Bos saja)
 
-- Cloud generation masih belum terbukti dari VM (endpoint Google tidak
-  terjangkau dari VM) — butuh tes tombol Generate dari HP Bos.
-- Jawaban survei IKM tersimpan di localStorage responden (mirror Firestore
-  best-effort) — tidak auto-sync ke dashboard kantor. **Update 21 Nov sore:
-  database Firestore (default) sudah dibuat di Jakarta + aturan terkunci
-  per pengguna diterbitkan + Auth Anonymous dinyalakan, dan TULISAN SUDAH
-  TERVERIFIKASI 21 Nov 18:27 WIB — jawaban Bos ada di
-  users/{uid}/ikm/rekap (14 item, updatedAt 18:26:08 WIB).**
-- Sprint 2 quota Firebase: jendela s.d. **24 Nov 15:00 WIB**.
-- Paket 12: 1 cek headless flaky bawaan ("kepegawaian summary renders an
-  offline recap without AI") — gagal 3 dari 4 run 23 Nov, TERBUKTI gagal
-  juga di kode pra-Paket 12 (baseline 151/152). Bukan akibat PWA; jangan
-  klaim 158/158 sebelum cek itu diperbaiki. **Update Paket 13: cek flaky
-  tersebut LOLOS di kedua run headless hari ini — total 179/179 hijau
-  (163 headless + 16 PWA).** Registrasi service worker
-  live BELUM terbukti dari VM (Chrome headless di VM tidak bisa mencapai
-  origin HTTP apa pun) — bukti live: buka situs di HP Bos, cek chip
-  Online + "Add to Home Screen" muncul (lihat uji-cloud-hp-20261123.md).
-  **Update Paket 14: cek flaky itu GAGAL lagi di run terakhir
-  (173/174 headless) — total 189/190; 10 cek backup/restore baru semua
-  hijau, PWA 16/16.** **Update Paket 15: cek flaky itu GAGAL lagi di
-  run terakhir (183/184 headless) — total 199/200; 10 cek cetak-surat
-  baru semua hijau, PWA 16/16.** **Update Paket 16: cek flaky itu
-  GAGAL lagi di run terakhir (189/190 headless) — total 205/206;
-  6 cek kartu follow-up baru semua hijau, PWA 16/16.** **Update Paket
-  17: cek flaky itu GAGAL lagi di run terakhir (199/200 headless) —
-  total 215/216; 10 cek kop-surat baru semua hijau, PWA 16/16; satu
-  cek "Buat SK" sempat gagal di 2 run lalu lolos di run ke-3 (flaky
-  timing, bukan regresi — kode prefill tidak disentuh Paket 17).**
-  **Update Paket 18: cek flaky itu GAGAL lagi di run terakhir (204/205 headless) —
-  total 220/221; 5 cek tren-bulanan baru semua hijau, PWA 16/16.**
-  **Update Paket 19: cek flaky itu GAGAL lagi di run terakhir (211/212 headless) —
-  total 227/228; 7 cek kalender-agenda baru semua hijau, PWA 16/16.**
+- **Video demo baru dibuat TERAKHIR** (perintah Bos 28 Nov 17:05 WIB:
+  "Cuma kalau udah fix selesai semua baru buat videonya"). Naskah
+  3 menit sudah siap (7 segmen + teleprompter + paket YouTube,
+  `desaai-naskah-video-demo-3-menit.docx` di folder goal). Video harus
+  menunjukkan fitur hibrida bekerja sejak awal — juri boleh menilai
+  hanya dari video. Video lama jangan dihapus sebelum link baru
+  tersimpan di Devpost.
+- **Bukti cloud dari HP Bos — MASIH PENDING.** Screenshot 28 Nov
+  10:34 membuktikan aplikasi termuat + "Firebase: connected · Synced
+  10:31, Online". Yang belum terbukti: badge jawaban Tanya Prosedur
+  membaca "Cloud" dan Anin menjawab pertanyaan pengaduan. Bila Bos
+  melaporkan keduanya, saga cloud DITUTUP. Bila masih gagal,
+  tersangka berikutnya: nilai kunci reCAPTCHA itu sendiri, atau
+  override model di Remote Config.
+- **Paket 45 SELESAI DIBANGUN** (main `4136a99`, Laporan Bulanan
+  .docx asli + cetak PDF) tapi BELUM LIVE.
+  Jangan klaim di Devpost sebelum live.
+- **Login masih demo** (`demo` / `demo123`, tertulis jelas di layar
+  login). Login sungguhan DITUNDA Bos sampai aplikasi solid — jangan
+  klaim keamanan login di Devpost.
+- **App Check enforcement OFF sampai 21 Jan 2027** (Paket 32.2).
+  Tindak lanjut: perbaiki allowlist reCAPTCHA Enterprise untuk
+  `kuro1996.github.io`, lalu aktifkan lagi — atau AI bisa mati lagi.
+  Token debug diterima untuk submission, jadi ini tidak menghalangi
+  submit.
+- **Frasa Bahasa Bangka "cukup yakin" belum diverifikasi Bos:** ka,
+  bi, lom, asak, kawa, bise, gey, terima kaseh, di mane. Jangan klaim
+  keakuratan dialek di Devpost sebelum Bos mengoreksi.
+- **Dikte suara notulen rapat belum terbukti live** (VM tidak punya
+  mikrofon; butuh uji dari HP Bos).
+- **Perilaku PWA live belum terbukti dari HP Bos** (instalasi +
+  offline) — butuh cek "Add to Home Screen" + chip Online.
+- **"Export Word" di tabel kepegawaian SUDAH diperbaiki Paket 45**
+  (kini mengunduh .docx asli; tombol CSV tetap CSV sesuai label) —
+  tapi baru terverifikasi struktural (ZIP/MIME), belum dibuka di Word
+  sungguhan dan belum LIVE. Jangan klaim sebelum live.
+- **Data kontak kantor (JANGAN diubah/dikarang):** Jl. Merdeka No 02
+  Desa Katis, Kode Pos 33674 · 08117121844 · kec.spkatis2014@gmail.com
+  · Facebook "kantor kecamatan simpangkatis" (teks saja, TANPA URL) ·
+  X @kec_simpangkatis · Instagram kecamatansimpangkatis.
+- **Nama/NIP pejabat TIDAK PERNAH dikarang** — aplikasi mencetak "—"
+  bila kosong. Jangan isi nama Camat di Devpost dari ingatan.
+- **Tes headless tidak 100% stabil di VM ini** — baseline main bersih
+  390/401; 1 cek flaky bawaan ("kepegawaian summary renders an
+  offline recap without AI") gagal di baseline pra-Paket-12 juga.
+  Angka 419/419 adalah hasil run terakhir yang hijau, bukan jaminan
+  tiap run.
+- **Nama tetap DesaAI** — rename Besuyak DIBATALKAN Bos 27 Nov 23:41.
+  Jangan sebut nama lain di Devpost.
