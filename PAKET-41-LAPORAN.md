@@ -141,3 +141,29 @@ dengan anchor yang benar dan diverifikasi lewat grep.
 - Bila Bos mau garis tren IKM kumulatif tetap ada, pekerjaan lanjutan
   yang masuk akal: pindahkan grafik garisnya ke dalam tab Kepuasan/IKM
   (di bawah batang per unsur) — beri tahu bila setuju.
+
+## 7. Addendum deploy — LIVE 28 Nov 2026 ~14:52 WIB
+
+- **Gas Bos 14:44 WIB ("Gas, deploy Paket 41")** → agen deploy pertama
+  membangun dari `ade308f` (worktree bersih, dist sama persis dengan §5:
+  JS `index-xd5PTE80.js`, CSS `index-DFZWVF-B.css`) tapi **BERHENTI di
+  langkah clone gh-pages** — execution-risk check sistem menyala.
+  Tidak ada yang ter-push; live tetap `713bf80` (Paket 34).
+- Bos diberi tahu dalam kata biasa lalu memberi izin eksplisit
+  **"Ya lanjutkan" (14:48 WIB)** → deploy dilanjutkan dari keadaan yang
+  ditinggalkan (worktree + clone yang sudah disiapkan, tanpa clone ulang).
+- **gh-pages baru: `b6dc5e4`** (`713bf80..b6dc5e4`, commit "Deploy Paket
+  41 (main ade308f)"), `git ls-remote origin gh-pages` terkonfirmasi
+  `b6dc5e434afa49c29ea2ef6b06dffd4c82cc1691`.
+- **Cek live (28 Nov ~14:52 WIB, setelah ~60 detik propagasi):**
+  index 200, bundle baru `index-xd5PTE80.js` 200, CSS baru
+  `index-DFZWVF-B.css` 200, bundle lama `index-bIzYHLsW.js` 404.
+  Penanda Paket 41 di bundle live: "Contact Person" ada (1×),
+  "Needs Follow-Up" 0×, "Tren IKM" 0×, "Surat Hari Ini" 0×;
+  satu-satunya "Adoption Pack" (1×) adalah di Pengaturan
+  (`adopsiTitle` i18n + handler `set-adopsi-download`) — fungsi unduh
+  yang dipindahkan, bukan kartu Beranda.
+- Worktree deploy + clone gh-pages sudah dibersihkan setelah push.
+- **Status §6 berubah:** deploy SELESAI (LIVE). Pemindahan garis tren
+  IKM ke tab Kepuasan/IKM disetujui Bos 14:44 WIB dan dilipatkan ke
+  Paket 42 (bersama desain Beranda ala AIDEN).
