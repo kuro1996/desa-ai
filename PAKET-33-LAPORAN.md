@@ -81,7 +81,6 @@ regresi Paket 32.1, 367/370) dan semuanya hanya soal ekspektasi tes:
 Rencana di `PAKET-33-RENCANA.md` (tidak di-commit, seperti paket lalu).
 
 ## Yang TIDAK dilakukan
-- **Tidak deploy** ke gh-pages — menunggu Gas Bos.
 - Tidak menyentuh kredensial/API key; tidak mengubah logika isi surat.
 - Backlog yang masih terbuka (tidak disentuh Paket 33): tombol
   'Export Word' masih mengunduh CSV bukan .docx; cloud generation belum
@@ -89,3 +88,20 @@ Rencana di `PAKET-33-RENCANA.md` (tidak di-commit, seperti paket lalu).
   polos; perilaku PWA live belum terbukti dari HP Bos.
 - Berikutnya sesuai urutan: Paket 34 (9 ide Anin/aplikasi) — jangan
   paralel dengan Paket 33 sebelum deploy.
+
+## Addendum — catatan commit gabungan + deploy (28 Nov 09:31 WIB)
+- Implementasi Paket 33 (tombol kirim-wa, handler wa.me, i18n wa*, entri
+  anin-kb kirim-wa, tes, screenshot-p33) sudah ada di working tree saat
+  run paralel Paket 32.1 bekerja di file yang sama, sehingga ikut
+  ter-commit di `bc083b5` (dicatat eksplisit di pesan commit itu).
+  Commit `368a326` melengkapi: perbaikan ekspektasi tes + laporan ini.
+- **DEPLOY gabungan Paket 32.1 + 32.2 + 33 (Gas Bos 09:31 WIB):**
+  gh-pages `e7c583c` → **`a636e0e`**, bundle `index-B_VOgDAc.js`.
+  Live terverifikasi: https://kuro1996.github.io/desa-ai/ menyajikan
+  bundle baru (HTTP 200) dan bundle live mengandung `wa.me` +
+  "Kirim ke WhatsApp" — tombol Paket 33 SUDAH LIVE.
+- Rebuild dari HEAD menghasilkan bundle yang sama persis
+  (`index-B_VOgDAc.js`) — live == main.
+- Cloud: Paket 32.2 melepas `useLimitedUseAppCheckTokens` (App Check
+  memblokir panggilan AI; Node test CLOUD_OK). Pembuktian akhir tetap
+  dari HP Bos: Tanya Prosedur → badge harus "Cloud".
