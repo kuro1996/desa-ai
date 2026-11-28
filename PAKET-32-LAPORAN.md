@@ -179,3 +179,9 @@ lama, jadi +10 hari UTC = 9 hari lokal dan aplikasi benar menampilkan
 "SK expires in 9 days". Perbaikan: tanggal dibangun dari komponen lokal
 (`getFullYear/getMonth/getDate`). Tes ulang: **359/359**, PWA 16/16,
 secrets bersih. Commit perbaikan tes: `ad6d4b8`.
+
+## Addendum — Deploy (28 Nov 2026, Gas Bos)
+- Deploy dieksekusi setelah Gas Bos (balasan ke laporan 00:58 + "Deploy dulu video nanti" ke naskah video 08:21).
+- gh-pages: 64a0c5f → **e7c583c** (15 files changed; 11 gambar Anin baru + bundle baru index-OnxCXOiD.js / index-KPZd4XpQ.css).
+- Verifikasi live: `ls-remote origin gh-pages` = e7c583c; https://kuro1996.github.io/desa-ai/ menyajikan bundle baru (HTTP 200 untuk JS + anin-depan.png).
+- Video demo: DITAHAN dulu sesuai perintah Bos — produksi setelah deploy.
