@@ -137,3 +137,15 @@ berturut-turut**. Bila run mendatang kembali flaky di cek yang sama, itu
 lingkungan (pergantian VM menghapus `/usr/bin/google-chrome`, fallback ke
 `/opt/meta-chromium/chrome`), bukan regresi Paket 37 — bandingkan selalu
 dengan baseline main bersih sebelum menyalahkan paket ini.
+
+## Deploy (addendum 28 Nov 2026)
+
+- Deploy gabung Paket 37–40 atas Gas Bos 28 Nov 12:03 WIB ("nanti deploy
+  langsung biar saya check lagi").
+- Main HEAD: 8d4ae09 (Paket 40). Build dari worktree bersih di HEAD itu.
+- gh-pages: 6f6f9a6 → **8c3538e** ("Deploy Paket 37-40", `git ls-remote`
+  terverifikasi).
+- Cek live https://kuro1996.github.io/desa-ai/ (~1 menit setelah push):
+  index 200, bundle baru `assets/index-Cs_7aeTP.js` 200 +
+  `assets/index-D8p1o6Vf.css` 200, keduanya dirujuk index live;
+  "Contact Person" ada di index live, "home-contact-card" 0.

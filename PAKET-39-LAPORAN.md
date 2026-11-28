@@ -114,3 +114,15 @@ Cek headless baru (Paket 39):
   This Month → IKM Trend (tanpa tombol, grafik utuh) → Monthly Report:
   ketiga kartu yang dihapus sudah tidak ada di antara IKM Trend dan
   Monthly Report.
+
+## Deploy (addendum 28 Nov 2026)
+
+- Deploy gabung Paket 37–40 atas Gas Bos 28 Nov 12:03 WIB ("nanti deploy
+  langsung biar saya check lagi").
+- Main HEAD: 8d4ae09 (Paket 40). Build dari worktree bersih di HEAD itu.
+- gh-pages: 6f6f9a6 → **8c3538e** ("Deploy Paket 37-40", `git ls-remote`
+  terverifikasi).
+- Cek live https://kuro1996.github.io/desa-ai/ (~1 menit setelah push):
+  index 200, bundle baru `assets/index-Cs_7aeTP.js` 200 +
+  `assets/index-D8p1o6Vf.css` 200, keduanya dirujuk index live;
+  "Contact Person" ada di index live, "home-contact-card" 0.
