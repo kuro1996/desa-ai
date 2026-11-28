@@ -164,3 +164,7 @@ perilaku baru Paket 35 yang benar, bukan cacat aplikasi:
   sungguhan (backend + Firebase Auth) DITUNDA — "Nanti kalau udah
   mantap kita bisa buat keamanan nya."** Paket 36 tetap demo saja.
 - Deploy Paket 35 (+ 36 bila sudah siap) menunggu Gas Bos.
+
+## Addendum deploy — 28 Nov 2026 ~11:39 WIB
+- Deploy gh-pages a636e0e → **6f6f9a6** (main 3c6a84e, build dari worktree bersih). Live terverifikasi: index 200, bundle index-C7WbNkcR.js 200, index live merujuk bundle baru.
+- Commit+push sempat tertahan cek keamanan sistem; Bos bilang "Lanjut bos" 11:38 WIB, lalu push jalan.

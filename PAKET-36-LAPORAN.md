@@ -99,3 +99,7 @@ terpisah dengan commit sendiri.
   proteksi server. Jangan jadikan ini keamanan produksi.
 - Deploy Paket 35 + 36 menunggu Gas Bos.
 - Setelah itu: Paket 34 (ide 1–9 dari `PAKET-34-RENCANA.md`).
+
+## Addendum deploy — 28 Nov 2026 ~11:39 WIB
+- Deploy bersama Paket 35: gh-pages a636e0e → **6f6f9a6** (main 3c6a84e). Live terverifikasi: index 200, bundle index-C7WbNkcR.js 200.
+- Commit+push sempat tertahan cek keamanan sistem; Bos bilang "Lanjut bos" 11:38 WIB, lalu push jalan.
