@@ -110,6 +110,86 @@ async function main() {
     });
     await sleep(1200);
 
+    // 0. Login demo (Paket 36) — layar masuk tampil pertama saat belum
+    // login; kredensial salah ditolak; demo/demo123 masuk Beranda; sesi
+    // bertahan setelah reload. Harus di awal: seluruh suite berjalan
+    // dalam keadaan login.
+    // Helper: login demo — kolom dibersihkan dulu (nilainya bertahan
+    // setelah logout, jadi mengetik tanpa membersihkan akan menggandakan).
+    const loginDemo = async () => {
+      await page.evaluate(() => {
+        document.getElementById("login-user").value = "";
+        document.getElementById("login-pass").value = "";
+      });
+      await page.type("#login-user", "demo");
+      await page.type("#login-pass", "demo123");
+      await page.click(".login-submit");
+      await sleep(500);
+    };
+    const loginGate = await page.evaluate(() => {
+      const scr = document.getElementById("login-screen");
+      const r = scr?.getBoundingClientRect();
+      return {
+        visible: !!scr && !scr.hidden,
+        covers:
+          !!r && r.width >= window.innerWidth && r.height >= window.innerHeight,
+        loggedOut: document.body.classList.contains("logged-out"),
+        session: localStorage.getItem("desaai-session-v1"),
+        demoNote: document
+          .querySelector('[data-i18n="loginDemoCreds"]')
+          ?.textContent?.includes("demo123"),
+      };
+    });
+    check(
+      "login screen shows first when logged out (covers app, no session)",
+      loginGate.visible && loginGate.covers && loginGate.loggedOut &&
+        loginGate.session === null && loginGate.demoNote === true,
+      JSON.stringify(loginGate),
+    );
+    await page.type("#login-user", "demo");
+    await page.type("#login-pass", "salah123");
+    await page.click(".login-submit");
+    await sleep(400);
+    const loginWrong = await page.evaluate(() => ({
+      stillThere: !document.getElementById("login-screen")?.hidden,
+      errorShown: !document.getElementById("login-error")?.hidden,
+      errorText: document.getElementById("login-error")?.textContent ?? "",
+      session: localStorage.getItem("desaai-session-v1"),
+    }));
+    check(
+      "wrong credentials are rejected (error shown, stays on login)",
+      loginWrong.stillThere && loginWrong.errorShown &&
+        /Wrong|salah/i.test(loginWrong.errorText) &&
+        loginWrong.session === null,
+      JSON.stringify(loginWrong),
+    );
+    await loginDemo();
+    const loginOk = await page.evaluate(() => ({
+      hidden: document.getElementById("login-screen")?.hidden ?? false,
+      homeActive: document
+        .querySelector('[data-tab="home"]')
+        ?.classList.contains("active"),
+      session: localStorage.getItem("desaai-session-v1"),
+    }));
+    check(
+      "demo/demo123 enters Beranda (session stored)",
+      loginOk.hidden && loginOk.homeActive &&
+        loginOk.session === JSON.stringify({ username: "demo" }),
+      JSON.stringify(loginOk),
+    );
+    await page.reload({ waitUntil: "networkidle0" });
+    await sleep(1200);
+    const loginPersist = await page.evaluate(() => ({
+      hidden: document.getElementById("login-screen")?.hidden ?? false,
+      session: localStorage.getItem("desaai-session-v1"),
+    }));
+    check(
+      "login session persists across reload (still logged in)",
+      loginPersist.hidden &&
+        loginPersist.session === JSON.stringify({ username: "demo" }),
+      JSON.stringify(loginPersist),
+    );
+
     // 1. App loads (Firebase config is now real, so the demo banner is hidden)
     const title = await page.title();
     check("app loads", title.includes("DesaAI"), `title="${title}"`);
@@ -4155,17 +4235,31 @@ async function main() {
         p28Pdf.target === "keg-table" && /Save as PDF|printer/i.test(p28Pdf.status),
       `printed=${p28Pdf.printed} printRows=${p28Pdf.rows} tableRows=${p28Pdf.tableRows} target=${p28Pdf.target} status=${p28Pdf.status}`,
     );
-    // Sidebar "Keluar" switches to Warga mode; the header toggle restores it.
+    // Sidebar "Keluar" switches to Warga mode AND returns to the login
+    // screen (Paket 36); logging back in restores the dashboard, and the
+    // header toggle restores officer mode.
     await page.click("#sidebar-logout");
     await sleep(300);
     const p28Warga = await page.evaluate(() => ({
       warga: document.body.classList.contains("mode-warga"),
       card: !document.getElementById("home-warga-card")?.hidden,
+      loginShown: !document.getElementById("login-screen")?.hidden,
+      session: localStorage.getItem("desaai-session-v1"),
     }));
     check(
-      "Paket 28 sidebar Keluar switches to Warga mode",
-      p28Warga.warga && p28Warga.card,
-      `mode-warga=${p28Warga.warga} wargaCard=${p28Warga.card}`,
+      "Paket 28 sidebar Keluar switches to Warga mode + shows login (session cleared)",
+      p28Warga.warga && p28Warga.card && p28Warga.loginShown &&
+        p28Warga.session === null,
+      `mode-warga=${p28Warga.warga} wargaCard=${p28Warga.card} login=${p28Warga.loginShown} session=${p28Warga.session}`,
+    );
+    await loginDemo();
+    check(
+      "login after Keluar returns to Beranda (still Warga mode)",
+      await page.evaluate(
+        () =>
+          document.getElementById("login-screen")?.hidden === true &&
+          document.body.classList.contains("mode-warga"),
+      ),
     );
     await page.click("#mode-toggle");
     await sleep(300);
@@ -5065,6 +5159,8 @@ async function main() {
       voice: localStorage.getItem("desaai-anin-voice-v1"),
       offline: localStorage.getItem("desaai-offline-only-v1"),
       mode: localStorage.getItem("desaai-mode-v1"),
+      // Paket 36 — wipe juga menghapus sesi login.
+      session: localStorage.getItem("desaai-session-v1"),
     }));
     check(
       "delete-all second tap wipes DesaAI local data after reload (defaults restored)",
@@ -5072,9 +5168,46 @@ async function main() {
         wiped.letterhead === null &&
         wiped.voice === null &&
         wiped.offline === null &&
+        wiped.session === null &&
         wiped.textSize === "normal" &&
         wiped.mode === "petugas",
       JSON.stringify(wiped),
+    );
+    // Paket 36 — setelah wipe + reload, layar masuk muncul lagi (sesi
+    // ikut terhapus); login kembali, lalu Keluar mengembalikan ke login.
+    check(
+      "login screen returns after wipe + reload (session was wiped)",
+      await page.evaluate(
+        () => !document.getElementById("login-screen")?.hidden,
+      ),
+    );
+    await loginDemo();
+    check(
+      "login works again after wipe",
+      await page.evaluate(
+        () =>
+          document.getElementById("login-screen")?.hidden === true &&
+          document
+            .querySelector('[data-tab="home"]')
+            ?.classList.contains("active"),
+      ),
+    );
+    await page.click("#sidebar-logout");
+    await sleep(300);
+    check(
+      "sidebar Keluar after re-login shows login again (session cleared)",
+      await page.evaluate(
+        () =>
+          !document.getElementById("login-screen")?.hidden &&
+          localStorage.getItem("desaai-session-v1") === null,
+      ),
+    );
+    await loginDemo();
+    check(
+      "final login leaves the app on Beranda",
+      await page.evaluate(
+        () => document.getElementById("login-screen")?.hidden === true,
+      ),
     );
 
     // 10. No console errors / failed requests (excluding the VM tunnel noise)

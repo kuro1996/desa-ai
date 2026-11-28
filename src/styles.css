@@ -3950,3 +3950,126 @@ body.mode-warga .tab[data-tab="settings"] {
     align-items: flex-start;
   }
 }
+
+/* ---------- Paket 36 — Layar Masuk (Login) Demo ---------- */
+/* Gerbang layar penuh mengikuti tata letak referensi (kartu putih di tengah
+   latar biru gradasi). Kartu tetap putih di mode gelap — ini gerbang merek,
+   bukan panel aplikasi. */
+.login-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+  background: linear-gradient(160deg, #0b3d91 0%, #1565d8 55%, #2f80ed 100%);
+}
+.login-screen[hidden] {
+  display: none;
+}
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  margin: auto;
+  padding: 28px 24px 20px;
+  border-radius: 20px;
+  background: #ffffff;
+  color: #0f172a;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(2, 20, 60, 0.45);
+}
+.login-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: #e8f0fe;
+  color: #1565d8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.login-icon svg {
+  width: 34px;
+  height: 34px;
+}
+.login-title {
+  margin: 0 0 4px;
+  font-size: 32px;
+  color: #0b3d91;
+}
+.login-subtitle {
+  margin: 0 0 10px;
+  color: #334155;
+}
+.login-line {
+  margin: 0 0 18px;
+  color: #1565d8;
+  font-weight: 700;
+}
+.login-field {
+  display: block;
+  margin-bottom: 12px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.login-field input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 6px;
+  padding: 11px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 16px;
+}
+.login-field input:focus {
+  outline: 2px solid #1565d8;
+  border-color: #1565d8;
+}
+.login-error {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 14px;
+  text-align: left;
+}
+.login-submit {
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #1565d8;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.login-submit:hover {
+  background: #0b4cb3;
+}
+.login-demo {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #713f12;
+  font-size: 13px;
+  text-align: left;
+}
+.login-demo p {
+  margin: 2px 0;
+}
+.login-footer {
+  margin: 16px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}

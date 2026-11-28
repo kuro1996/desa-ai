@@ -1170,6 +1170,36 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     id: "DesaAI adalah petugas AI gratis yang mengutamakan offline untuk kantor desa & kecamatan — dibuat untuk hackathon #BuildHybridAI 2026. Draf wajib diperiksa petugas sebelum digunakan.",
   },
   setSaved: { en: "Settings saved.", id: "Pengaturan disimpan." },
+  // Paket 36 — Layar Masuk (Login) Demo.
+  loginSubtitle: {
+    en: "Administrasi Kecamatan Simpangkatis",
+    id: "Administrasi Kecamatan Simpangkatis",
+  },
+  loginLine: {
+    en: "Kecamatan Simpangkatis 2026",
+    id: "Kecamatan Simpangkatis 2026",
+  },
+  loginUser: { en: "Username", id: "Username" },
+  loginUserPh: { en: "Enter username", id: "Masukkan username" },
+  loginPass: { en: "Password", id: "Password" },
+  loginPassPh: { en: "Enter password", id: "Masukkan password" },
+  loginSubmit: { en: "Masuk Sistem", id: "Masuk Sistem" },
+  loginDemoNote: {
+    en: "Demo mode — not real security.",
+    id: "Mode demo — bukan keamanan sungguhan.",
+  },
+  loginDemoCreds: {
+    en: "Demo account — username: demo, password: demo123",
+    id: "Akun demo — username: demo, password: demo123",
+  },
+  loginError: {
+    en: "Wrong username or password. Use the demo account shown below.",
+    id: "Username atau password salah. Pakai akun demo di bawah.",
+  },
+  loginFooter: {
+    en: "© 2026 Kecamatan Simpangkatis – Bangka Tengah",
+    id: "© 2026 Kecamatan Simpangkatis – Bangka Tengah",
+  },
   contactTitle: { en: "Contact us", id: "Hubungi Kami" },
   contactHint: {
     en: "Kecamatan Simpangkatis office — visit, call or write to us.",

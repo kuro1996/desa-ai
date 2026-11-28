@@ -488,6 +488,9 @@ function runPaletteCmd(cmd: PaletteCmd): void {
 }
 
 function openPalette(): void {
+  // Paket 36 — palet perintah tidak boleh dibuka sebelum login (pintasan
+  // keyboard bisa ditekan saat layar masuk menutupi aplikasi).
+  if (!isLoggedIn()) return;
   paletteSelected = 0;
   ($("palette-input") as HTMLInputElement).value = "";
   renderPaletteList();
@@ -578,10 +581,10 @@ function initMode(): void {
   $("mode-toggle").addEventListener("click", () =>
     applyMode(appMode === "warga" ? "petugas" : "warga"),
   );
-  // Paket 28 — the sidebar "Keluar" button is the same mode toggle:
-  // the app has no login, so exiting means switching to Warga mode.
+  // Paket 36 — tombol Keluar di sidebar menghapus sesi dan kembali ke
+  // layar masuk (sebelumnya hanya pindah ke Mode Warga).
   $("sidebar-logout").addEventListener("click", () => {
-    if (appMode !== "warga") applyMode("warga");
+    signOut();
   });
   $("warga-go-ikm").addEventListener("click", () => activateTab("ikm"));
   $("warga-go-aduan").addEventListener("click", () => activateTab("pengaduan"));
@@ -591,14 +594,20 @@ function initMode(): void {
 // ---------- Paket 35 — Pengaturan (tab baru) ----------
 
 const APP_VERSION = "0.1.0";
-const APP_PAKET = 35;
+const APP_PAKET = 36;
 
-/** Akun yang sedang dipakai. Paket 35: belum ada layar masuk, jadi akun
- * demo bawaan. Paket 36 (layar masuk demo) menyimpan sesi di
- * "desaai-session-v1" dan fungsi ini membacanya — tanpa mengubah UI ini. */
+/** Kunci sesi login demo (Paket 36) — juga dibaca skrip inline di
+ * index.html sebelum bundle boot. */
+const SESSION_KEY = "desaai-session-v1";
+/** Kredensial demo — perbandingan lokal saja, TIDAK PERNAH disimpan. */
+const DEMO_USER = "demo";
+const DEMO_PASS = "demo123";
+
+/** Akun yang sedang dipakai. Paket 36 (layar masuk demo) menyimpan sesi di
+ * SESSION_KEY dan fungsi ini membacanya — tanpa mengubah UI ini. */
 function currentAccount(): { displayName: string; username: string } {
   try {
-    const raw = localStorage.getItem("desaai-session-v1");
+    const raw = localStorage.getItem(SESSION_KEY);
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
       if (typeof parsed === "object" && parsed !== null) {
@@ -614,16 +623,93 @@ function currentAccount(): { displayName: string; username: string } {
   return { displayName: "Admin Kecamatan", username: "demo" };
 }
 
-/** Keluar. Paket 35: belum ada sesi login — keluar berarti pindah ke Mode
- * Warga (sama seperti tombol Keluar di sidebar). Paket 36 menghapus sesi
- * di sini sebelum menampilkan layar masuk. */
+/** Keluar. Paket 36: hapus sesi lalu tampilkan layar masuk (dan, seperti
+ * sebelumnya, pindah ke Mode Warga). */
 function signOut(): void {
   try {
-    localStorage.removeItem("desaai-session-v1");
+    localStorage.removeItem(SESSION_KEY);
   } catch {
-    // Storage unavailable — the mode switch below still applies.
+    // Storage unavailable — the mode switch + login screen below still apply.
   }
   if (appMode !== "warga") applyMode("warga");
+  showLogin();
+}
+
+// ---------- Paket 36 — Layar Masuk (Login) Demo ----------
+
+/** Ada sesi demo yang valid? */
+function isLoggedIn(): boolean {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return false;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) return false;
+    const u = (parsed as Record<string, unknown>).username;
+    return typeof u === "string" && u.trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function showLogin(): void {
+  const scr = document.getElementById("login-screen");
+  if (scr) scr.hidden = false;
+  document.body.classList.add("logged-out");
+  const err = document.getElementById("login-error");
+  if (err) err.hidden = true;
+  const user = document.getElementById(
+    "login-user",
+  ) as HTMLInputElement | null;
+  user?.focus();
+}
+
+function hideLogin(): void {
+  const scr = document.getElementById("login-screen");
+  if (scr) scr.hidden = true;
+  document.body.classList.remove("logged-out");
+}
+
+/** Login DEMO lokal saja — perbandingan di sini, password tidak pernah
+ * disimpan di mana pun. Benar → sesi ditulis + masuk Beranda; salah →
+ * pesan error di layar, tetap di halaman login. */
+function tryLogin(username: string, password: string): boolean {
+  if (username.trim() === DEMO_USER && password === DEMO_PASS) {
+    try {
+      localStorage.setItem(
+        SESSION_KEY,
+        JSON.stringify({ username: DEMO_USER }),
+      );
+    } catch {
+      // Sesi tidak tersimpan (storage tidak tersedia) — gerbang tetap
+      // terbuka untuk sekali ini; tutup aplikasi berarti login lagi.
+    }
+    hideLogin();
+    activateTab("home");
+    return true;
+  }
+  const err = document.getElementById("login-error");
+  if (err) {
+    err.textContent = t("loginError", lang);
+    err.hidden = false;
+  }
+  return false;
+}
+
+function initLogin(): void {
+  const form = document.getElementById("login-form") as HTMLFormElement | null;
+  form?.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const u = (document.getElementById("login-user") as HTMLInputElement)
+      .value;
+    const p = (document.getElementById("login-pass") as HTMLInputElement)
+      .value;
+    tryLogin(u, p);
+  });
+  // Sinkronkan gerbang dengan sesi (skrip inline di index.html sudah
+  // menyembunyikannya untuk sesi yang kembali; ini menjaga keduanya
+  // tetap sama bila storage berubah sebelum boot).
+  if (isLoggedIn()) hideLogin();
+  else showLogin();
 }
 
 const SETTINGS_LH_INPUT_IDS: Record<keyof LetterheadSettings, string> = {
@@ -5614,6 +5700,9 @@ function initAgenda(): void {
 // ---------- boot ----------
 
 async function boot(): Promise<void> {
+  // Paket 36 — pasang gerbang login dulu (sebelum await Firebase yang
+  // lambat), supaya formulir bisa dipakai walau boot belum selesai.
+  initLogin();
   initTabs();
   initHome();
   initLetters();

@@ -38,6 +38,62 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
+    <!-- Paket 36 — Layar Masuk (Login) Demo. Tampil HANYA sampai login;
+      sidebar/dashboard tidak bisa diakses sebelum itu (overlay menutup
+      seluruh viewport). BUKAN keamanan sungguhan — kredensial demo
+      tertulis di kartu. -->
+    <section id="login-screen" class="login-screen" aria-label="Layar masuk">
+      <div class="login-card">
+        <div class="login-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 21h18" />
+            <path d="M5 21V7l7-4 7 4v14" />
+            <path d="M9 9h1.5M13.5 9H15M9 12.5h1.5M13.5 12.5H15M9 16h1.5M13.5 16H15" />
+            <path d="M10.5 21v-3h3v3" />
+          </svg>
+        </div>
+        <h1 class="login-title">DesaAI</h1>
+        <p class="login-subtitle" data-i18n="loginSubtitle">Administrasi Kecamatan Simpangkatis</p>
+        <p class="login-line" data-i18n="loginLine">Kecamatan Simpangkatis 2026</p>
+        <form id="login-form" novalidate>
+          <label class="login-field">
+            <span data-i18n="loginUser">Username</span>
+            <input id="login-user" name="username" type="text" autocomplete="username" data-i18n-ph="loginUserPh" placeholder="Masukkan username" />
+          </label>
+          <label class="login-field">
+            <span data-i18n="loginPass">Password</span>
+            <input id="login-pass" name="password" type="password" autocomplete="current-password" data-i18n-ph="loginPassPh" placeholder="Masukkan password" />
+          </label>
+          <p id="login-error" class="login-error" role="alert" hidden></p>
+          <button class="login-submit" type="submit">
+            <span data-i18n="loginSubmit">Masuk Sistem</span>
+          </button>
+        </form>
+        <div class="login-demo">
+          <p data-i18n="loginDemoNote">Mode demo — bukan keamanan sungguhan.</p>
+          <p data-i18n="loginDemoCreds">Akun demo — username: demo, password: demo123</p>
+        </div>
+        <p class="login-footer" data-i18n="loginFooter">© 2026 Kecamatan Simpangkatis – Bangka Tengah</p>
+      </div>
+    </section>
+    <script>
+      // Paket 36 — sembunyikan layar masuk seketika bila sesi ada, supaya
+      // pengguna yang kembali tidak melihatnya berkedip saat bundle boot.
+      try {
+        var __desaaiSession = JSON.parse(
+          localStorage.getItem("desaai-session-v1") || "null",
+        );
+        if (
+          __desaaiSession &&
+          typeof __desaaiSession.username === "string" &&
+          __desaaiSession.username.trim()
+        ) {
+          document.getElementById("login-screen").hidden = true;
+        }
+      } catch (e) {
+        /* Tanpa sesi yang valid — tetap di layar masuk. */
+      }
+    </script>
     <div class="app-shell">
       <aside class="sidebar">
         <header class="hero">
