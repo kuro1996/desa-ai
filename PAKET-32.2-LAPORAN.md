@@ -26,3 +26,9 @@ Menghapus `useLimitedUseAppCheckTokens: true` dari `getAI()`. Alasan: enforcemen
 1. **Deploy** (butuh Gas Bos) → tes live di HP Bos.
 2. **Sebelum 21 Jan 2027** (saat App Check mulai ditegakkan untuk AI Logic): perbaiki kunci reCAPTCHA Enterprise (allowlist domain `kuro1996.github.io`), lalu aktifkan kembali `useLimitedUseAppCheckTokens`. Kalau tidak, panggilan AI akan gagal lagi saat enforcement menyala.
 3. Script diagnosis baru disimpan: `scripts/node-cloud-test-referer.mjs` (jangan hapus — berguna tiap kali cloud dicurigai rusak).
+
+## DEPLOY (28 Nov 2026, Gas Bos 09:31 WIB)
+- Deploy gabungan **Paket 32.1 + 32.2 + 33** dari main `82ccb59` (build bersih dari worktree, bundle `index-B_VOgDAc.js`).
+- gh-pages: `e7c583c` → **`a636e0e`** (ls-remote terverifikasi).
+- Live terverifikasi: https://kuro1996.github.io/desa-ai/ menyajikan bundle baru, HTTP 200.
+- Catatan: `scripts/headless-test.mjs` + `scripts/screenshot-p33.mjs` masih termodifikasi belum ter-commit di main (sisa kerja 32.1) — tidak memengaruhi build/deploy.
