@@ -102,4 +102,6 @@ Screenshot (`screenshots/p44-*`, 12 file: Beranda atas + close-up grid + tren IK
 
 ## 7. Addendum deploy
 
-- (Diisi setelah deploy selesai — Gas "Gass bro" 15:43 WIB sudah diberikan Bos untuk deploy langsung begitu Paket 44 selesai + terverifikasi.)
+- **LIVE 28 Nov 2026 ~16:36 WIB — gh-pages `0fea5e3`** (dari `2fb594b` Paket 43). Main `3c7eb30`. Deploy: hapus bundle lama `index-CbSUZul-.js` + `index-CSdlRDOk.css`, salin dist (JS baru `index-DyD40UNC.js`, CSS baru `index-CJ0wiFjK.css`), commit "Deploy Paket 44 (main 3c7eb30)", push, `ls-remote` terkonfirmasi `0fea5e3`.
+- **Verifikasi live (parent, ~16:36 WIB):** index 200, bundle baru 200, bundle lama 404, `menu-grid` ada di index live, `home-stat-row` 0 kemunculan.
+- **Jalan deploy:** Gas "Gass bro" 15:43 WIB → check keamanan menyala di clone (15:55) → Bos "Lanjut" 16:23 WIB → check menyala LAGI di clone baru (16:25) → Bos "Ya lanjutkan aja" 16:33 WIB → deploy dikerjakan langsung parent (hapus bundle → salin dist → commit → push → verifikasi live) → LIVE. Worktree + clone deploy sudah dibersihkan.
