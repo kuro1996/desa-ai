@@ -1,6 +1,6 @@
 # Paket 47 — Maksimalkan Paket 45+46: tanggal contoh relatif + KB radar + lazy-load docx + validasi python-docx
 
-**Tanggal:** 28 Nov 2026 ~18:30 WIB · **Base:** main `68dde39` (addendum §7 deploy Paket 45+46; kode aplikasi di `40b3207`) · **Status:** selesai + terverifikasi — **BELUM di-deploy** (lihat §7; deploy menyusul atas Gas Bos).
+**Tanggal:** 28 Nov 2026 ~18:30 WIB · **Base:** main `68dde39` (addendum §7 deploy Paket 45+46; kode aplikasi di `40b3207`) · **Status:** selesai + terverifikasi + **LIVE 28 Nov ~18:45 WIB (gh-pages `e0a22ae`)** (lihat §7).
 
 ## 1. Keputusan Bos
 
@@ -154,4 +154,10 @@ Screenshot (`screenshots/p47-*`, 8 file: radar + jawaban pengingat Anin × 390px
 
 ## 7. Addendum deploy
 
-(KOSONG — tidak ada deploy di paket ini. Deploy Paket 47 menyusul atas Gas Bos; perintah deploy siap jalan ada di laporan ke parent.)
+**LIVE 28 Nov 2026 ~18:45 WIB** — main `f0e4778`. gh-pages `e0a22ae`
+(dari `a741fa7`). Bundle baru `index-BcCySAE3.js` (1.149,08 kB / gzip
+299,68 kB) + chunk terpisah `laporan-docx-BUZgexx7.js` (186,26 kB),
+CSS `index-f1s1jf5T.css`. Verifikasi live oleh parent: index 200,
+bundle baru 200, chunk docx 200, bundle lama `index-D9K_qPB3.js` 404,
+index merujuk bundle baru. Gas Bos 18:41 WIB ("Deploy bro", go-ahead
+baru setelah penjelasan pemeriksaan keamanan sistem).
