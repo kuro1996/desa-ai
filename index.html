@@ -35,8 +35,8 @@
         /* storage unavailable — light theme by default */
       }
     </script>
-    <script type="module" crossorigin src="./assets/index-CbSUZul-.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CSdlRDOk.css">
+    <script type="module" crossorigin src="./assets/index-DyD40UNC.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CJ0wiFjK.css">
   </head>
   <body>
     <!-- Paket 36 — Layar Masuk (Login) Demo. Tampil HANYA sampai login;
@@ -272,8 +272,9 @@
 
         <main>
           <!-- Paket 28 — kartu statistik cerah (model SIAP AKAD): angka besar
-               putih + chip ikon, data live yang sama dengan quick-stats lama
-               (surat, skor IKM, pengaduan selesai) + total perangkat. -->
+               putih + chip ikon. Paket 44 — isi strip: surat tersimpan,
+               draf surat, pengaduan selesai, total perangkat (skor IKM
+               dikeluarkan dari strip supaya tidak dobel di Beranda). -->
           <section class="quick-stats" id="quick-stats" aria-label="Ringkasan cepat">
             <div class="hero-stat hero-stat-blue">
               <div class="hero-stat-text">
@@ -284,13 +285,16 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
               </span>
             </div>
+            <!-- Paket 44 — tile ke-2 strip quick-stats bukan lagi Skor
+                 IKM (skor itu dobel di Beranda): diganti "Draf surat"
+                 = jumlah draf tersimpan, binding countLocalDrafts(). -->
             <div class="hero-stat hero-stat-green">
               <div class="hero-stat-text">
-                <span data-i18n="qsIkm">IKM score</span>
-                <strong id="qs-ikm">–</strong>
+                <span data-i18n="qsDrafts">Letter drafts</span>
+                <strong id="qs-drafts">0</strong>
               </div>
               <span class="hero-stat-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
               </span>
             </div>
             <div class="hero-stat hero-stat-orange">
@@ -322,34 +326,50 @@
               terms of office — all from the data already in this browser.
             </p>
             <div class="bento">
-              <!-- Paket 42 — Baris statistik AIDEN: 4 kartu berwarna
-                   sejajar (SKOR IKM, Surat bulan ini, Pengaduan baru,
-                   Masa bhakti). Angka live = cermin binding kartu Beranda
-                   (renderHome); ketuk tile membuka tab terkait. -->
-              <div class="home-stat-row" id="home-stat-row" role="group" aria-label="Ringkasan angka kunci">
-                <button class="home-stat home-stat-blue" type="button" data-tab="ikm">
-                  <svg class="home-stat-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
-                  <span class="home-stat-label" data-i18n="homeIkm">IKM score</span>
-                  <strong class="home-stat-num" id="home-stat-ikm">–</strong>
-                  <span class="home-stat-sub" id="home-stat-ikm-sub"></span>
+              <!-- Paket 44 — Grid ikon menu (improvisasi SEMESTA): semua
+                   10 tab selain Beranda sebagai tile ikon + label saja
+                   (tanpa angka, supaya tidak menambah dobel). Ikon + label
+                   sama dengan sidebar; ketuk tile membuka tab terkait. -->
+              <div class="menu-grid" id="menu-grid" role="group" aria-label="Menu">
+                <button class="menu-tile" type="button" data-tab="letters">
+                  <svg class="menu-tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+                  <span data-i18n="tabLetters">Draft Letters</span>
                 </button>
-                <button class="home-stat home-stat-teal" type="button" data-tab="letters">
-                  <svg class="home-stat-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
-                  <span class="home-stat-label" data-i18n="homeStatLetters">Letters this month</span>
-                  <strong class="home-stat-num" id="home-stat-letters">0</strong>
-                  <span class="home-stat-sub" id="home-stat-letters-sub"></span>
+                <button class="menu-tile" type="button" data-tab="summarize">
+                  <svg class="menu-tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
+                  <span data-i18n="tabSummarize">Summarize</span>
                 </button>
-                <button class="home-stat home-stat-light" type="button" data-tab="pengaduan">
-                  <svg class="home-stat-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
-                  <span class="home-stat-label" data-i18n="homeAduanBaru">New complaints</span>
-                  <strong class="home-stat-num" id="home-stat-aduan">0</strong>
-                  <span class="home-stat-sub" data-i18n="homeAduanBaruHint">waiting for follow-up</span>
+                <button class="menu-tile" type="button" data-tab="qa">
+                  <svg class="menu-tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                  <span data-i18n="tabQa">Procedure Q&amp;A</span>
                 </button>
-                <button class="home-stat home-stat-orange" type="button" data-tab="kepegawaian">
-                  <svg class="home-stat-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
-                  <span class="home-stat-label" data-i18n="homeStatMasa">Terms of office</span>
-                  <strong class="home-stat-num" id="home-stat-masa">0</strong>
-                  <span class="home-stat-sub" id="home-stat-masa-sub"></span>
+                <button class="menu-tile" type="button" data-tab="drafts">
+                  <svg class="menu-tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  <span data-i18n="tabDrafts">My Drafts</span>
+                </button>
+                <button class="menu-tile" type="button" data-tab="kepegawaian">
+                  <svg class="menu-tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <span data-i18n="tabKepegawaian">Personnel Data</span>
+                </button>
+                <button class="menu-tile" type="button" data-tab="ikm">
+                  <svg class="menu-tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <span data-i18n="tabIkm">Satisfaction (IKM)</span>
+                </button>
+                <button class="menu-tile" type="button" data-tab="pengaduan">
+                  <svg class="menu-tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+                  <span data-i18n="tabPengaduan">Complaints</span>
+                </button>
+                <button class="menu-tile" type="button" data-tab="agenda">
+                  <svg class="menu-tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2-2-2z"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M2 10h20"/></svg>
+                  <span data-i18n="tabAgenda">Mail Register</span>
+                </button>
+                <button class="menu-tile" type="button" data-tab="kontak">
+                  <svg class="menu-tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                  <span data-i18n="tabKontak">Contact Person</span>
+                </button>
+                <button class="menu-tile" type="button" data-tab="settings">
+                  <svg class="menu-tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                  <span data-i18n="tabSettings">Settings</span>
                 </button>
               </div>
               <div class="bento-card bento-search" data-card="search">
