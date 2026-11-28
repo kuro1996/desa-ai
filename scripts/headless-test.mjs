@@ -254,16 +254,32 @@ async function main() {
       monthAduan: document.getElementById("home-month-aduan")?.textContent ?? "",
       monthLetters: document.getElementById("home-month-letters")?.textContent ?? "",
       monthName: document.getElementById("home-month-name")?.textContent ?? "",
-      cards: document.querySelectorAll("#panel-home .bento-card").length,
+      cards: [...document.querySelectorAll("#panel-home .bento-card")].map(
+        (el) => el.id || el.className.split(" ").slice(1).join("."),
+      ),
     }));
     const monthName = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+    // Paket 37 — 18 kartu tersisa (backup + kop surat pindah ke
+    // Pengaturan). Dicek sebagai himpunan, bukan sekadar jumlah, supaya
+    // detail kegagalan menunjukkan kartu mana yang hilang/lebih.
+    const expectCards = [
+      "bento-search", "home-anin", "home-briefing", "home-camat",
+      "home-warga-card", "bento-ikm", "bento-kpi", "bento-kpi",
+      "bento-masa", "bento-month", "bento-trend", "bento-chart",
+      "bento-desa-chart", "bento-jabatan-chart", "bento-report",
+      "home-contact-card", "home-adopsi-card", "home-followup-card",
+    ];
     check(
-      "bento shows 19 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
-      bento.cards === 19 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
+      "bento shows 18 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
+      bento.cards.length === 18 &&
+        expectCards.every((c) => bento.cards.includes(c)) &&
+        !bento.cards.includes("home-backup-card") &&
+        !bento.cards.includes("home-letterhead-card") &&
+        bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
         bento.lettersToday === "0" && bento.aduanBaru === "3" &&
         bento.monthIkm === "12" && bento.monthAduan === "6" && bento.monthLetters === "0" &&
         bento.monthName === monthName,
-      `cards=${bento.cards} ikm=${bento.ikm} cat=${bento.cat} lettersToday=${bento.lettersToday} aduanBaru=${bento.aduanBaru} month=${bento.monthName} ${bento.monthIkm}/${bento.monthAduan}/${bento.monthLetters}`,
+      `cards=${bento.cards.length} [${bento.cards.join(",")}] ikm=${bento.ikm} cat=${bento.cat} lettersToday=${bento.lettersToday} aduanBaru=${bento.aduanBaru} month=${bento.monthName} ${bento.monthIkm}/${bento.monthAduan}/${bento.monthLetters}`,
     );
     // Bento masa-bhakti counts match the kepegawaian tab's live stats.
     await page.click('[data-tab="kepegawaian"]');
@@ -803,19 +819,41 @@ async function main() {
       trendWarga.wrapVisible && trendWarga.reportVisible,
       JSON.stringify(trendWarga),
     );
-    // Paket 14: Backup & Restore — one JSON file, all five collections.
-    const backupCard = await page.$("#home-backup-card");
-    check("backup card exists on the home dashboard", !!backupCard);
-    const backupCountsText = await page.$eval(
-      "#home-backup-counts",
-      (el) => el.textContent ?? "",
-    );
+    // Paket 37: Backup & Restore pindah dari Beranda ke Pengaturan —
+    // Beranda tidak lagi berisi kartu backup/kop surat; Pengaturan
+    // (grup Data & Privasi) punya tombol backup DAN restore.
+    const homeCardsGone = await page.evaluate(() => ({
+      backup: !!document.getElementById("home-backup-card"),
+      letterhead: !!document.getElementById("home-letterhead-card"),
+    }));
     check(
-      "backup card shows live counts for all five collections",
-      ["Letters", "Personnel", "IKM", "Complaints", "Register"].every((s) =>
-        backupCountsText.includes(s),
-      ),
-      backupCountsText,
+      "home dashboard no longer has the backup and letterhead cards (Paket 37)",
+      !homeCardsGone.backup && !homeCardsGone.letterhead,
+      JSON.stringify(homeCardsGone),
+    );
+    await page.click('[data-tab="settings"]');
+    await sleep(300);
+    const settingsBackup = await page.evaluate(() => ({
+      exportBtn: !!document.getElementById("set-backup-export"),
+      importBtn: !!document.getElementById("set-backup-import"),
+    }));
+    check(
+      "Settings Data & Privacy has both backup export and restore buttons",
+      settingsBackup.exportBtn && settingsBackup.importBtn,
+      JSON.stringify(settingsBackup),
+    );
+    // Paket 37: klik Restore tanpa memilih file tidak boleh crash —
+    // dialog konfirmasi tetap tersembunyi, tidak ada pageerror.
+    await page.click("#set-backup-import");
+    await sleep(300);
+    const restoreNoFile = await page.evaluate(() => ({
+      confirmHidden: document.getElementById("set-backup-confirm")?.hidden ?? null,
+      status: document.getElementById("set-backup-status")?.textContent ?? "",
+    }));
+    check(
+      "clicking Restore without choosing a file does not crash (confirm stays hidden)",
+      restoreNoFile.confirmHidden === true,
+      JSON.stringify(restoreNoFile),
     );
     const readLastBlobText = () =>
       page.evaluate(async () => {
@@ -840,11 +878,11 @@ async function main() {
           agenda: read("desaai-agenda-v1"),
         };
       });
-    await page.click("#home-backup-export");
+    await page.click("#set-backup-export");
     await sleep(300);
     const backupJson = await readLastBlobText();
     const backupExportStatus = await page.$eval(
-      "#home-backup-status",
+      "#set-backup-status",
       (el) => el.textContent ?? "",
     );
     const backupNow = new Date();
@@ -923,13 +961,13 @@ async function main() {
     synthetic.counts.surat = 1;
     writeFileSync(syntheticPath, JSON.stringify(synthetic, null, 2));
     writeFileSync(originalPath, backupJson);
-    const backupFileInput = await page.$("#home-backup-file");
+    const backupFileInput = await page.$("#set-backup-file");
     await backupFileInput.uploadFile(syntheticPath);
     await sleep(500);
     const confirmShown =
-      (await page.$eval("#home-backup-confirm", (el) => !el.hidden)) &&
+      (await page.$eval("#set-backup-confirm", (el) => !el.hidden)) &&
       (await page.$eval(
-        "#home-backup-confirm-text",
+        "#set-backup-confirm-text",
         (el) => el.textContent ?? "",
       ));
     check(
@@ -939,13 +977,9 @@ async function main() {
         /Personnel 23/.test(confirmShown),
       confirmShown || "",
     );
-    await page.click("#home-backup-confirm-yes");
+    await page.click("#set-backup-confirm-yes");
     await sleep(800);
     const afterRestore = await readLocalCollections();
-    const countsAfterRestore = await page.$eval(
-      "#home-backup-counts",
-      (el) => el.textContent ?? "",
-    );
     check(
       "restore replaces data with the backup contents",
       afterRestore.agenda[0]?.perihal === "RESTORE-TEST agenda" &&
@@ -953,13 +987,12 @@ async function main() {
         afterRestore.ikm[0]?.komentar === "RESTORE-TEST komentar" &&
         afterRestore.pengaduan[0]?.isi === "RESTORE-TEST aduan" &&
         afterRestore.surat.length === 1 &&
-        afterRestore.surat[0]?.title === "RESTORE-TEST Surat" &&
-        /Letters 1/.test(countsAfterRestore),
-      `agenda=${afterRestore.agenda[0]?.perihal} surat=${afterRestore.surat.length} counts=${countsAfterRestore}`,
+        afterRestore.surat[0]?.title === "RESTORE-TEST Surat",
+      `agenda=${afterRestore.agenda[0]?.perihal} surat=${afterRestore.surat.length}`,
     );
     await backupFileInput.uploadFile(originalPath);
     await sleep(500);
-    await page.click("#home-backup-confirm-yes");
+    await page.click("#set-backup-confirm-yes");
     await sleep(800);
     const afterRevert = await readLocalCollections();
     check(
@@ -975,11 +1008,11 @@ async function main() {
     await backupFileInput.uploadFile(corruptPath);
     await sleep(500);
     const corruptStatus = await page.$eval(
-      "#home-backup-status",
+      "#set-backup-status",
       (el) => el.textContent ?? "",
     );
     const corruptConfirmHidden = await page.$eval(
-      "#home-backup-confirm",
+      "#set-backup-confirm",
       (el) => el.hidden,
     );
     const agendaAfterCorrupt = await page.evaluate(
@@ -1000,7 +1033,7 @@ async function main() {
     await backupFileInput.uploadFile(wrongVersionPath);
     await sleep(500);
     const wrongVerStatus = await page.$eval(
-      "#home-backup-status",
+      "#set-backup-status",
       (el) => el.textContent ?? "",
     );
     const agendaAfterWrongVer = await page.evaluate(
@@ -1014,7 +1047,7 @@ async function main() {
     );
     // Offline: backup export still produces a valid JSON file.
     await page.setOfflineMode(true);
-    await page.click("#home-backup-export");
+    await page.click("#set-backup-export");
     await sleep(300);
     const offlineBackupJson = await readLastBlobText();
     await page.setOfflineMode(false);
@@ -1033,22 +1066,22 @@ async function main() {
     );
     // Paket 17: Pengaturan Kop Surat — officer fills the office identity
     // used by the letterhead; nothing is ever invented.
-    const lhCard = await page.$("#home-letterhead-card");
+    const lhCard = await page.$("#set-letterhead-form");
     const lhValues = await page.evaluate(() => {
       const v = (id) => document.getElementById(id)?.value ?? null;
       return {
-        instansi1: v("home-lh-instansi1"),
-        instansi2: v("home-lh-instansi2"),
-        alamat: v("home-lh-alamat"),
-        telepon: v("home-lh-telepon"),
-        email: v("home-lh-email"),
-        camatNama: v("home-lh-camat-nama"),
-        camatNip: v("home-lh-camat-nip"),
-        sekretarisNama: v("home-lh-sekretaris-nama"),
+        instansi1: v("set-lh-instansi1"),
+        instansi2: v("set-lh-instansi2"),
+        alamat: v("set-lh-alamat"),
+        telepon: v("set-lh-telepon"),
+        email: v("set-lh-email"),
+        camatNama: v("set-lh-camat-nama"),
+        camatNip: v("set-lh-camat-nip"),
+        sekretarisNama: v("set-lh-sekretaris-nama"),
       };
     });
     check(
-      "letterhead card exists with 8 fields prefilled with the office defaults, no invented names",
+      "letterhead form in Settings has 8 fields prefilled with the office defaults, no invented names",
       !!lhCard &&
         Object.values(lhValues).every((v) => v !== null) &&
         lhValues.instansi1 === "Pemerintah Kabupaten Bangka Tengah" &&
@@ -1062,19 +1095,21 @@ async function main() {
       page.$eval(id, (el, val) => {
         el.value = val;
       }, value);
-    await setLhField("#home-lh-camat-nama", "CAMAT-UJI-17");
-    await setLhField("#home-lh-camat-nip", "NIP-UJI-17");
-    await setLhField("#home-lh-alamat", "Jl. Uji No. 17");
-    await setLhField("#home-lh-sekretaris-nama", "SEKRETARIS-UJI-17");
-    await page.click("#home-letterhead-save");
+    await setLhField("#set-lh-camat-nama", "CAMAT-UJI-17");
+    await setLhField("#set-lh-camat-nip", "NIP-UJI-17");
+    await setLhField("#set-lh-alamat", "Jl. Uji No. 17");
+    await setLhField("#set-lh-sekretaris-nama", "SEKRETARIS-UJI-17");
+    await page.click("#set-letterhead-save");
     await sleep(300);
     const lhSaved = await page.evaluate(() => ({
-      status: document.getElementById("home-letterhead-status")?.textContent ?? "",
+      status: document.getElementById("set-letterhead-status")?.textContent ?? "",
+      preview: document.getElementById("set-lh-preview")?.textContent ?? "",
       stored: JSON.parse(localStorage.getItem("desaai-letterhead-v1") ?? "{}"),
     }));
     check(
-      "letterhead settings save to localStorage and report success",
+      "letterhead settings save to localStorage, show in the letter preview, and report success",
       /(disimpan|saved)/i.test(lhSaved.status) &&
+        /CAMAT-UJI-17/.test(lhSaved.preview) &&
         lhSaved.stored.camatNama === "CAMAT-UJI-17" &&
         lhSaved.stored.camatNip === "NIP-UJI-17" &&
         lhSaved.stored.alamat === "Jl. Uji No. 17" &&
@@ -1083,8 +1118,8 @@ async function main() {
     );
     // Offline: saving still works (localStorage only).
     await page.setOfflineMode(true);
-    await setLhField("#home-lh-telepon", "(0717) 000000");
-    await page.click("#home-letterhead-save");
+    await setLhField("#set-lh-telepon", "(0717) 000000");
+    await page.click("#set-letterhead-save");
     await sleep(300);
     const lhOffline = await page.evaluate(
       () => JSON.parse(localStorage.getItem("desaai-letterhead-v1") ?? "{}").telepon,
@@ -1096,7 +1131,7 @@ async function main() {
       `telepon=${lhOffline}`,
     );
     // Backup export carries the settings as a sixth collection.
-    await page.click("#home-backup-export");
+    await page.click("#set-backup-export");
     await sleep(300);
     const backupWithLh = await readLastBlobText();
     let backupLhParsed = null;
@@ -1121,7 +1156,7 @@ async function main() {
     await backupFileInput.uploadFile(lhRestorePath);
     await sleep(500);
     const lhConfirm = await page.$eval(
-      "#home-backup-confirm-text",
+      "#set-backup-confirm-text",
       (el) => el.textContent ?? "",
     );
     check(
@@ -1129,11 +1164,11 @@ async function main() {
       /(Pengaturan 1|Settings 1)/.test(lhConfirm),
       lhConfirm,
     );
-    await page.click("#home-backup-confirm-yes");
+    await page.click("#set-backup-confirm-yes");
     await sleep(800);
     const lhAfterRestore = await page.evaluate(() => ({
       stored: JSON.parse(localStorage.getItem("desaai-letterhead-v1") ?? "{}"),
-      form: document.getElementById("home-lh-camat-nama")?.value ?? "",
+      form: document.getElementById("set-lh-camat-nama")?.value ?? "",
     }));
     check(
       "restore replaces the letterhead settings",
@@ -1143,7 +1178,7 @@ async function main() {
     );
     await backupFileInput.uploadFile(originalPath);
     await sleep(500);
-    await page.click("#home-backup-confirm-yes");
+    await page.click("#set-backup-confirm-yes");
     await sleep(800);
     const lhAfterRevert = await page.evaluate(
       () => JSON.parse(localStorage.getItem("desaai-letterhead-v1") ?? "{}").camatNama,
@@ -2849,14 +2884,14 @@ async function main() {
         sheetDefault.secretary === "",
       `sign=${sheetDefault.signName} contact=${sheetDefault.contact}`,
     );
-    await page.click('[data-tab="home"]');
+    await page.click('[data-tab="settings"]');
     await sleep(300);
-    await setLhField("#home-lh-camat-nama", "CAMAT-UJI-17");
-    await setLhField("#home-lh-camat-nip", "NIP-UJI-17");
-    await setLhField("#home-lh-alamat", "Jl. Uji No. 17");
-    await setLhField("#home-lh-telepon", "(0717) 000000");
-    await setLhField("#home-lh-sekretaris-nama", "SEKRETARIS-UJI-17");
-    await page.click("#home-letterhead-save");
+    await setLhField("#set-lh-camat-nama", "CAMAT-UJI-17");
+    await setLhField("#set-lh-camat-nip", "NIP-UJI-17");
+    await setLhField("#set-lh-alamat", "Jl. Uji No. 17");
+    await setLhField("#set-lh-telepon", "(0717) 000000");
+    await setLhField("#set-lh-sekretaris-nama", "SEKRETARIS-UJI-17");
+    await page.click("#set-letterhead-save");
     await sleep(300);
     await page.click('[data-tab="drafts"]');
     await sleep(300);
@@ -2872,14 +2907,14 @@ async function main() {
         /SEKRETARIS-UJI-17/.test(sheetFilled.secretary),
       `sign=${sheetFilled.signName} contact=${sheetFilled.contact} secretary=${sheetFilled.secretary}`,
     );
-    await page.click('[data-tab="home"]');
+    await page.click('[data-tab="settings"]');
     await sleep(300);
-    await setLhField("#home-lh-camat-nama", "");
-    await setLhField("#home-lh-camat-nip", "");
-    await setLhField("#home-lh-alamat", "");
-    await setLhField("#home-lh-telepon", "");
-    await setLhField("#home-lh-sekretaris-nama", "");
-    await page.click("#home-letterhead-save");
+    await setLhField("#set-lh-camat-nama", "");
+    await setLhField("#set-lh-camat-nip", "");
+    await setLhField("#set-lh-alamat", "");
+    await setLhField("#set-lh-telepon", "");
+    await setLhField("#set-lh-sekretaris-nama", "");
+    await page.click("#set-letterhead-save");
     await sleep(300);
     await page.click('[data-tab="drafts"]');
     await sleep(300);
@@ -3768,17 +3803,15 @@ async function main() {
       cardVisible: !document.getElementById("home-warga-card").hidden,
       briefingHidden:
         getComputedStyle(document.getElementById("home-briefing")).display === "none",
-      backupHidden:
-        getComputedStyle(document.getElementById("home-backup-card")).display === "none",
-      letterheadHidden:
-        getComputedStyle(document.getElementById("home-letterhead-card")).display === "none",
+      backupHidden: !document.getElementById("home-backup-card"),
+      letterheadHidden: !document.getElementById("home-letterhead-card"),
       followupHidden:
         getComputedStyle(document.getElementById("home-followup-card")).display === "none",
       agendaHidden:
         getComputedStyle(document.querySelector('[data-tab="agenda"]')).display === "none",
     }));
     check(
-      "citizen mode hides officer tabs + briefing + agenda + backup + letterhead + follow-up cards and shows resident card",
+      "citizen mode hides officer tabs + briefing + agenda + follow-up cards and shows resident card (backup + letterhead cards no longer exist)",
       warga.bodyWarga && warga.lettersHidden && warga.cardVisible && warga.briefingHidden && warga.agendaHidden && warga.backupHidden && warga.letterheadHidden && warga.followupHidden,
       JSON.stringify(warga),
     );
@@ -4739,9 +4772,18 @@ async function main() {
     );
     const aduLapor = await aninAsk("Bagaimana cara lapor pengaduan?");
     check(
-      "Anin explains how to file a complaint",
-      /Pengaduan baru/.test(aduLapor),
+      "Anin starts the guided report flow for 'cara lapor pengaduan' (Paket 34 Ide 5)",
+      /langkah demi langkah/.test(aduLapor) && /Balas dengan angkanya/.test(aduLapor),
       aduLapor.slice(0, 120),
+    );
+    // Keluar dari alur lapor ("batal") supaya pertanyaan KB berikutnya
+    // dijawab normal — tanpa ini Anin tetap menunggu jawaban "angka 1–5"
+    // dan 6 cek KB sesudahnya gagal.
+    const aduBatal = await aninAsk("batal");
+    check(
+      "Anin cancels the report flow on 'batal' (nothing saved)",
+      /dibatalkan|cancelled/i.test(aduBatal),
+      aduBatal.slice(0, 120),
     );
     // Paket 32.1 — administrasi umum DI LUAR fitur aplikasi (KB baru).
     const domisiliAnswer = await aninAsk("Syarat surat domisili apa saja?");
@@ -4844,7 +4886,20 @@ async function main() {
     await page.$eval("#qa-input", (el) => { el.value = ""; });
     await page.type("#qa-input", "Bagaimana cara mengurus KK baru?");
     await page.click("#qa-ask");
-    await sleep(600);
+    // Paket 37 — tunggu jawabannya, bukan sleep tetap: bila Firebase
+    // sempat "ready", panggilan cloud di VM ini gagal lambat (terowongan
+    // ke Google diblokir) dan fallback panduan offline baru mendarat
+    // setelah >600ms; sleep tetap membuat tes ini flaky.
+    await page
+      .waitForFunction(
+        () =>
+          /Kartu Keluarga/.test(
+            document.getElementById("qa-output")?.textContent ?? "",
+          ),
+        { timeout: 20000 },
+      )
+      .catch(() => {});
+    await sleep(300);
     const qaAninOutput = await page.$eval("#qa-output", (el) => el.textContent);
     check(
       "Tanya answers a KK question from the offline guide (Anin takeover)",
@@ -4966,7 +5021,7 @@ async function main() {
     );
 
     // Theme: Automatic stores "auto", Dark applies + stores, back to Light.
-    await page.click('[data-seg="theme"][data-value="auto"]');
+    await page.$eval('[data-seg="theme"][data-value="auto"]', (el) => el.click());
     await sleep(200);
     const themeAuto = await page.evaluate(() => ({
       stored: localStorage.getItem("desaai-theme-v1"),
@@ -4977,7 +5032,7 @@ async function main() {
       themeAuto.stored === "auto" && themeAuto.effective === "light",
       JSON.stringify(themeAuto),
     );
-    await page.click('[data-seg="theme"][data-value="dark"]');
+    await page.$eval('[data-seg="theme"][data-value="dark"]', (el) => el.click());
     await sleep(200);
     const themeDark2 = await page.evaluate(() => ({
       stored: localStorage.getItem("desaai-theme-v1"),
@@ -4988,11 +5043,11 @@ async function main() {
       themeDark2.stored === "dark" && themeDark2.effective === "dark",
       JSON.stringify(themeDark2),
     );
-    await page.click('[data-seg="theme"][data-value="light"]');
+    await page.$eval('[data-seg="theme"][data-value="light"]', (el) => el.click());
     await sleep(200);
 
     // Text size: Large scales the base font and persists across reload.
-    await page.click('[data-seg="textsize"][data-value="large"]');
+    await page.$eval('[data-seg="textsize"][data-value="large"]', (el) => el.click());
     await sleep(200);
     const textLarge = await page.evaluate(() => ({
       attr: document.documentElement.dataset.textSize,
@@ -5017,11 +5072,11 @@ async function main() {
     );
     await page.click('[data-tab="settings"]');
     await sleep(300);
-    await page.click('[data-seg="textsize"][data-value="normal"]');
+    await page.$eval('[data-seg="textsize"][data-value="normal"]', (el) => el.click());
     await sleep(200);
 
     // Language via Settings: English switches the UI + date pill, back to Indonesian.
-    await page.click('[data-seg="lang"][data-value="en"]');
+    await page.$eval('[data-seg="lang"][data-value="en"]', (el) => el.click());
     await sleep(400);
     const langEn = await page.evaluate(() => ({
       tab: document.querySelector('[data-tab="settings"] span')?.textContent ?? "",
@@ -5035,7 +5090,7 @@ async function main() {
         langEn.stored === "en",
       JSON.stringify(langEn),
     );
-    await page.click('[data-seg="lang"][data-value="id"]');
+    await page.$eval('[data-seg="lang"][data-value="id"]', (el) => el.click());
     await sleep(400);
     const langId = await page.evaluate(() => ({
       tab: document.querySelector('[data-tab="settings"] span')?.textContent ?? "",
@@ -5060,14 +5115,12 @@ async function main() {
     await sleep(300);
     const lhSetSaved = await page.evaluate(() => ({
       stored: JSON.parse(localStorage.getItem("desaai-letterhead-v1") ?? "{}").camatNama,
-      homeForm: document.getElementById("home-lh-camat-nama")?.value ?? "",
       preview: document.getElementById("set-lh-preview")?.textContent ?? "",
       status: document.getElementById("set-letterhead-status")?.textContent ?? "",
     }));
     check(
-      "letterhead save stores Camat, syncs the home form + preview",
+      "letterhead save stores Camat and shows it in the preview",
       lhSetSaved.stored === "CAMAT-SET-35" &&
-        lhSetSaved.homeForm === "CAMAT-SET-35" &&
         /CAMAT-SET-35/.test(lhSetSaved.preview) &&
         /disimpan|saved/i.test(lhSetSaved.status),
       JSON.stringify(lhSetSaved),

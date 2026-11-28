@@ -554,92 +554,6 @@
                 <div id="home-report-status" class="status" aria-live="polite"></div>
               </div>
 
-              <!-- Paket 14 — Backup & Restore: one JSON file, all collections. -->
-              <div class="bento-card bento-backup" id="home-backup-card">
-                <p class="bento-label" data-i18n="homeBackupTitle">Data &amp; backup</p>
-                <p class="hint" data-i18n="homeBackupHint">
-                  Download all office data as one JSON file, or restore it from a
-                  backup. Everything stays in this browser.
-                </p>
-                <p class="backup-counts" id="home-backup-counts"></p>
-                <div class="actions">
-                  <button id="home-backup-export" class="btn btn-primary" type="button">
-                    <span data-i18n="homeBackupExport">Backup data</span>
-                  </button>
-                  <button id="home-backup-import" class="btn" type="button">
-                    <span data-i18n="homeBackupRestore">Restore data</span>
-                  </button>
-                </div>
-                <input
-                  id="home-backup-file"
-                  type="file"
-                  accept=".json,application/json"
-                  hidden
-                />
-                <div id="home-backup-confirm" class="backup-confirm" hidden>
-                  <p id="home-backup-confirm-text" class="backup-confirm-text"></p>
-                  <div class="actions">
-                    <button id="home-backup-confirm-yes" class="btn btn-primary" type="button">
-                      <span data-i18n="homeBackupConfirmYes">Yes, restore</span>
-                    </button>
-                    <button id="home-backup-confirm-no" class="btn" type="button">
-                      <span data-i18n="homeBackupConfirmNo">Cancel</span>
-                    </button>
-                  </div>
-                </div>
-                <div id="home-backup-status" class="status" aria-live="polite"></div>
-              </div>
-
-              <!-- Paket 17 — Pengaturan Kop Surat: officer fills the office identity used by the letterhead. -->
-              <div class="bento-card bento-letterhead" id="home-letterhead-card">
-                <p class="bento-label" data-i18n="homeLetterheadTitle">Pengaturan Kop Surat</p>
-                <p class="hint" data-i18n="homeLetterheadHint">
-                  Identitas kantor yang tercetak di kop dan blok tanda tangan surat
-                  resmi. Isi yang sesuai — field kosong tercetak "—", tidak ada
-                  yang dikarang.
-                </p>
-                <div class="form-grid" id="home-letterhead-form">
-                  <label class="field">
-                    <span data-i18n="lhInstansi1">Instansi baris 1</span>
-                    <input id="home-lh-instansi1" type="text" autocomplete="off" />
-                  </label>
-                  <label class="field">
-                    <span data-i18n="lhInstansi2">Instansi baris 2</span>
-                    <input id="home-lh-instansi2" type="text" autocomplete="off" />
-                  </label>
-                  <label class="field field-wide">
-                    <span data-i18n="lhAlamat">Alamat kantor</span>
-                    <input id="home-lh-alamat" type="text" autocomplete="off" />
-                  </label>
-                  <label class="field">
-                    <span data-i18n="lhTelepon">Telepon</span>
-                    <input id="home-lh-telepon" type="text" autocomplete="off" />
-                  </label>
-                  <label class="field">
-                    <span data-i18n="lhEmail">Email</span>
-                    <input id="home-lh-email" type="email" autocomplete="off" />
-                  </label>
-                  <label class="field">
-                    <span data-i18n="lhCamatNama">Nama Camat (penandatangan)</span>
-                    <input id="home-lh-camat-nama" type="text" autocomplete="off" />
-                  </label>
-                  <label class="field">
-                    <span data-i18n="lhCamatNip">NIP Camat</span>
-                    <input id="home-lh-camat-nip" type="text" autocomplete="off" />
-                  </label>
-                  <label class="field">
-                    <span data-i18n="lhSekretarisNama">Nama Sekretaris (opsional)</span>
-                    <input id="home-lh-sekretaris-nama" type="text" autocomplete="off" />
-                  </label>
-                </div>
-                <div class="actions">
-                  <button id="home-letterhead-save" class="btn btn-primary" type="button">
-                    <span data-i18n="homeLetterheadSave">Simpan kop surat</span>
-                  </button>
-                </div>
-                <div id="home-letterhead-status" class="status" aria-live="polite"></div>
-              </div>
-
               <!-- Paket 35 — Kartu Kontak kantor (data persis dari gambar Bos,
                    28 Nov 10:40 WIB — jangan diubah/dikoreksi). Nama sosmed
                    tampil sebagai teks saja: tidak ada URL profil di gambar,
@@ -1901,8 +1815,33 @@
                   <span data-i18n="homeBackupExport">Backup data</span>
                 </button>
               </div>
+              <div class="set-row">
+                <span data-i18n="homeBackupRestore">Restore data</span>
+                <button id="set-backup-import" class="btn" type="button">
+                  <span data-i18n="homeBackupRestore">Restore data</span>
+                </button>
+              </div>
+              <input
+                id="set-backup-file"
+                type="file"
+                accept=".json,application/json"
+                hidden
+              />
+              <div id="set-backup-confirm" class="backup-confirm" hidden>
+                <p id="set-backup-confirm-text" class="backup-confirm-text"></p>
+                <div class="actions">
+                  <button id="set-backup-confirm-yes" class="btn btn-primary" type="button">
+                    <span data-i18n="homeBackupConfirmYes">Yes, restore</span>
+                  </button>
+                  <button id="set-backup-confirm-no" class="btn" type="button">
+                    <span data-i18n="homeBackupConfirmNo">Cancel</span>
+                  </button>
+                </div>
+              </div>
+              <div id="set-backup-status" class="status" aria-live="polite"></div>
               <p class="hint" data-i18n="setBackupHint">
-                Cadangan lengkap yang sama seperti di Beranda.
+                Unduh seluruh data kantor sebagai satu file JSON, atau pulihkan
+                dari cadangan. Semua tetap di browser ini.
               </p>
               <label class="field check">
                 <input type="checkbox" id="set-offline-only" />
@@ -1929,7 +1868,7 @@
               <h3 data-i18n="setHelp">Bantuan &amp; Tentang</h3>
               <div class="set-row">
                 <span data-i18n="setVersion">Versi</span>
-                <strong id="set-version-number">0.1.0 · Paket 35</strong>
+                <strong id="set-version-number">0.1.0 · Paket 37</strong>
               </div>
               <div class="set-row">
                 <span data-i18n="setContactLink">Kontak kantor</span>

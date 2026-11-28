@@ -2066,9 +2066,7 @@ html[data-theme="dark"] ::placeholder {
 }
 
 .bento-trend,
-.bento-report,
-.bento-backup,
-.bento-letterhead {
+.bento-report {
   grid-column: 1 / -1;
 }
 
@@ -2130,12 +2128,6 @@ html[data-theme="dark"] ::placeholder {
 }
 
 /* Paket 14 — Backup & Restore card. */
-.backup-counts {
-  margin: 8px 0;
-  font-size: 0.92rem;
-  font-variant-numeric: tabular-nums;
-}
-
 .backup-confirm {
   margin-top: 12px;
   padding: 12px;
@@ -2426,8 +2418,6 @@ body.mode-warga .tab[data-tab="drafts"],
 body.mode-warga .tab[data-tab="kepegawaian"],
 body.mode-warga .tab[data-tab="agenda"],
 body.mode-warga #home-briefing,
-body.mode-warga #home-backup-card,
-body.mode-warga #home-letterhead-card,
 body.mode-warga #home-followup-card,
 body.mode-warga #home-anin,
 body.mode-warga #home-adopsi-card {
@@ -4098,6 +4088,10 @@ body.verify-mode .anin-panel {
   justify-content: center;
   padding: 32px 16px;
   background: var(--bg);
+}
+
+.verify-page[hidden] {
+  display: none;
 }
 
 .verify-card {

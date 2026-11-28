@@ -427,20 +427,20 @@ function paletteCommands(): PaletteCmd[] {
       id: "cmd-backup",
       label: () => t("cmdBackup", lang),
       run: () => {
-        activateTab("home");
-        document.getElementById("home-backup-export")?.click();
+        activateTab("pengaturan");
+        document.getElementById("set-backup-export")?.click();
       },
     },
     {
       id: "cmd-letterhead",
       label: () => t("cmdLetterhead", lang),
       run: () => {
-        activateTab("home");
+        activateTab("pengaturan");
         document
-          .getElementById("home-letterhead-card")
+          .getElementById("set-letterhead-form")
           ?.scrollIntoView({ block: "start" });
         (
-          document.getElementById("home-lh-camat-nama") as HTMLInputElement | null
+          document.getElementById("set-lh-camat-nama") as HTMLInputElement | null
         )?.focus();
       },
     },
@@ -609,7 +609,7 @@ function initMode(): void {
 // ---------- Paket 35 — Pengaturan (tab baru) ----------
 
 const APP_VERSION = "0.1.0";
-const APP_PAKET = 36;
+const APP_PAKET = 37;
 
 /** Kunci sesi login demo (Paket 36) — juga dibaca skrip inline di
  * index.html sebelum bundle boot. */
@@ -769,7 +769,6 @@ function saveSettingsLetterhead(): void {
     if (input) next[key] = input.value;
   }
   saveLetterhead(next);
-  renderLetterheadForm();
   renderLetterheadPreview(next);
   setStatus($("set-letterhead-status"), t("homeLetterheadSaved", lang));
   if (currentPrintDraft) renderArchiveSheet();
@@ -845,7 +844,32 @@ function initSettings(): void {
   $("set-letterhead-save").addEventListener("click", saveSettingsLetterhead);
   $("set-backup-export").addEventListener("click", async () => {
     await exportBackup();
-    setStatus($("set-status"), $("home-backup-status").textContent ?? "");
+    setStatus($("set-status"), $("set-backup-status").textContent ?? "");
+  });
+  // Paket 37 — Restore pindah dari Beranda ke Pengaturan (grup Data &
+  // Privasi): logika yang sama, hanya target elemennya yang pindah.
+  $("set-backup-import").addEventListener("click", () =>
+    ($("set-backup-file") as HTMLInputElement).click(),
+  );
+  ($("set-backup-file") as HTMLInputElement).addEventListener(
+    "change",
+    (ev) => {
+      const file = (ev.target as HTMLInputElement).files?.[0];
+      if (file) void handleBackupFile(file);
+    },
+  );
+  $("set-backup-confirm-yes").addEventListener("click", async () => {
+    const backup = pendingBackup;
+    hideBackupConfirm();
+    resetBackupFileInput();
+    if (!backup) return;
+    await applyBackup(backup);
+    setStatus($("set-backup-status"), t("homeBackupRestored", lang));
+  });
+  $("set-backup-confirm-no").addEventListener("click", () => {
+    hideBackupConfirm();
+    resetBackupFileInput();
+    setStatus($("set-backup-status"), t("homeBackupCancelled", lang));
   });
   $("set-signout").addEventListener("click", () => {
     signOut();
@@ -1568,70 +1592,14 @@ function exportMonthlyReportCsv(): void {
 // ---------- Backup & Restore (Paket 14) ----------
 
 let pendingBackup: DesaaiBackup | null = null;
-/** Merged drafts count (local + Firestore), refreshed by refreshDrafts(). */
-let mergedDraftCount: number | null = null;
-
-function backupCounts(): {
-  surat: number;
-  pegawai: number;
-  ikm: number;
-  pengaduan: number;
-  agenda: number;
-} {
-  return {
-    surat: mergedDraftCount ?? listLocalDrafts().length,
-    pegawai: loadPerangkat().length,
-    ikm: loadIkm().length,
-    pengaduan: loadAduan().length,
-    agenda: loadAgenda().length,
-  };
-}
-
-function renderBackupCard(): void {
-  const el = document.getElementById("home-backup-counts");
-  if (el) el.textContent = backupCountsLine(backupCounts(), lang);
-}
 
 // ---------- Paket 17 — Pengaturan Kop Surat ----------
-
-const LETTERHEAD_INPUT_IDS: Record<keyof LetterheadSettings, string> = {
-  instansi1: "home-lh-instansi1",
-  instansi2: "home-lh-instansi2",
-  alamat: "home-lh-alamat",
-  telepon: "home-lh-telepon",
-  email: "home-lh-email",
-  camatNama: "home-lh-camat-nama",
-  camatNip: "home-lh-camat-nip",
-  sekretarisNama: "home-lh-sekretaris-nama",
-};
-
-function renderLetterheadForm(): void {
-  const lh = loadLetterhead();
-  for (const key of LETTERHEAD_FIELDS) {
-    const input = document.getElementById(
-      LETTERHEAD_INPUT_IDS[key],
-    ) as HTMLInputElement | null;
-    if (input) input.value = lh[key];
-  }
-}
-
-function saveLetterheadForm(): void {
-  const next: LetterheadSettings = { ...DEFAULT_LETTERHEAD };
-  for (const key of LETTERHEAD_FIELDS) {
-    const input = document.getElementById(
-      LETTERHEAD_INPUT_IDS[key],
-    ) as HTMLInputElement | null;
-    if (input) next[key] = input.value;
-  }
-  saveLetterhead(next);
-  setStatus($("home-letterhead-status"), t("homeLetterheadSaved", lang));
-  // A print preview already open on the drafts tab re-renders with the
-  // new kop right away — no need to reopen it.
-  if (currentPrintDraft) renderArchiveSheet();
-}
+// Paket 37 — kartu kop surat Beranda dihapus; satu-satunya form kop surat
+// tinggal di Pengaturan (set-lh-*), diisi/disimpan oleh
+// renderSettingsLetterhead()/saveSettingsLetterhead() di atas.
 
 async function exportBackup(): Promise<void> {
-  const status = $("home-backup-status");
+  const status = $("set-backup-status");
   try {
     const backup = await collectBackup(svc);
     const filename = backupFilename();
@@ -1641,20 +1609,19 @@ async function exportBackup(): Promise<void> {
     console.warn("DesaAI: backup export failed.", e);
     setStatus(status, t("homeBackupReadFail", lang), true);
   }
-  renderBackupCard();
 }
 
 function resetBackupFileInput(): void {
-  ($("home-backup-file") as HTMLInputElement).value = "";
+  ($("set-backup-file") as HTMLInputElement).value = "";
 }
 
 function hideBackupConfirm(): void {
-  $("home-backup-confirm").hidden = true;
+  $("set-backup-confirm").hidden = true;
   pendingBackup = null;
 }
 
 async function handleBackupFile(file: File): Promise<void> {
-  const status = $("home-backup-status");
+  const status = $("set-backup-status");
   hideBackupConfirm();
   if (file.size > BACKUP_MAX_BYTES) {
     setStatus(status, t("homeBackupTooBig", lang), true);
@@ -1696,9 +1663,9 @@ async function handleBackupFile(file: File): Promise<void> {
         month: "long",
         year: "numeric",
       });
-  $("home-backup-confirm-text").textContent =
+  $("set-backup-confirm-text").textContent =
     `${t("homeBackupConfirmQ", lang)} — ${dateStr} · ${backupCountsLine(result.backup.counts, lang)}`;
-  $("home-backup-confirm").hidden = false;
+  $("set-backup-confirm").hidden = false;
   setStatus(status, "");
 }
 
@@ -1713,7 +1680,7 @@ async function applyBackup(backup: DesaaiBackup): Promise<void> {
   // (older v1 backups simply have none — the current settings stay).
   if (backup.collections.pengaturan) {
     saveLetterhead(backup.collections.pengaturan);
-    renderLetterheadForm();
+    renderSettingsLetterhead();
   }
   // Letters: replace the local archive, but skip drafts that already
   // exist in Firestore — otherwise the merged library would show them
@@ -1726,7 +1693,6 @@ async function applyBackup(backup: DesaaiBackup): Promise<void> {
       (d) => d.source === "local" || !currentIds.has(d.id),
     ),
   );
-  mergedDraftCount = null;
   syncAllToFirestore();
   await refreshDrafts();
   renderHome();
@@ -2106,8 +2072,6 @@ function renderHome(): void {
   renderCamatDashboard();
   renderHomeSearch();
   renderQuickStats();
-  renderBackupCard();
-  renderLetterheadForm();
   renderAnin();
 }
 
@@ -2230,35 +2194,8 @@ function initHome(): void {
   $("home-report-print").addEventListener("click", printMonthlyReport);
   $("home-report-export").addEventListener("click", exportMonthlyReportCsv);
   $("home-briefing-copy").addEventListener("click", () => void copyBriefing());
-  // Paket 14 — Backup & Restore.
-  $("home-backup-export").addEventListener("click", () => void exportBackup());
-  $("home-backup-import").addEventListener("click", () =>
-    ($("home-backup-file") as HTMLInputElement).click(),
-  );
-  ($("home-backup-file") as HTMLInputElement).addEventListener(
-    "change",
-    (ev) => {
-      const file = (ev.target as HTMLInputElement).files?.[0];
-      if (file) void handleBackupFile(file);
-    },
-  );
-  $("home-backup-confirm-yes").addEventListener("click", async () => {
-    const backup = pendingBackup;
-    hideBackupConfirm();
-    resetBackupFileInput();
-    if (!backup) return;
-    await applyBackup(backup);
-    setStatus($("home-backup-status"), t("homeBackupRestored", lang));
-  });
-  $("home-backup-confirm-no").addEventListener("click", () => {
-    hideBackupConfirm();
-    resetBackupFileInput();
-    setStatus($("home-backup-status"), t("homeBackupCancelled", lang));
-  });
-  // Paket 17 — Pengaturan Kop Surat.
-  $("home-letterhead-save").addEventListener("click", () =>
-    saveLetterheadForm(),
-  );
+  // Paket 37 — Backup & Restore + Kop Surat pindah dari Beranda ke
+  // Pengaturan; listener-nya ada di initSettings().
   // Paket 27 — Anin + Paket Adopsi Desa Lain.
   $("anin-go-letters").addEventListener("click", () =>
     document.querySelector<HTMLButtonElement>('[data-tab="letters"]')?.click(),
@@ -4016,9 +3953,6 @@ async function refreshDrafts(): Promise<void> {
   const list = $("drafts-list");
   const empty = $("drafts-empty");
   const all = await listDrafts(svc);
-  // Paket 14 — the home backup card shows the merged letters count.
-  mergedDraftCount = all.length;
-  renderBackupCard();
   const q = draftsQuery.trim().toLowerCase();
   const drafts = q
     ? all.filter(

@@ -1234,8 +1234,8 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   setData: { en: "Data & privacy", id: "Data & privasi" },
   setBackup: { en: "Download a backup (JSON)", id: "Unduh cadangan (JSON)" },
   setBackupHint: {
-    en: "The same full backup as on the home dashboard.",
-    id: "Cadangan lengkap yang sama seperti di Beranda.",
+    en: "Download all office data as one JSON file, or restore it from a backup. Everything stays in this browser — no data leaves the device.",
+    id: "Unduh seluruh data kantor sebagai satu file JSON, atau pulihkan dari cadangan. Semua tetap di browser ini — tidak ada data yang keluar dari perangkat.",
   },
   setOfflineOnly: { en: "Offline-only mode", id: "Mode offline saja" },
   setOfflineOnlyHint: {
