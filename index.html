@@ -22,7 +22,8 @@
       // wins, otherwise follow the device's color scheme.
       try {
         var desaaiTheme = localStorage.getItem("desaai-theme-v1");
-        if (!desaaiTheme) {
+        // Paket 35 — "auto" follows the device, like no stored choice.
+        if (!desaaiTheme || desaaiTheme === "auto") {
           desaaiTheme =
             window.matchMedia &&
             window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -34,10 +35,66 @@
         /* storage unavailable — light theme by default */
       }
     </script>
-    <script type="module" crossorigin src="./assets/index-B_VOgDAc.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-KPZd4XpQ.css">
+    <script type="module" crossorigin src="./assets/index-C7WbNkcR.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-EMCg_K5a.css">
   </head>
   <body>
+    <!-- Paket 36 — Layar Masuk (Login) Demo. Tampil HANYA sampai login;
+      sidebar/dashboard tidak bisa diakses sebelum itu (overlay menutup
+      seluruh viewport). BUKAN keamanan sungguhan — kredensial demo
+      tertulis di kartu. -->
+    <section id="login-screen" class="login-screen" aria-label="Layar masuk">
+      <div class="login-card">
+        <div class="login-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 21h18" />
+            <path d="M5 21V7l7-4 7 4v14" />
+            <path d="M9 9h1.5M13.5 9H15M9 12.5h1.5M13.5 12.5H15M9 16h1.5M13.5 16H15" />
+            <path d="M10.5 21v-3h3v3" />
+          </svg>
+        </div>
+        <h1 class="login-title">DesaAI</h1>
+        <p class="login-subtitle" data-i18n="loginSubtitle">Administrasi Kecamatan Simpangkatis</p>
+        <p class="login-line" data-i18n="loginLine">Kecamatan Simpangkatis 2026</p>
+        <form id="login-form" novalidate>
+          <label class="login-field">
+            <span data-i18n="loginUser">Username</span>
+            <input id="login-user" name="username" type="text" autocomplete="username" data-i18n-ph="loginUserPh" placeholder="Masukkan username" />
+          </label>
+          <label class="login-field">
+            <span data-i18n="loginPass">Password</span>
+            <input id="login-pass" name="password" type="password" autocomplete="current-password" data-i18n-ph="loginPassPh" placeholder="Masukkan password" />
+          </label>
+          <p id="login-error" class="login-error" role="alert" hidden></p>
+          <button class="login-submit" type="submit">
+            <span data-i18n="loginSubmit">Masuk Sistem</span>
+          </button>
+        </form>
+        <div class="login-demo">
+          <p data-i18n="loginDemoNote">Mode demo — bukan keamanan sungguhan.</p>
+          <p data-i18n="loginDemoCreds">Akun demo — username: demo, password: demo123</p>
+        </div>
+        <p class="login-footer" data-i18n="loginFooter">© 2026 Kecamatan Simpangkatis – Bangka Tengah</p>
+      </div>
+    </section>
+    <script>
+      // Paket 36 — sembunyikan layar masuk seketika bila sesi ada, supaya
+      // pengguna yang kembali tidak melihatnya berkedip saat bundle boot.
+      try {
+        var __desaaiSession = JSON.parse(
+          localStorage.getItem("desaai-session-v1") || "null",
+        );
+        if (
+          __desaaiSession &&
+          typeof __desaaiSession.username === "string" &&
+          __desaaiSession.username.trim()
+        ) {
+          document.getElementById("login-screen").hidden = true;
+        }
+      } catch (e) {
+        /* Tanpa sesi yang valid — tetap di layar masuk. */
+      }
+    </script>
     <div class="app-shell">
       <aside class="sidebar">
         <header class="hero">
@@ -116,6 +173,10 @@
           <button class="tab" data-tab="agenda" role="tab" aria-selected="false" type="button">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M2 10h20"/></svg>
             <span data-i18n="tabAgenda">Mail Register</span>
+          </button>
+          <button class="tab" data-tab="settings" role="tab" aria-selected="false" type="button">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span data-i18n="tabSettings">Settings</span>
           </button>
         </nav>
         <div class="sidebar-foot">
@@ -543,6 +604,61 @@
                   </button>
                 </div>
                 <div id="home-letterhead-status" class="status" aria-live="polite"></div>
+              </div>
+
+              <!-- Paket 35 — Kartu Kontak kantor (data persis dari gambar Bos,
+                   28 Nov 10:40 WIB — jangan diubah/dikoreksi). Nama sosmed
+                   tampil sebagai teks saja: tidak ada URL profil di gambar,
+                   jadi tidak ada tautan yang dikarang. -->
+              <div class="bento-card bento-contact" id="home-contact-card">
+                <p class="bento-label" data-i18n="contactTitle">Hubungi Kami</p>
+                <p class="hint" data-i18n="contactHint">
+                  Kantor Kecamatan Simpangkatis — kunjungi, telepon, atau kirim pesan.
+                </p>
+                <ul class="contact-list">
+                  <li>
+                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <div class="contact-text">
+                      <span class="contact-label" data-i18n="contactAddress">Alamat</span>
+                      <span>Jl. Merdeka No 02 Desa Katis, Kode Pos 33674</span>
+                    </div>
+                  </li>
+                  <li>
+                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <div class="contact-text">
+                      <span class="contact-label" data-i18n="contactPhone">Telepon</span>
+                      <a href="tel:08117121844">08117121844</a>
+                    </div>
+                  </li>
+                  <li>
+                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+                    <div class="contact-text">
+                      <span class="contact-label" data-i18n="contactEmail">Email</span>
+                      <a href="mailto:kec.spkatis2014@gmail.com">kec.spkatis2014@gmail.com</a>
+                    </div>
+                  </li>
+                  <li>
+                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                    <div class="contact-text">
+                      <span class="contact-label" data-i18n="contactFacebook">Facebook</span>
+                      <span>kantor kecamatan simpangkatis</span>
+                    </div>
+                  </li>
+                  <li>
+                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
+                    <div class="contact-text">
+                      <span class="contact-label" data-i18n="contactTwitter">Twitter / X</span>
+                      <span>@kec_simpangkatis</span>
+                    </div>
+                  </li>
+                  <li>
+                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></svg>
+                    <div class="contact-text">
+                      <span class="contact-label" data-i18n="contactInstagram">Instagram</span>
+                      <span>kecamatansimpangkatis</span>
+                    </div>
+                  </li>
+                </ul>
               </div>
 
               <!-- Paket 27 — Paket Adopsi Desa Lain: checklist + unduh paket JSON -->
@@ -1563,6 +1679,206 @@
               </button>
             </div>
             <div id="agenda-export-status" class="status" aria-live="polite"></div>
+          </section>
+
+          <!-- ============ PAKET 35 — PENGATURAN ============ -->
+          <!-- Urutan baku aplikasi umum: Akun paling atas, lalu preferensi
+               harian (tampilan, bahasa), Anin, mode, kop surat, data &
+               privasi, bantuan & tentang, destruktif (hapus) paling bawah.
+               Satu layar daftar berkelompok: baris = label kiri + kontrol
+               di kanan. Semua tersimpan di localStorage, langsung berlaku. -->
+          <section id="panel-settings" class="panel" role="tabpanel" hidden>
+            <h2 data-i18n="settingsTitle">Pengaturan</h2>
+            <p class="hint" data-i18n="settingsHint">
+              Akun, tampilan, bahasa, Anin, kop surat, data dan privasi —
+              tersimpan di browser ini dan langsung berlaku.
+            </p>
+
+            <div class="settings-card">
+              <h3 data-i18n="setAccount">Akun Pengguna</h3>
+              <div class="account-card">
+                <span class="account-avatar" aria-hidden="true">A</span>
+                <div class="account-text">
+                  <strong id="set-account-name">Admin Kecamatan</strong>
+                  <span><span data-i18n="setAccountUser">Username</span>: <span id="set-account-user">demo</span></span>
+                  <span><span data-i18n="setAccountRole">Peran</span>: <span id="set-account-role">Petugas</span></span>
+                </div>
+              </div>
+              <p class="hint" data-i18n="setAccountDemoNote">
+                Akun demo — bukan keamanan sungguhan. Login sungguhan menyusul
+                setelah aplikasi mantap.
+              </p>
+              <div class="actions">
+                <button id="set-signout" class="btn" type="button">
+                  <span data-i18n="sidebarLogout">Keluar</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <h3 data-i18n="setAppearance">Tampilan</h3>
+              <div class="set-row">
+                <span data-i18n="setTheme">Tema</span>
+                <div class="seg" role="group">
+                  <button type="button" data-seg="theme" data-value="light"><span data-i18n="setThemeLight">Terang</span></button>
+                  <button type="button" data-seg="theme" data-value="dark"><span data-i18n="setThemeDark">Gelap</span></button>
+                  <button type="button" data-seg="theme" data-value="auto"><span data-i18n="setThemeAuto">Otomatis</span></button>
+                </div>
+              </div>
+              <div class="set-row">
+                <span data-i18n="setTextSize">Ukuran teks</span>
+                <div class="seg" role="group">
+                  <button type="button" data-seg="textsize" data-value="normal"><span data-i18n="setTextNormal">Normal</span></button>
+                  <button type="button" data-seg="textsize" data-value="large"><span data-i18n="setTextLarge">Besar</span></button>
+                </div>
+              </div>
+              <p class="hint" data-i18n="setTextSizeHint">
+                Teks besar lebih mudah dibaca petugas senior.
+              </p>
+            </div>
+
+            <div class="settings-card">
+              <h3 data-i18n="setLanguage">Bahasa</h3>
+              <div class="set-row">
+                <span data-i18n="setLanguage">Bahasa</span>
+                <div class="seg" role="group">
+                  <button type="button" data-seg="lang" data-value="id"><span data-i18n="setLangId">Bahasa Indonesia</span></button>
+                  <button type="button" data-seg="lang" data-value="en"><span data-i18n="setLangEn">English</span></button>
+                </div>
+              </div>
+              <p class="hint" data-i18n="setLanguageHint">
+                Tanggal di kepala halaman mengikuti bahasa.
+              </p>
+            </div>
+
+            <div class="settings-card">
+              <h3 data-i18n="setAnin">Anin</h3>
+              <label class="field check">
+                <input type="checkbox" id="set-anin-voice" />
+                <span data-i18n="setAninVoice">Bacakan jawaban dengan suara (suara Anin)</span>
+              </label>
+              <p class="hint" data-i18n="setAninVoiceHint">
+                Bila mati, tombol bacakan menampilkan catatan, bukan bersuara.
+              </p>
+            </div>
+
+            <div class="settings-card">
+              <h3 data-i18n="setMode">Mode</h3>
+              <div class="set-row">
+                <span data-i18n="setMode">Mode</span>
+                <div class="seg" role="group">
+                  <button type="button" data-seg="mode" data-value="petugas"><span data-i18n="setModePetugas">Petugas</span></button>
+                  <button type="button" data-seg="mode" data-value="warga"><span data-i18n="setModeWarga">Warga</span></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <h3 data-i18n="setLetterheadTitle">Kop surat</h3>
+              <p class="hint" data-i18n="homeLetterheadHint">
+                Identitas kantor yang tercetak di kop dan blok tanda tangan surat
+                resmi. Isi yang sesuai — field kosong tercetak "—", tidak ada
+                yang dikarang.
+              </p>
+              <div class="form-grid" id="set-letterhead-form">
+                <label class="field">
+                  <span data-i18n="lhInstansi1">Instansi baris 1</span>
+                  <input id="set-lh-instansi1" type="text" autocomplete="off" />
+                </label>
+                <label class="field">
+                  <span data-i18n="lhInstansi2">Instansi baris 2</span>
+                  <input id="set-lh-instansi2" type="text" autocomplete="off" />
+                </label>
+                <label class="field field-wide">
+                  <span data-i18n="lhAlamat">Alamat kantor</span>
+                  <input id="set-lh-alamat" type="text" autocomplete="off" />
+                </label>
+                <label class="field">
+                  <span data-i18n="lhTelepon">Telepon</span>
+                  <input id="set-lh-telepon" type="text" autocomplete="off" />
+                </label>
+                <label class="field">
+                  <span data-i18n="lhEmail">Email</span>
+                  <input id="set-lh-email" type="email" autocomplete="off" />
+                </label>
+                <label class="field">
+                  <span data-i18n="lhCamatNama">Nama Camat (penandatangan)</span>
+                  <input id="set-lh-camat-nama" type="text" autocomplete="off" />
+                </label>
+                <label class="field">
+                  <span data-i18n="lhCamatNip">NIP Camat</span>
+                  <input id="set-lh-camat-nip" type="text" autocomplete="off" />
+                </label>
+                <label class="field">
+                  <span data-i18n="lhSekretarisNama">Nama Sekretaris (opsional)</span>
+                  <input id="set-lh-sekretaris-nama" type="text" autocomplete="off" />
+                </label>
+              </div>
+              <p class="lh-preview-label" data-i18n="setLhPreview">Pratinjau di surat</p>
+              <p id="set-lh-preview" class="lh-preview" aria-live="polite"></p>
+              <div class="actions">
+                <button id="set-letterhead-save" class="btn btn-primary" type="button">
+                  <span data-i18n="homeLetterheadSave">Simpan kop surat</span>
+                </button>
+              </div>
+              <div id="set-letterhead-status" class="status" aria-live="polite"></div>
+            </div>
+
+            <div class="settings-card">
+              <h3 data-i18n="setData">Data &amp; privasi</h3>
+              <div class="set-row">
+                <span data-i18n="setBackup">Unduh cadangan (JSON)</span>
+                <button id="set-backup-export" class="btn" type="button">
+                  <span data-i18n="homeBackupExport">Backup data</span>
+                </button>
+              </div>
+              <p class="hint" data-i18n="setBackupHint">
+                Cadangan lengkap yang sama seperti di Beranda.
+              </p>
+              <label class="field check">
+                <input type="checkbox" id="set-offline-only" />
+                <span data-i18n="setOfflineOnly">Mode offline saja</span>
+              </label>
+              <p class="hint" data-i18n="setOfflineOnlyHint">
+                Jangan pernah memanggil AI cloud — jawaban hanya dari model
+                perangkat dan panduan offline.
+              </p>
+              <div class="set-row">
+                <span data-i18n="setWipe">Hapus semua data lokal</span>
+                <button id="set-wipe" class="btn btn-danger" type="button">
+                  <span data-i18n="setWipe">Hapus semua data lokal</span>
+                </button>
+              </div>
+              <p class="hint" data-i18n="setWipeHint">
+                Menghapus surat, draf, kepegawaian, survei, pengaduan, dan
+                pengaturan dari browser ini. Tidak bisa dibatalkan — unduh
+                cadangan dulu.
+              </p>
+            </div>
+
+            <div class="settings-card">
+              <h3 data-i18n="setHelp">Bantuan &amp; Tentang</h3>
+              <div class="set-row">
+                <span data-i18n="setVersion">Versi</span>
+                <strong id="set-version-number">0.1.0 · Paket 35</strong>
+              </div>
+              <div class="set-row">
+                <span data-i18n="setContactLink">Kontak kantor</span>
+                <button id="set-contact-link" class="btn" type="button">
+                  <span data-i18n="contactTitle">Hubungi Kami</span>
+                </button>
+              </div>
+              <p class="hint" data-i18n="setContactLinkHint">
+                Alamat, telepon, email, dan media sosial di Beranda.
+              </p>
+              <p class="hint" data-i18n="setAboutNote">
+                DesaAI adalah petugas AI gratis yang mengutamakan offline untuk
+                kantor desa &amp; kecamatan — dibuat untuk hackathon
+                #BuildHybridAI 2026. Draf wajib diperiksa petugas sebelum digunakan.
+              </p>
+            </div>
+
+            <div id="set-status" class="status" aria-live="polite"></div>
           </section>
         </main>
 
