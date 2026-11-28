@@ -1,6 +1,6 @@
 # Paket 46 — Lacak Surat + Anin Suara + Radar Tenggat + Statistik Warga + TTE Demo
 
-**Tanggal:** 28 Nov 2026 ~18:00 WIB · **Base:** main `4136a99` (Paket 45, belum di-deploy — live masih Paket 44 gh-pages `0fea5e3`) · **Status:** selesai + terverifikasi; **BELUM DEPLOY — menunggu Gas Bos** (lihat §7).
+**Tanggal:** 28 Nov 2026 ~18:00 WIB · **Base:** main `4136a99` (Paket 45, belum di-deploy — live masih Paket 44 gh-pages `0fea5e3`) · **Status:** selesai + terverifikasi + **LIVE 28 Nov ~17:53 WIB (gh-pages `a741fa7`)** (lihat §7).
 
 Catatan base: saat commit, main sudah maju satu langkah ke `364af23` (refresh Devpost update-pack oleh pekerjaan paralel — hanya menyentuh `devpost-update-pack-20261121.md`, file terpisah, tanpa konflik dengan file Paket 46).
 
@@ -142,4 +142,10 @@ Screenshot (`screenshots/p46-*`, 20 file: 5 fitur × 390px/980px × light/dark) 
 
 ## 7. Addendum deploy
 
-*(KOSONG — belum deploy. Menunggu Gas Bos.)*
+**LIVE 28 Nov 2026 ~17:53 WIB** — deploy gabungan Paket 45 + 46 (main `40b3207`).
+gh-pages `a741fa7` (dari `0fea5e3`). Bundle baru `index-D9K_qPB3.js` (1.332,30 kB /
+gzip 351,93 kB), CSS `index-BhkictfN.css`. Verifikasi live oleh parent:
+index 200, bundle baru 200, bundle lama `index-DyD40UNC.js` 404, index
+merujuk bundle baru. Gas Bos 17:45 WIB; langkah clone sempat berhenti
+karena pemeriksaan keamanan sistem, dilanjutkan parent langsung setelah
+go-ahead baru Bos ("Lanjutkan deploy", 17:52 WIB).
