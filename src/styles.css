@@ -3733,3 +3733,220 @@ html[data-theme="dark"] .sidebar .tab.active {
   font-size: 0.92rem;
   color: var(--muted);
 }
+
+/* ---------- Paket 35 — Pengaturan + Kartu Kontak ---------- */
+
+/* Ukuran teks Besar: basis rem naik 16px -> 18px; hampir semua ukuran
+   teks aplikasi memakai rem, jadi ikut membesar. */
+html[data-text-size="large"] {
+  font-size: 112.5%;
+}
+
+/* Kartu kelompok Pengaturan — pola yang sama dengan .bento-card. */
+.settings-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+}
+
+.settings-card h3 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+}
+
+.settings-card .hint {
+  margin: 8px 0 0;
+}
+
+/* Baris pengaturan: label kiri + kontrol kanan. */
+.set-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.set-row:first-of-type {
+  border-top: none;
+}
+
+/* Kontrol tersegmentasi (pilihan tema / bahasa / mode / ukuran teks). */
+.seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.seg button {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.seg button:hover {
+  background: var(--blue-soft);
+}
+
+.seg button[aria-pressed="true"] {
+  background: var(--blue-strong);
+  border-color: var(--blue-strong);
+  color: #fff;
+}
+
+/* Checkbox sebaris (suara Anin, mode offline saja). */
+.field.check {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 12px;
+  cursor: pointer;
+}
+
+.field.check input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex: 0 0 20px;
+  accent-color: var(--blue-strong);
+  cursor: pointer;
+}
+
+/* Tombol destruktif (hapus semua data). */
+.btn-danger {
+  background: var(--rose);
+  border-color: transparent;
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: #9f1239;
+}
+
+.btn-danger.armed {
+  background: #881337;
+  outline: 2px solid var(--rose);
+  outline-offset: 2px;
+}
+
+/* Kartu Akun Pengguna. */
+.account-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0 4px;
+}
+
+.account-avatar {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  border-radius: 50%;
+  background: var(--blue-strong);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.account-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.account-text strong {
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+
+/* Pratinjau kop surat di Pengaturan. */
+.lh-preview-label {
+  margin: 16px 0 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.lh-preview {
+  white-space: pre-line;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+
+/* Kartu Kontak di Beranda. */
+.contact-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.contact-list li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.contact-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  margin-top: 2px;
+  color: var(--blue-strong);
+}
+
+.contact-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 0.95rem;
+  min-width: 0;
+}
+
+.contact-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.contact-text a {
+  color: var(--blue-strong);
+  word-break: break-all;
+}
+
+/* Mode Warga: Pengaturan hanya untuk petugas (kop surat + hapus data).
+   Kartu Kontak tetap terlihat — warga justru butuh kontak kantor. */
+body.mode-warga .tab[data-tab="settings"] {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .set-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -112,7 +112,7 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
   return el as T;
 };
 
-let lang: Lang = "en";
+let lang: Lang = loadLang();
 let svc: FirebaseServices | null = null;
 let onDevice: OnDeviceState = "unsupported";
 let currentTemplate: LetterTemplate = TEMPLATES[0];
@@ -120,6 +120,29 @@ let lastLetterText = "";
 let lastSummaryText = "";
 
 // ---------- language ----------
+
+// Paket 35 — bahasa tersimpan di localStorage dan bertahan setelah tutup
+// aplikasi (sebelumnya hanya variabel sesi: reload kembali ke Inggris).
+const LANG_KEY = "desaai-lang-v1";
+
+function loadLang(): Lang {
+  try {
+    if (localStorage.getItem(LANG_KEY) === "id") return "id";
+  } catch {
+    // Storage unavailable — English by default.
+  }
+  return "en";
+}
+
+function setLang(next: Lang): void {
+  lang = next;
+  try {
+    localStorage.setItem(LANG_KEY, next);
+  } catch {
+    // Storage unavailable — the language still applies for this session.
+  }
+  applyLang();
+}
 
 function applyLang(): void {
   document.documentElement.lang = lang;
@@ -150,6 +173,10 @@ function applyLang(): void {
   renderIkm();
   renderPengaduan();
   renderHome();
+  // Paket 35 — the Settings tab's dynamic strings (account role,
+  // letterhead preview) must follow a language change made while the
+  // tab is open; data-i18n labels alone do not cover them.
+  renderSettings();
   setNetChip();
   void refreshDrafts();
   // Paket 27 — keep Anin's error tip in the current language.
@@ -161,13 +188,35 @@ function applyLang(): void {
     buildArchivePrintFields();
     renderArchiveSheet();
   }
+  // Paket 35 — the date pill follows the language, and the Settings
+  // controls re-sync (segmented pressed states, account role).
+  updateDatePill();
+  renderSettings();
   // Paket 28 — the page head mirrors the active panel's title + subtitle.
   updatePageHead(currentTab);
 }
 
-// ---------- theme (dark mode) ----------
+// ---------- theme (dark mode) — Paket 35: + "auto" ----------
 
 const THEME_KEY = "desaai-theme-v1";
+type ThemePref = "light" | "dark" | "auto";
+
+function loadThemePref(): ThemePref {
+  try {
+    const raw = localStorage.getItem(THEME_KEY);
+    if (raw === "light" || raw === "dark" || raw === "auto") return raw;
+  } catch {
+    // Storage unavailable — fall through to the device default.
+  }
+  return "auto";
+}
+
+function resolveTheme(pref: ThemePref): "light" | "dark" {
+  if (pref !== "auto") return pref;
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
 
 function currentTheme(): "light" | "dark" {
   return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
@@ -183,14 +232,85 @@ function updateThemeButton(): void {
   }
 }
 
-function applyTheme(theme: "light" | "dark"): void {
-  document.documentElement.dataset.theme = theme;
+function applyTheme(pref: ThemePref): void {
+  document.documentElement.dataset.theme = resolveTheme(pref);
   try {
-    localStorage.setItem(THEME_KEY, theme);
+    localStorage.setItem(THEME_KEY, pref);
   } catch {
     // Storage unavailable — the theme still applies for this session.
   }
   updateThemeButton();
+  renderSettings();
+}
+
+// Paket 35 — "Otomatis" mengikuti perangkat: bila perangkat berganti tema
+// (mis. jadwal gelap HP), aplikasi ikut tanpa reload.
+if (typeof window !== "undefined" && window.matchMedia) {
+  window
+    .matchMedia("(prefers-color-scheme: dark)")
+    .addEventListener("change", () => {
+      if (loadThemePref() === "auto") applyTheme("auto");
+    });
+}
+
+// ---------- Paket 35 — Pengaturan: ukuran teks, suara Anin, mode offline ----------
+
+const TEXT_SIZE_KEY = "desaai-text-size-v1";
+type TextSize = "normal" | "large";
+
+function loadTextSize(): TextSize {
+  try {
+    if (localStorage.getItem(TEXT_SIZE_KEY) === "large") return "large";
+  } catch {
+    // Storage unavailable — normal size.
+  }
+  return "normal";
+}
+
+function applyTextSize(size: TextSize): void {
+  document.documentElement.dataset.textSize = size;
+  try {
+    localStorage.setItem(TEXT_SIZE_KEY, size);
+  } catch {
+    // Storage unavailable — the size still applies for this session.
+  }
+  renderSettings();
+}
+
+const ANIN_VOICE_KEY = "desaai-anin-voice-v1";
+
+function isAninVoiceEnabled(): boolean {
+  try {
+    return localStorage.getItem(ANIN_VOICE_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+function setAninVoiceEnabled(on: boolean): void {
+  try {
+    localStorage.setItem(ANIN_VOICE_KEY, on ? "on" : "off");
+  } catch {
+    // Storage unavailable — the choice still applies for this session.
+  }
+}
+
+const OFFLINE_ONLY_KEY = "desaai-offline-only-v1";
+
+function isOfflineOnly(): boolean {
+  try {
+    return localStorage.getItem(OFFLINE_ONLY_KEY) === "on";
+  } catch {
+    return false;
+  }
+}
+
+function setOfflineOnly(on: boolean): void {
+  try {
+    localStorage.setItem(OFFLINE_ONLY_KEY, on ? "on" : "off");
+  } catch {
+    // Storage unavailable — the choice still applies for this session.
+  }
 }
 
 // ---------- tabs + deep links (hash routing) ----------
@@ -207,6 +327,7 @@ const TAB_HASHES: Record<string, string> = {
   ikm: "ikm",
   pengaduan: "pengaduan",
   agenda: "agenda",
+  pengaturan: "settings",
 };
 const HASH_BY_TAB: Record<string, string> = Object.fromEntries(
   Object.entries(TAB_HASHES).map(([h, tab]) => [tab, h]),
@@ -233,6 +354,7 @@ function activateTab(tab: string, updateHash = true): void {
   if (tab === "ikm") renderIkm();
   if (tab === "pengaduan") renderPengaduan();
   if (tab === "agenda") renderAgenda();
+  if (tab === "settings") renderSettings();
   // A detail dialog belongs to its tab — close it when leaving the tab.
   document.querySelectorAll("dialog[open]").forEach((d) => {
     (d as HTMLDialogElement).close();
@@ -318,8 +440,7 @@ function paletteCommands(): PaletteCmd[] {
       id: "cmd-lang",
       label: () => t("cmdLang", lang),
       run: () => {
-        lang = lang === "en" ? "id" : "en";
-        applyLang();
+        setLang(lang === "en" ? "id" : "en");
       },
     },
   );
@@ -418,7 +539,7 @@ let appMode: AppMode = "petugas";
 let currentTab = "home";
 
 // Officer-only tabs — hidden from the nav while in citizen mode.
-const OFFICER_TABS = ["letters", "summarize", "drafts", "kepegawaian", "agenda"];
+const OFFICER_TABS = ["letters", "summarize", "drafts", "kepegawaian", "agenda", "settings"];
 
 function updateModeButton(): void {
   $("mode-toggle-label").textContent = t(
@@ -442,6 +563,7 @@ function applyMode(mode: AppMode): void {
     const tab = active?.dataset.tab ?? "home";
     if (OFFICER_TABS.includes(tab)) activateTab("home");
   }
+  renderSettings();
 }
 
 function initMode(): void {
@@ -464,6 +586,211 @@ function initMode(): void {
   $("warga-go-ikm").addEventListener("click", () => activateTab("ikm"));
   $("warga-go-aduan").addEventListener("click", () => activateTab("pengaduan"));
   $("warga-go-qa").addEventListener("click", () => activateTab("qa"));
+}
+
+// ---------- Paket 35 — Pengaturan (tab baru) ----------
+
+const APP_VERSION = "0.1.0";
+const APP_PAKET = 35;
+
+/** Akun yang sedang dipakai. Paket 35: belum ada layar masuk, jadi akun
+ * demo bawaan. Paket 36 (layar masuk demo) menyimpan sesi di
+ * "desaai-session-v1" dan fungsi ini membacanya — tanpa mengubah UI ini. */
+function currentAccount(): { displayName: string; username: string } {
+  try {
+    const raw = localStorage.getItem("desaai-session-v1");
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw);
+      if (typeof parsed === "object" && parsed !== null) {
+        const u = (parsed as Record<string, unknown>).username;
+        if (typeof u === "string" && u.trim()) {
+          return { displayName: "Admin Kecamatan", username: u.trim() };
+        }
+      }
+    }
+  } catch {
+    // Corrupt session — fall through to the demo account.
+  }
+  return { displayName: "Admin Kecamatan", username: "demo" };
+}
+
+/** Keluar. Paket 35: belum ada sesi login — keluar berarti pindah ke Mode
+ * Warga (sama seperti tombol Keluar di sidebar). Paket 36 menghapus sesi
+ * di sini sebelum menampilkan layar masuk. */
+function signOut(): void {
+  try {
+    localStorage.removeItem("desaai-session-v1");
+  } catch {
+    // Storage unavailable — the mode switch below still applies.
+  }
+  if (appMode !== "warga") applyMode("warga");
+}
+
+const SETTINGS_LH_INPUT_IDS: Record<keyof LetterheadSettings, string> = {
+  instansi1: "set-lh-instansi1",
+  instansi2: "set-lh-instansi2",
+  alamat: "set-lh-alamat",
+  telepon: "set-lh-telepon",
+  email: "set-lh-email",
+  camatNama: "set-lh-camat-nama",
+  camatNip: "set-lh-camat-nip",
+  sekretarisNama: "set-lh-sekretaris-nama",
+};
+
+function renderSettingsLetterhead(): void {
+  const lh = loadLetterhead();
+  for (const key of LETTERHEAD_FIELDS) {
+    const input = document.getElementById(
+      SETTINGS_LH_INPUT_IDS[key],
+    ) as HTMLInputElement | null;
+    if (input) input.value = lh[key];
+  }
+  renderLetterheadPreview(lh);
+}
+
+/** How the kop will print — empty Camat/NIP show "—", never invented. */
+function renderLetterheadPreview(lh: LetterheadSettings): void {
+  const el = document.getElementById("set-lh-preview");
+  if (!el) return;
+  const camat = lh.camatNama.trim() || "—";
+  const nip = lh.camatNip.trim() || "—";
+  const contact = letterheadContactLine(lh);
+  el.textContent =
+    `${lh.instansi1}\n${lh.instansi2}\n${contact || "—"}\n${t("setLhPreviewCamat", lang)}: ${camat} · NIP: ${nip}`;
+}
+
+function saveSettingsLetterhead(): void {
+  const next: LetterheadSettings = { ...DEFAULT_LETTERHEAD };
+  for (const key of LETTERHEAD_FIELDS) {
+    const input = document.getElementById(
+      SETTINGS_LH_INPUT_IDS[key],
+    ) as HTMLInputElement | null;
+    if (input) next[key] = input.value;
+  }
+  saveLetterhead(next);
+  renderLetterheadForm();
+  renderLetterheadPreview(next);
+  setStatus($("set-letterhead-status"), t("homeLetterheadSaved", lang));
+  if (currentPrintDraft) renderArchiveSheet();
+}
+
+/** Sync every Settings control from the live state. Safe to call any time
+ * after DOM parse — every lookup tolerates a missing element. */
+function renderSettings(): void {
+  const setSeg = (group: string, value: string): void => {
+    document
+      .querySelectorAll<HTMLButtonElement>(`[data-seg="${group}"]`)
+      .forEach((btn) => {
+        btn.setAttribute(
+          "aria-pressed",
+          btn.dataset.value === value ? "true" : "false",
+        );
+      });
+  };
+  setSeg("theme", loadThemePref());
+  setSeg("textsize", loadTextSize());
+  setSeg("lang", lang);
+  setSeg("mode", appMode);
+  const voice = document.getElementById(
+    "set-anin-voice",
+  ) as HTMLInputElement | null;
+  if (voice) voice.checked = isAninVoiceEnabled();
+  const offline = document.getElementById(
+    "set-offline-only",
+  ) as HTMLInputElement | null;
+  if (offline) offline.checked = isOfflineOnly();
+  const account = currentAccount();
+  const nameEl = document.getElementById("set-account-name");
+  if (nameEl) nameEl.textContent = account.displayName;
+  const userEl = document.getElementById("set-account-user");
+  if (userEl) userEl.textContent = account.username;
+  const roleEl = document.getElementById("set-account-role");
+  if (roleEl)
+    roleEl.textContent = t(
+      appMode === "warga" ? "setModeWarga" : "setModePetugas",
+      lang,
+    );
+  const versionEl = document.getElementById("set-version-number");
+  if (versionEl) versionEl.textContent = `${APP_VERSION} · Paket ${APP_PAKET}`;
+  renderSettingsLetterhead();
+}
+
+function initSettings(): void {
+  const pick = (group: string, apply: (value: string) => void): void => {
+    document
+      .querySelectorAll<HTMLButtonElement>(`[data-seg="${group}"]`)
+      .forEach((btn) => {
+        btn.addEventListener("click", () => {
+          apply(btn.dataset.value ?? "");
+          renderSettings();
+        });
+      });
+  };
+  pick("theme", (v) => applyTheme(v as ThemePref));
+  pick("textsize", (v) => applyTextSize(v as TextSize));
+  pick("lang", (v) => {
+    setLang(v as Lang);
+  });
+  pick("mode", (v) => applyMode(v as AppMode));
+
+  $("set-anin-voice").addEventListener("change", (ev) => {
+    setAninVoiceEnabled((ev.target as HTMLInputElement).checked);
+    setStatus($("set-status"), t("setSaved", lang));
+  });
+  $("set-offline-only").addEventListener("change", (ev) => {
+    setOfflineOnly((ev.target as HTMLInputElement).checked);
+    setStatus($("set-status"), t("setSaved", lang));
+  });
+  $("set-letterhead-save").addEventListener("click", saveSettingsLetterhead);
+  $("set-backup-export").addEventListener("click", async () => {
+    await exportBackup();
+    setStatus($("set-status"), $("home-backup-status").textContent ?? "");
+  });
+  $("set-signout").addEventListener("click", () => {
+    signOut();
+    activateTab("home");
+  });
+  $("set-contact-link").addEventListener("click", () => {
+    activateTab("home");
+    document
+      .getElementById("home-contact-card")
+      ?.scrollIntoView({ block: "start" });
+  });
+
+  // Hapus semua data — konfirmasi dua langkah: ketuk pertama hanya
+  // mengaktifkan tombol (10 detik), ketuk kedua menghapus + reload.
+  let wipeArmed = false;
+  let wipeTimer: number | undefined;
+  const wipeBtn = $("set-wipe") as HTMLButtonElement;
+  const wipeLabel = wipeBtn.querySelector("span");
+  const disarmWipe = (): void => {
+    wipeArmed = false;
+    window.clearTimeout(wipeTimer);
+    wipeBtn.classList.remove("armed");
+    if (wipeLabel) wipeLabel.textContent = t("setWipe", lang);
+  };
+  wipeBtn.addEventListener("click", () => {
+    if (!wipeArmed) {
+      wipeArmed = true;
+      wipeBtn.classList.add("armed");
+      if (wipeLabel) wipeLabel.textContent = t("setWipeConfirm", lang);
+      wipeTimer = window.setTimeout(disarmWipe, 10000);
+      return;
+    }
+    try {
+      const doomed: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k?.startsWith("desaai-")) doomed.push(k);
+      }
+      doomed.forEach((k) => localStorage.removeItem(k));
+    } catch {
+      // Storage unavailable — nothing to wipe.
+    }
+    window.location.reload();
+  });
+
+  renderSettings();
 }
 
 // ---------- complaints-by-type chart (home) — Paket 7 ----------
@@ -514,14 +841,18 @@ function updatePageHead(tab: string): void {
   if (hint) $("page-subtitle").textContent = hint.textContent?.trim() ?? "";
 }
 
-// Live Indonesian date, e.g. "Jumat, 27 November 2026".
+// Live date, e.g. "Jumat, 27 November 2026" — Paket 35: the language
+// follows the UI language (id-ID / en-GB), not always Indonesian.
 function updateDatePill(): void {
-  $("date-pill-text").textContent = new Date().toLocaleDateString("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  $("date-pill-text").textContent = new Date().toLocaleDateString(
+    lang === "id" ? "id-ID" : "en-GB",
+    {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    },
+  );
 }
 
 // The bell shows the same notification count as the personnel tab;
@@ -2316,10 +2647,11 @@ function initLetters(): void {
       tip.hidden = false;
       return;
     }
-    if (!svc || svc.status !== "ready") {
+    if (!svc || svc.status !== "ready" || isOfflineOnly()) {
       // Paket 30 — AI belum siap (Firebase belum dikonfigurasi / App Check
-      // belum aktif): tetap hasilkan draf offline dari formulir, jangan
-      // biarkan tombol "Buat draf" berakhir tanpa isi.
+      // belum aktif) ATAU Paket 35 mode offline saja: tetap hasilkan draf
+      // offline dari formulir, jangan biarkan tombol "Buat draf" berakhir
+      // tanpa isi.
       const fallback = buildOfflineLetterBody(currentTemplate, values, extra);
       const output = $("letter-output") as HTMLTextAreaElement;
       output.value = fallback;
@@ -2466,6 +2798,11 @@ function initSummarizer(): void {
     const text = input.value.trim();
     if (!text) {
       setStatus(status, t("statusNeedText", lang), true);
+      return;
+    }
+    // Paket 35 — mode offline saja: ringkasan AI tidak tersedia.
+    if (isOfflineOnly()) {
+      setStatus(status, t("setOfflineOnlyNote", lang), true);
       return;
     }
     if (!svc || svc.status !== "ready") {
@@ -2681,7 +3018,8 @@ function initQa(): void {
     };
 
     // Demo mode / no Firebase: answer straight from the offline guide.
-    if (!svc || svc.status !== "ready") {
+    // Paket 35 — mode offline saja: sama, jangan pernah memanggil cloud.
+    if (!svc || svc.status !== "ready" || isOfflineOnly()) {
       if (!answerFromGuide()) answerNoneFound();
       setStatus(status, t("aninQaAiFailed", lang));
       return;
@@ -2735,6 +3073,11 @@ function initQa(): void {
   $("qa-read").addEventListener("click", async () => {
     const text = $("qa-output").textContent ?? "";
     if (!text.trim()) return;
+    // Paket 35 — suara dimatikan di Pengaturan: beri tahu, jangan diam.
+    if (!isAninVoiceEnabled()) {
+      setStatus($("qa-status"), t("aninVoiceOff", lang));
+      return;
+    }
     const ok = await speakText(text);
     if (!ok) setStatus($("qa-status"), t("aninVoiceNoVoice", lang));
   });
@@ -2832,6 +3175,8 @@ function waitForVoices(): Promise<SpeechSynthesisVoice[]> {
  * silently. Used by Anin's chat AND by Tanya Prosedur (Paket 32).
  */
 async function speakText(text: string): Promise<boolean> {
+  // Paket 35 — suara Anin dimatikan di Pengaturan: jangan bersuara.
+  if (!isAninVoiceEnabled()) return false;
   const synth = window.speechSynthesis;
   if (!synth || typeof synth.speak !== "function") return false;
   const clean = text.replace(/\s+/g, " ").trim().slice(0, 600);
@@ -2918,6 +3263,11 @@ function initAninChat(): void {
   /** Read a text aloud (free, no server). Clear message when the device
    * has no voice — never silent failure. */
   const speakAnin = async (text: string): Promise<void> => {
+    // Paket 35 — suara dimatikan di Pengaturan: beri tahu, jangan diam.
+    if (!isAninVoiceEnabled()) {
+      addMessage("anin", t("aninVoiceOff", lang));
+      return;
+    }
     const ok = await speakText(text);
     if (!ok) addMessage("anin", t("aninVoiceNoVoice", lang));
   };
@@ -3053,7 +3403,8 @@ function initAninChat(): void {
   /** Same grounded AI answer as Tanya Prosedur (KB grounding + streaming),
    * shown inside the chat bubble. Falls back to the offline KB text. */
   const answerWithAi = async (question: string, matches: KbEntry[]): Promise<void> => {
-    if (!svc || svc.status !== "ready") {
+    // Paket 35 — mode offline saja: jangan pernah memanggil cloud.
+    if (!svc || svc.status !== "ready" || isOfflineOnly()) {
       if (matches.length === 0) {
         setExpression("bingung", 2500);
         addMessage("anin", noUnderstandReply(question));
@@ -4332,7 +4683,8 @@ function initKepegawaian(): void {
     const reason = $("keg-sum-reason");
     const recap = buildKepegawaianSummary(kegItems);
     wrap.hidden = false;
-    if (!svc || svc.status !== "ready") {
+    // Paket 35 — mode offline saja: rekap offline, jangan panggil AI.
+    if (!svc || svc.status !== "ready" || isOfflineOnly()) {
       output.textContent = recap;
       badge.textContent = t("badgeUnknown", lang);
       badge.className = "badge badge-unknown";
@@ -5275,6 +5627,11 @@ async function boot(): Promise<void> {
   initAgenda();
   initPalette();
   initMode();
+  initSettings();
+  // Paket 35 — ukuran teks tersimpan berlaku sejak awal (bukan hanya
+  // saat diubah di Pengaturan); tema sudah diterapkan pre-paint oleh
+  // skrip <head> di index.html.
+  applyTextSize(loadTextSize());
   // Paket 28 — live date pill + notification bell in the page head.
   updateDatePill();
   $("notif-bell").addEventListener("click", () => activateTab("kepegawaian"));
@@ -5288,8 +5645,7 @@ async function boot(): Promise<void> {
   updatePageHead(currentTab);
 
   $("lang-toggle").addEventListener("click", () => {
-    lang = lang === "en" ? "id" : "en";
-    applyLang();
+    setLang(lang === "en" ? "id" : "en");
   });
 
   // Dark mode toggle (theme applied pre-paint by the <head> script).

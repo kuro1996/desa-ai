@@ -178,8 +178,8 @@ async function main() {
     }));
     const monthName = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
     check(
-      "bento shows 18 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
-      bento.cards === 18 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
+      "bento shows 19 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
+      bento.cards === 19 && bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
         bento.lettersToday === "0" && bento.aduanBaru === "3" &&
         bento.monthIkm === "12" && bento.monthAduan === "6" && bento.monthLetters === "0" &&
         bento.monthName === monthName,
@@ -3582,8 +3582,8 @@ async function main() {
       })),
     );
     check(
-      "all 9 tabs have an SVG icon + label",
-      tabIcons.length === 9 && tabIcons.every((t) => t.hasSvg && t.label.length > 0),
+      "all 10 tabs have an SVG icon + label",
+      tabIcons.length === 10 && tabIcons.every((t) => t.hasSvg && t.label.length > 0),
       tabIcons.map((t) => `${t.label}:${t.hasSvg ? "svg" : "NO-SVG"}`).join(" | "),
     );
     // Survey distribution: link + QR code (generated locally, offline)
@@ -4017,22 +4017,27 @@ async function main() {
       datePill: document.getElementById("date-pill-text")?.textContent ?? "",
       title: document.getElementById("page-title")?.textContent ?? "",
       homeH2: document.querySelector("#panel-home h2")?.textContent ?? "",
+      uiLang: document.documentElement.lang ?? "en",
     }));
-    const todayId = new Date().toLocaleDateString("id-ID", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
+    // Paket 35 — the date pill follows the UI language, not always Indonesian.
+    const todayId = new Date().toLocaleDateString(
+      p28Shell.uiLang === "id" ? "id-ID" : "en-GB",
+      {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      },
+    );
     check(
-      "Paket 28 sidebar exists with all 9 tabs",
-      p28Shell.sidebar && p28Shell.tabs === 9,
+      "Paket 28 sidebar exists with all 10 tabs",
+      p28Shell.sidebar && p28Shell.tabs === 10,
       `sidebar=${p28Shell.sidebar} tabs=${p28Shell.tabs}`,
     );
     check(
-      "Paket 28 date pill shows today's Indonesian date",
+      "Paket 28 date pill shows today's date in the UI language",
       p28Shell.datePill === todayId,
-      `pill="${p28Shell.datePill}" today="${todayId}"`,
+      `pill="${p28Shell.datePill}" today="${todayId}" lang=${p28Shell.uiLang}`,
     );
     check(
       "Paket 28 page head mirrors the home panel title",
@@ -4801,6 +4806,276 @@ async function main() {
     );
     await page.click("#anin-panel-close");
     await sleep(200);
+
+    // 9. Settings tab (Paket 35) + Contact card on the home dashboard.
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    const contact = await page.evaluate(() => {
+      const card = document.getElementById("home-contact-card");
+      if (!card) return null;
+      const rows = [...card.querySelectorAll(".contact-list li")].map((li) => li.textContent ?? "");
+      return {
+        rows: rows.length,
+        text: card.textContent ?? "",
+        tel: card.querySelector('a[href^="tel:"]')?.getAttribute("href") ?? "",
+        mail: card.querySelector('a[href^="mailto:"]')?.getAttribute("href") ?? "",
+        links: [...card.querySelectorAll("a")].map((a) => a.getAttribute("href") ?? ""),
+      };
+    });
+    check(
+      "contact card shows on Beranda with all six rows",
+      contact !== null &&
+        contact.rows === 6 &&
+        /Jl\. Merdeka No 02 Desa Katis, Kode Pos 33674/.test(contact.text) &&
+        /08117121844/.test(contact.text) &&
+        /kec\.spkatis2014@gmail\.com/.test(contact.text) &&
+        /kantor kecamatan simpangkatis/.test(contact.text) &&
+        /@kec_simpangkatis/.test(contact.text) &&
+        /kecamatansimpangkatis/.test(contact.text),
+      contact ? `${contact.rows} rows` : "card missing",
+    );
+    check(
+      "contact card phone + email are tappable (tel:/mailto:), socials have no invented links",
+      contact !== null &&
+        contact.tel === "tel:08117121844" &&
+        contact.mail === "mailto:kec.spkatis2014@gmail.com" &&
+        contact.links.length === 2,
+      contact ? JSON.stringify(contact.links) : "card missing",
+    );
+
+    await page.click('[data-tab="settings"]');
+    await sleep(300);
+    const settingsOpen = await page.evaluate(() => ({
+      visible: !document.getElementById("panel-settings").hidden,
+      active: document
+        .querySelector('[data-tab="settings"]')
+        ?.classList.contains("active"),
+      title: document.getElementById("page-title")?.textContent ?? "",
+    }));
+    check(
+      "settings tab opens (panel visible, page head follows)",
+      settingsOpen.visible && settingsOpen.active && /Pengaturan|Settings/.test(settingsOpen.title),
+      JSON.stringify(settingsOpen),
+    );
+    const account = await page.evaluate(() => ({
+      user: document.getElementById("set-account-user")?.textContent ?? "",
+      role: document.getElementById("set-account-role")?.textContent ?? "",
+      signout: !!document.getElementById("set-signout"),
+      demoNote: /demo/i.test(
+        document.querySelector("#panel-settings .settings-card .hint")?.textContent ?? "",
+      ),
+    }));
+    check(
+      "account card shows the demo account (demo / Petugas) + Keluar",
+      account.user === "demo" && /Petugas|Officer/.test(account.role) && account.signout && account.demoNote,
+      JSON.stringify(account),
+    );
+
+    // Theme: Automatic stores "auto", Dark applies + stores, back to Light.
+    await page.click('[data-seg="theme"][data-value="auto"]');
+    await sleep(200);
+    const themeAuto = await page.evaluate(() => ({
+      stored: localStorage.getItem("desaai-theme-v1"),
+      effective: document.documentElement.dataset.theme,
+    }));
+    check(
+      "theme Automatic stores 'auto' and follows the device (light here)",
+      themeAuto.stored === "auto" && themeAuto.effective === "light",
+      JSON.stringify(themeAuto),
+    );
+    await page.click('[data-seg="theme"][data-value="dark"]');
+    await sleep(200);
+    const themeDark2 = await page.evaluate(() => ({
+      stored: localStorage.getItem("desaai-theme-v1"),
+      effective: document.documentElement.dataset.theme,
+    }));
+    check(
+      "theme Dark applies and is saved (settings control)",
+      themeDark2.stored === "dark" && themeDark2.effective === "dark",
+      JSON.stringify(themeDark2),
+    );
+    await page.click('[data-seg="theme"][data-value="light"]');
+    await sleep(200);
+
+    // Text size: Large scales the base font and persists across reload.
+    await page.click('[data-seg="textsize"][data-value="large"]');
+    await sleep(200);
+    const textLarge = await page.evaluate(() => ({
+      attr: document.documentElement.dataset.textSize,
+      bodyPx: getComputedStyle(document.body).fontSize,
+      stored: localStorage.getItem("desaai-text-size-v1"),
+    }));
+    check(
+      "text size Large applies (base 16px -> 18px) and is saved",
+      textLarge.attr === "large" && textLarge.bodyPx === "18px" && textLarge.stored === "large",
+      JSON.stringify(textLarge),
+    );
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await sleep(1200);
+    const textAfterReload = await page.evaluate(() => ({
+      attr: document.documentElement.dataset.textSize,
+      bodyPx: getComputedStyle(document.body).fontSize,
+    }));
+    check(
+      "text size Large persists across reload",
+      textAfterReload.attr === "large" && textAfterReload.bodyPx === "18px",
+      JSON.stringify(textAfterReload),
+    );
+    await page.click('[data-tab="settings"]');
+    await sleep(300);
+    await page.click('[data-seg="textsize"][data-value="normal"]');
+    await sleep(200);
+
+    // Language via Settings: English switches the UI + date pill, back to Indonesian.
+    await page.click('[data-seg="lang"][data-value="en"]');
+    await sleep(400);
+    const langEn = await page.evaluate(() => ({
+      tab: document.querySelector('[data-tab="settings"] span')?.textContent ?? "",
+      pill: document.getElementById("date-pill-text")?.textContent ?? "",
+      stored: localStorage.getItem("desaai-lang-v1"),
+    }));
+    check(
+      "language English via Settings (tab + date pill in English, saved)",
+      /Settings/.test(langEn.tab) &&
+        /Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/.test(langEn.pill) &&
+        langEn.stored === "en",
+      JSON.stringify(langEn),
+    );
+    await page.click('[data-seg="lang"][data-value="id"]');
+    await sleep(400);
+    const langId = await page.evaluate(() => ({
+      tab: document.querySelector('[data-tab="settings"] span')?.textContent ?? "",
+      pill: document.getElementById("date-pill-text")?.textContent ?? "",
+    }));
+    check(
+      "language back to Indonesian via Settings (tab + date pill in Indonesian)",
+      /Pengaturan/.test(langId.tab) &&
+        /Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu/.test(langId.pill),
+      JSON.stringify(langId),
+    );
+
+    // Letterhead: empty Camat/NIP preview as "—"; saving syncs both forms + persists.
+    const lhPreviewEmpty = await page.$eval("#set-lh-preview", (el) => el.textContent ?? "");
+    check(
+      "letterhead preview shows '—' for the empty Camat/NIP",
+      /—/.test(lhPreviewEmpty) && /Camat/.test(lhPreviewEmpty),
+      lhPreviewEmpty.replace(/\n/g, " | "),
+    );
+    await page.type("#set-lh-camat-nama", "CAMAT-SET-35");
+    await page.click("#set-letterhead-save");
+    await sleep(300);
+    const lhSetSaved = await page.evaluate(() => ({
+      stored: JSON.parse(localStorage.getItem("desaai-letterhead-v1") ?? "{}").camatNama,
+      homeForm: document.getElementById("home-lh-camat-nama")?.value ?? "",
+      preview: document.getElementById("set-lh-preview")?.textContent ?? "",
+      status: document.getElementById("set-letterhead-status")?.textContent ?? "",
+    }));
+    check(
+      "letterhead save stores Camat, syncs the home form + preview",
+      lhSetSaved.stored === "CAMAT-SET-35" &&
+        lhSetSaved.homeForm === "CAMAT-SET-35" &&
+        /CAMAT-SET-35/.test(lhSetSaved.preview) &&
+        /disimpan|saved/i.test(lhSetSaved.status),
+      JSON.stringify(lhSetSaved),
+    );
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await sleep(1200);
+    await page.click('[data-tab="settings"]');
+    await sleep(300);
+    const lhPersist = await page.$eval("#set-lh-camat-nama", (el) => el.value);
+    check("letterhead Camat persists across reload", lhPersist === "CAMAT-SET-35", lhPersist);
+    await page.$eval("#set-lh-camat-nama", (el) => {
+      el.value = "";
+    });
+    await page.click("#set-letterhead-save");
+    await sleep(300);
+
+    // Anin voice + offline-only toggles persist across reload.
+    await page.click("#set-anin-voice");
+    await page.click("#set-offline-only");
+    await sleep(200);
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await sleep(1200);
+    await page.click('[data-tab="settings"]');
+    await sleep(300);
+    const toggles = await page.evaluate(() => ({
+      voiceChecked: document.getElementById("set-anin-voice")?.checked,
+      voiceStored: localStorage.getItem("desaai-anin-voice-v1"),
+      offlineChecked: document.getElementById("set-offline-only")?.checked,
+      offlineStored: localStorage.getItem("desaai-offline-only-v1"),
+    }));
+    check(
+      "Anin voice off + offline-only on persist across reload",
+      toggles.voiceChecked === false &&
+        toggles.voiceStored === "off" &&
+        toggles.offlineChecked === true &&
+        toggles.offlineStored === "on",
+      JSON.stringify(toggles),
+    );
+    await page.click("#set-anin-voice");
+    await page.click("#set-offline-only");
+    await sleep(200);
+
+    // Mode via Settings: Warga hides officer tabs and returns home; back to Petugas.
+    await page.click('[data-seg="mode"][data-value="warga"]');
+    await sleep(300);
+    const modeWarga = await page.evaluate(() => ({
+      warga: document.body.classList.contains("mode-warga"),
+      homeActive: document
+        .querySelector('[data-tab="home"]')
+        ?.classList.contains("active"),
+      settingsHidden:
+        getComputedStyle(document.querySelector('[data-tab="settings"]')).display === "none",
+    }));
+    check(
+      "mode Warga via Settings (officer tabs hidden, redirected home)",
+      modeWarga.warga && modeWarga.homeActive && modeWarga.settingsHidden,
+      JSON.stringify(modeWarga),
+    );
+    await page.click("#mode-toggle");
+    await sleep(300);
+    const modeBack = await page.evaluate(
+      () => !document.body.classList.contains("mode-warga"),
+    );
+    check("mode back to Petugas via the header toggle", modeBack);
+
+    // Delete all local data: first tap only arms, second tap wipes + reloads.
+    await page.click('[data-tab="settings"]');
+    await sleep(300);
+    await page.click("#set-wipe");
+    await sleep(200);
+    const wipeArmed = await page.evaluate(() => ({
+      label: document.querySelector("#set-wipe span")?.textContent ?? "",
+      armed: document.getElementById("set-wipe")?.classList.contains("armed"),
+      themeStillThere: localStorage.getItem("desaai-theme-v1") !== null,
+    }));
+    check(
+      "delete-all first tap only arms (no data deleted yet)",
+      /Ketuk lagi|Tap again/.test(wipeArmed.label) &&
+        wipeArmed.armed &&
+        wipeArmed.themeStillThere,
+      JSON.stringify(wipeArmed),
+    );
+    await page.click("#set-wipe");
+    await sleep(3000);
+    const wiped = await page.evaluate(() => ({
+      theme: localStorage.getItem("desaai-theme-v1"),
+      letterhead: localStorage.getItem("desaai-letterhead-v1"),
+      textSize: localStorage.getItem("desaai-text-size-v1"),
+      voice: localStorage.getItem("desaai-anin-voice-v1"),
+      offline: localStorage.getItem("desaai-offline-only-v1"),
+      mode: localStorage.getItem("desaai-mode-v1"),
+    }));
+    check(
+      "delete-all second tap wipes DesaAI local data after reload (defaults restored)",
+      wiped.theme === null &&
+        wiped.letterhead === null &&
+        wiped.voice === null &&
+        wiped.offline === null &&
+        wiped.textSize === "normal" &&
+        wiped.mode === "petugas",
+      JSON.stringify(wiped),
+    );
 
     // 10. No console errors / failed requests (excluding the VM tunnel noise)
     check("0 console errors (excluding VM tunnel noise)", errors.length === 0, errors.join(" | ").slice(0, 500));
