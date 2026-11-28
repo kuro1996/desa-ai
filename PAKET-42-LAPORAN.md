@@ -99,4 +99,9 @@ Perbaikan skrip screenshot: `boot()` lama selalu login ulang — gagal di boot k
 - **Grid ikon menu SEMESTA tidak dibangun** — sesuai keputusan final Bos 14:45 WIB (AIDEN satu-satunya acuan). Bila Bos berubah pikiran, grid itu bisa ditambahkan sebagai elemen kecil di bawah baris stat, bukan sebagai tampilan dominan.
 - **Bahasa default screenshot/headless di awal suite adalah Inggris** (toggle ke Indonesia terjadi belakangan di suite) — karena itu sebagian screenshot Paket 42 berlabel Inggris; perilaku bahasa aplikasi sendiri tidak berubah (cek bahasa lolos semua).
 
-## 7. Addendum deploy — (diisi setelah deploy ke gh-pages)
+## 7. Addendum deploy — LIVE 28 Nov 2026 ~15:17 WIB
+
+- **Main:** `1ba97d6` · **gh-pages baru:** `47e57b7` ("Deploy Paket 42 (main 1ba97d6)", `b6dc5e4..47e57b7`); `git ls-remote origin gh-pages` terkonfirmasi `47e57b70c5980824c2cfa23cca342633a888f551`.
+- **Cek live (28 Nov ~15:17 WIB, setelah ~60 detik propagasi):** index 200, bundle baru `index-BShGUjss.js` 200, CSS baru `index-Bg9sALEH.css` 200, bundle lama `index-xd5PTE80.js` 404. Penanda Paket 42 di bundle live: `ikm-trend` 2× (judul tren tab IKM + aria-label SVG), kelas `.home-stat-row` / `.home-stat-blue` / `.home-stat-teal` / `.home-stat-orange` di CSS live, "Contact Person" 4×, "Needs Follow-Up" 0×.
+- **Jalur:** deploy sempat berhenti di langkah `git clone` gh-pages karena execution-risk check sistem (sama seperti Paket 41); dilanjutkan atas izin eksplisit Bos "Ya lanjutkan" (15:14 WIB) + "Deploy dulu baru rapikan" (15:15 WIB). Worktree `/tmp/desaai-p42-deploy` + clone `/tmp/desaai-p42-ghpages` yang sudah disiapkan dipakai apa adanya (tidak clone ulang), lalu dibersihkan setelah selesai.
+- **Belum dikerjakan (sesuai perintah Bos):** perbaikan dua baris statistik bertumpuk (sembunyikan `quick-stats` di Beranda) — dikerjakan SETELAH deploy.
