@@ -312,14 +312,6 @@ main {
   margin: 4px 0 18px;
 }
 
-/* Paket 43 — the old quick-stats strip duplicates the new AIDEN stat
-   row on Beranda (IKM shown twice). Hide the strip only while the
-   Beranda tab is active (body.tab-home is set by activateTab); it stays
-   visible on every other tab. Its live data/bindings are untouched. */
-body.tab-home .quick-stats {
-  display: none;
-}
-
 .quick-stat {
   display: flex;
   flex-direction: column;
@@ -2002,22 +1994,14 @@ html[data-theme="dark"] ::placeholder {
 
 /* ---------- home dashboard: bento grid ---------- */
 
-/* Paket 42 — layout AIDEN: Beranda dua kolom di desktop (kartu-kartu
- * berdampingan berpasangan), satu kolom di bawah 900px. Baris stat AIDEN
- * + kartu pencarian membentang penuh; sisanya 1 kolom grid masing-masing. */
+/* Paket 44 — REVERT dari layout AIDEN Paket 42: Beranda kembali SATU
+ * KOLOM bertumpuk di semua lebar (seperti tampilan lama di HP Bos).
+ * Grid ikon menu + kartu pencarian membentang penuh. */
 .bento {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
   margin-top: 16px;
-}
-
-/* Paket 42 — baris statistik AIDEN (di dalam .bento, membentang penuh). */
-.home-stat-row {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
 }
 
 .bento-card {
@@ -2269,8 +2253,9 @@ html[data-theme="dark"] ::placeholder {
 }
 
 /* Paket 30 — di bawah 900px (termasuk HP yang membuka tampilan desktop)
-   bento jadi satu kolom. Paket 42: batas diturunkan dari 1100px karena
-   layout dua kolom tetap lega sampai 900px; di bawah itu kartu menumpuk. */
+   bento jadi satu kolom. Paket 44: bento SUDAH satu kolom di semua lebar
+   (revert dari dua kolom Paket 42), jadi aturan di bawah ini hanya
+   menegaskan ulang; dipertahankan supaya perilaku lama tetap eksplisit. */
 @media (max-width: 900px) {
   .bento {
     grid-template-columns: 1fr;
@@ -2287,118 +2272,69 @@ html[data-theme="dark"] ::placeholder {
   }
 }
 
-/* ---------- Paket 42 — kartu statistik AIDEN di Beranda ---------- */
+/* ---------- Paket 44 — grid ikon menu (improvisasi SEMESTA) ---------- */
 
-/* Empat kartu berwarna sejajar (biru, teal, biru muda, oranye — seperti
- * AIDEN): label + angka besar + sub. Tile adalah tombol — ketuk membuka
- * tab terkait. Teks tetap terbaca: kartu biru muda memakai teks gelap
- * di mode terang. */
-.home-stat {
-  position: relative;
+/* Tile ikon + label saja (tanpa angka) untuk 10 tab selain Beranda,
+ * di dalam .bento paling atas. 4 kolom di desktop, 3 kolom di HP
+ * (≤700px). Ikon biru di atas label, teks rata tengah; identitas
+ * tetap biru-putih DesaAI, teks hitam, satu font. */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.menu-tile {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
-  min-height: 118px;
-  padding: 16px 16px 14px;
-  border: 1px solid transparent;
+  padding: 16px 8px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   font: inherit;
-  text-align: left;
+  color: var(--text);
+  text-align: center;
   cursor: pointer;
-  color: #fff;
 }
 
-.home-stat:hover {
-  filter: brightness(1.07);
+.menu-tile:hover {
+  border-color: var(--blue-strong);
 }
 
-.home-stat:focus-visible {
+.menu-tile:focus-visible {
   outline: 2px solid var(--blue-strong);
   outline-offset: 2px;
 }
 
-.home-stat-blue {
-  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+.menu-tile-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--blue-strong);
+  flex: 0 0 auto;
 }
 
-.home-stat-teal {
-  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
-}
-
-.home-stat-light {
-  background: #dbeafe;
-  color: #0f172a;
-  border-color: #bfdbfe;
-}
-
-.home-stat-orange {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-}
-
-.home-stat-open {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 18px;
-  height: 18px;
-  opacity: 0.75;
-}
-
-.home-stat-label {
+.menu-tile span {
   font-size: 0.85rem;
-  font-weight: 700;
-  padding-right: 24px;
-}
-
-.home-stat-num {
-  font-size: clamp(1.7rem, 4vw, 2.2rem);
-  line-height: 1.15;
-  font-variant-numeric: tabular-nums;
-}
-
-.home-stat-light .home-stat-num {
-  color: #1e40af;
-}
-
-.home-stat-sub {
-  font-size: 0.82rem;
-  opacity: 0.92;
-}
-
-.home-stat-light .home-stat-sub {
-  color: #475569;
-  opacity: 1;
-}
-
-html[data-theme="dark"] .home-stat-light {
-  background: linear-gradient(135deg, #1e40af 0%, #172554 100%);
-  color: #fff;
-  border-color: transparent;
-}
-
-html[data-theme="dark"] .home-stat-light .home-stat-num {
-  color: #fff;
-}
-
-html[data-theme="dark"] .home-stat-light .home-stat-sub {
-  color: rgb(255 255 255 / 0.85);
+  font-weight: 600;
+  line-height: 1.25;
 }
 
 @media (max-width: 700px) {
-  .home-stat-row {
-    grid-template-columns: repeat(2, 1fr);
+  .menu-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 
-  .home-stat {
-    min-height: 104px;
-    padding: 14px 12px 12px;
+  .menu-tile {
+    padding: 14px 6px 12px;
   }
 
-  .home-stat-num {
-    font-size: 1.6rem;
+  .menu-tile-icon {
+    width: 26px;
+    height: 26px;
   }
 }
 

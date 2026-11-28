@@ -478,6 +478,7 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   },
   // Quick-stats strip (live counts from existing data)
   qsLetters: { en: "Letters saved", id: "Surat tersimpan" },
+  qsDrafts: { en: "Letter drafts", id: "Draf surat" },
   qsIkm: { en: "IKM score", id: "Skor IKM" },
   qsAduan: { en: "Complaints resolved", id: "Pengaduan selesai" },
   ikmScale1: { en: "1 — Very dissatisfied", id: "1 — Sangat Tidak Puas" },

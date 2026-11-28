@@ -396,11 +396,6 @@ function surveyLink(): string {
 
 function activateTab(tab: string, updateHash = true): void {
   currentTab = tab;
-  // Paket 43 — the old quick-stats strip duplicates the new AIDEN stat
-  // row on Beranda; hide it only while the Beranda tab is active. It
-  // stays visible on every other tab (same body-class pattern as
-  // mode-warga). Data/bindings untouched.
-  document.body.classList.toggle("tab-home", tab === "home");
   document.querySelectorAll(".tab").forEach((b) => {
     const isActive = (b as HTMLButtonElement).dataset.tab === tab;
     b.classList.toggle("active", isActive);
@@ -1018,9 +1013,10 @@ function updateNotifBell(): void {
 
 function renderQuickStats(): void {
   $("qs-letters").textContent = String(countLocalDrafts("letter"));
-  const ikmStats = computeIkm(loadIkm());
-  $("qs-ikm").textContent =
-    ikmStats.count === 0 ? "–" : ikmFmt(ikmStats.overall);
+  // Paket 44 — tile ke-2 bukan lagi Skor IKM (skor itu dobel di
+  // Beranda; satu-satunya kemunculan skor ada di kartu SKOR IKM):
+  // diganti jumlah draf tersimpan (semua jenis draf).
+  $("qs-drafts").textContent = String(countLocalDrafts());
   const aduStats = computeAduanStats(loadAduan());
   $("qs-aduan").textContent = String(aduStats.selesai);
   // Paket 28 — the fourth hero card: total village officers (live data).
@@ -1661,12 +1657,14 @@ function buildBriefing(now = new Date()): Briefing {
     month: "long",
     year: "numeric",
   });
+  // Paket 44 — ringkasan Briefing Pagi TANPA fragmen IKM: skor IKM
+  // 90,28 dobel di Beranda bila ada di sini (satu-satunya kemunculan
+  // skor ada di kartu SKOR IKM). Teks WhatsApp di bawah tetap memuat
+  // IKM lengkap — itu salinan briefing untuk dibagikan, bukan tampilan
+  // Beranda.
   const summary = [
     `${aduStats.baru} ${t("briefingAduan", lang)}`,
     `${habis} ${t("briefingMasaHabis", lang)}`,
-    ikmStats.count === 0
-      ? "IKM –"
-      : `IKM ${ikmFmt(ikmStats.overall)} (${ikmStats.category})`,
     `${lettersToday} ${t("briefingSurat", lang)}`,
     `${masukToday} ${t("briefingAgendaMasuk", lang)}`,
   ].join(" • ");
@@ -1800,10 +1798,6 @@ function renderHome(): void {
             ? IKM_ELEMENTS[ikmStats.minIdx].labelId
             : IKM_ELEMENTS[ikmStats.minIdx].labelEn
         } (${ikmFmt(ikmStats.perElement[ikmStats.minIdx])})`;
-  // Paket 42 — cermin angka ke kartu statistik AIDEN di atas Beranda.
-  $("home-stat-ikm").textContent =
-    ikmStats.count === 0 ? "–" : ikmFmt(ikmStats.overall);
-  $("home-stat-ikm-sub").textContent = `${ikmStats.count} ${t("ikmRespondents", lang)}`;
   // Paket 41 — kartu "Surat hari ini" dihapus dari Beranda; draf hari ini
   // tetap terlihat di tab Draf Surat (panel-letters + panel-drafts).
   const drafts = listLocalDrafts();
@@ -1811,7 +1805,6 @@ function renderHome(): void {
   $("home-aduan-baru").textContent = String(
     computeAduanStats(loadAduan()).baru,
   );
-  $("home-stat-aduan").textContent = $("home-aduan-baru").textContent;
   // Oldest unresolved complaints (waiting longest first).
   const openAduan = loadAduan()
     .filter((a) => a.status !== "selesai")
@@ -1843,13 +1836,6 @@ function renderHome(): void {
   $("home-masa-habis").textContent = String(
     notifs.filter((n) => n.kind === "habis").length,
   );
-  $("home-stat-masa").textContent = String(
-    notifs.filter((n) => n.kind === "akan-habis").length +
-      notifs.filter((n) => n.kind === "habis").length,
-  );
-  $("home-stat-masa-sub").textContent =
-    `${$("home-masa-akan").textContent} ${t("homeStatMasaAkan", lang)} · ` +
-    `${$("home-masa-habis").textContent} ${t("homeStatMasaHabis", lang)}`;
   const masaList = $("home-masa-list");
   masaList.innerHTML = "";
   $("home-masa-empty").hidden = notifs.length > 0;
@@ -1872,8 +1858,6 @@ function renderHome(): void {
   $("home-month-letters").textContent = String(
     drafts.filter((d) => d.kind === "letter" && inMonth(d.createdAt, now)).length,
   );
-  $("home-stat-letters").textContent = $("home-month-letters").textContent;
-  $("home-stat-letters-sub").textContent = monthNameId(now);
   $("home-month-ikm").textContent = String(
     loadIkm().filter((r) => inMonth(r.createdAt, now)).length,
   );
@@ -1964,8 +1948,11 @@ function renderCamatDashboard(): void {
   );
   mkRow(
     t("camatIkm", lang),
+    // Paket 44 — baris Kepuasan (IKM) TANPA angka skor: skor IKM dobel
+    // di Beranda bila ada di sini. Yang tampil hanya jumlah responden
+    // (bukan skor); skor lengkap ada di kartu SKOR IKM + tab Kepuasan.
     d.hasIkm
-      ? `${t("camatIkmRata", lang)} ${ikmFmt(d.ikmRata)} · ${d.ikmResponden} ${t("camatIkmResponden", lang)}`
+      ? `${d.ikmResponden} ${t("camatIkmResponden", lang)}`
       : noData,
     "ikm",
   );
@@ -1987,8 +1974,8 @@ function initHome(): void {
   renderHome();
   // Paket 38 — tombol lipat kartu Beranda (semua kartu punya data-card).
   initHomeCollapse();
-  // Paket 42 — kartu statistik AIDEN: ketuk tile membuka tab terkait.
-  document.querySelectorAll<HTMLButtonElement>(".home-stat").forEach((tile) => {
+  // Paket 44 — grid ikon menu SEMESTA: ketuk tile membuka tab terkait.
+  document.querySelectorAll<HTMLButtonElement>(".menu-tile").forEach((tile) => {
     tile.addEventListener("click", () => {
       const tab = tile.dataset.tab;
       if (tab) activateTab(tab);

@@ -576,145 +576,159 @@ async function main() {
     );
     await page.setViewport({ width: 1280, height: 900 });
     await sleep(300);
-    // Paket 42 — baris statistik AIDEN: 4 kartu berwarna, angka live =
-    // cermin kartu Beranda (IKM, surat bulan ini, pengaduan baru, masa
-    // bhakti total), tiap kartu beda warna.
-    const p42stats = await page.evaluate(() => {
-      const tiles = [...document.querySelectorAll("#home-stat-row .home-stat")];
-      const txt = (id) => document.getElementById(id)?.textContent ?? "";
-      const akan = Number(txt("home-masa-akan") || "0");
-      const habis = Number(txt("home-masa-habis") || "0");
+    // Paket 44 — REVERT: baris statistik AIDEN dihapus; strip
+    // quick-stats kembali tampil di Beranda TANPA tile IKM (tile ke-2
+    // kini "Draf surat" = jumlah draf tersimpan, binding
+    // countLocalDrafts()). Skor IKM tidak ada lagi di strip.
+    const p44qs = await page.evaluate(() => {
+      const qs = document.querySelector(".quick-stats");
+      const drafts = JSON.parse(
+        localStorage.getItem("desaai-drafts-v1") ?? "[]",
+      ).length;
+      return {
+        rowGone: document.getElementById("home-stat-row") === null,
+        qsVisible: getComputedStyle(qs).display !== "none",
+        qsItems: document.querySelectorAll("#quick-stats .hero-stat").length,
+        qsDrafts: document.getElementById("qs-drafts")?.textContent ?? null,
+        qsDraftsExpected: String(drafts),
+        qsIkmGone: document.getElementById("qs-ikm") === null,
+        labels: [...document.querySelectorAll("#quick-stats .hero-stat span[data-i18n]")].map(
+          (el) => el.textContent,
+        ),
+      };
+    });
+    check(
+      "Paket 44: AIDEN stat row gone; quick-stats visible on Beranda with Draf surat tile, no IKM tile",
+      p44qs.rowGone && p44qs.qsVisible && p44qs.qsItems === 4 &&
+        p44qs.qsIkmGone && p44qs.qsDrafts === p44qs.qsDraftsExpected &&
+        !p44qs.labels.some((l) => /skor ikm|ikm score/i.test(l)),
+      JSON.stringify(p44qs),
+    );
+    // Paket 44 — grid ikon menu SEMESTA: 10 tile (semua tab kecuali
+    // Beranda), ikon + label saja, tanpa angka.
+    const p44grid = await page.evaluate(() => {
+      const tiles = [...document.querySelectorAll("#menu-grid .menu-tile")];
       return {
         count: tiles.length,
-        variants: tiles.map((t) =>
-          [...t.classList].find((c) => c.startsWith("home-stat-") && c !== "home-stat"),
+        tabs: tiles.map((t) => t.dataset.tab),
+        hasIcon: tiles.every((t) => t.querySelector("svg") !== null),
+        hasLabel: tiles.every(
+          (t) => t.querySelector("span")?.textContent.trim().length > 0,
         ),
-        ikm: txt("home-stat-ikm") === txt("home-ikm-score") && txt("home-stat-ikm") !== "",
-        letters: txt("home-stat-letters") === txt("home-month-letters"),
-        aduan: txt("home-stat-aduan") === txt("home-aduan-baru"),
-        masa: txt("home-stat-masa") === String(akan + habis),
-        masaSub: txt("home-stat-masa-sub"),
-        ikmSub: txt("home-stat-ikm-sub"),
-        lettersSub: txt("home-stat-letters-sub"),
+        hasNumber: tiles.some((t) => /\d/.test(t.textContent)),
       };
     });
     check(
-      "Paket 42: AIDEN stat row has 4 colored tiles mirroring live Beranda numbers",
-      p42stats.count === 4 &&
-        new Set(p42stats.variants).size === 4 &&
-        p42stats.ikm && p42stats.letters && p42stats.aduan && p42stats.masa &&
-        (/akan habis|expiring/.test(p42stats.masaSub)) &&
-        (/responden|respondent/.test(p42stats.ikmSub)) &&
-        p42stats.lettersSub.length > 0,
-      JSON.stringify(p42stats),
+      "Paket 44: icon menu grid has 10 tiles (all tabs except Beranda), icon + label, no numbers",
+      p44grid.count === 10 &&
+        JSON.stringify([...p44grid.tabs].sort()) ===
+          JSON.stringify([
+            "agenda", "drafts", "ikm", "kepegawaian", "kontak", "letters",
+            "pengaduan", "qa", "settings", "summarize",
+          ]) &&
+        p44grid.hasIcon && p44grid.hasLabel && !p44grid.hasNumber,
+      JSON.stringify(p44grid),
     );
-    // Paket 42 — ketuk tile statistik membuka tab terkait.
-    await page.click(".home-stat-teal");
-    await sleep(300);
-    const p42nav1 = await page.evaluate(() => ({
-      lettersVisible: !document.getElementById("panel-letters").hidden,
-      homeHidden: document.getElementById("panel-home").hidden,
-    }));
-    await page.click('[data-tab="home"]');
-    await sleep(300);
-    await page.click(".home-stat-blue");
-    await sleep(300);
-    const p42nav2 = await page.evaluate(() => ({
-      ikmVisible: !document.getElementById("panel-ikm").hidden,
-      trendStillThere: document.querySelector("#ikm-trend svg") !== null,
-    }));
-    await page.click('[data-tab="home"]');
-    await sleep(300);
+    // Paket 44 — ketuk tiap tile menu membuka tabnya.
+    const p44nav = [];
+    for (const tab of [
+      "letters", "summarize", "qa", "drafts", "kepegawaian", "ikm",
+      "pengaduan", "agenda", "kontak", "settings",
+    ]) {
+      await page.click(`#menu-grid .menu-tile[data-tab="${tab}"]`);
+      await sleep(300);
+      const ok = await page.evaluate(
+        (t) => !document.getElementById(`panel-${t}`).hidden,
+        tab,
+      );
+      p44nav.push({ tab, ok });
+      await page.click('[data-tab="home"]');
+      await sleep(300);
+    }
     check(
-      "Paket 42: tapping a stat tile opens its tab (Surat → Draf Surat, IKM → Kepuasan)",
-      p42nav1.lettersVisible && p42nav1.homeHidden && p42nav2.ikmVisible && p42nav2.trendStillThere,
-      JSON.stringify({ p42nav1, p42nav2 }),
+      "Paket 44: every menu tile opens its tab",
+      p44nav.every((r) => r.ok),
+      JSON.stringify(p44nav),
     );
-    // Paket 42 — panel dua kolom di desktop 1280px: Laporan + Pengaduan
-    // berdampingan (baris 1), Briefing + Pengingat berdampingan (baris 2).
-    const p42cols = await page.evaluate(() => {
-      const r = (sel) => document.querySelector(sel)?.getBoundingClientRect();
-      const rep = r(".bento-report");
-      const adu = r(".bento-kpi");
-      const bri = r(".bento-briefing");
-      const rem = r("#home-reminder-card");
-      const sameRow = (a, b) => a && b && Math.abs(a.top - b.top) < 4 && b.left > a.right;
+    // Paket 44 — panel kembali SATU KOLOM di desktop 1280px (batalkan
+    // grid 2 kolom Paket 42); 11 kartu tetap ada.
+    const p44cols = await page.evaluate(() => {
+      const lefts = [...document.querySelectorAll("#panel-home .bento-card")]
+        .filter((el) => el.getBoundingClientRect().width > 0)
+        .map((el) => Math.round(el.getBoundingClientRect().left));
       return {
-        repAdu: sameRow(rep, adu),
-        briRem: sameRow(bri, rem),
-        repTop: rep ? Math.round(rep.top) : -1,
-        aduTop: adu ? Math.round(adu.top) : -1,
-        briTop: bri ? Math.round(bri.top) : -1,
-        remTop: rem ? Math.round(rem.top) : -1,
         cards: document.querySelectorAll("#panel-home .bento-card").length,
+        lefts: [...new Set(lefts)],
       };
     });
     check(
-      "Paket 42: Beranda panels sit two-column on desktop (report+complaints, briefing+reminder)",
-      p42cols.repAdu && p42cols.briRem && p42cols.cards === 11,
-      JSON.stringify(p42cols),
+      "Paket 44: Beranda panels back to one column on desktop, 11 cards stay",
+      p44cols.cards === 11 && p44cols.lefts.length === 1,
+      JSON.stringify(p44cols),
     );
-    // Paket 42 — HP 390px: kartu statistik tetap 2 per baris, panel
-    // menumpuk 1 kolom, tanpa overflow horizontal.
+    // Paket 44 — HP 390px: grid ikon 3 per baris, panel menumpuk
+    // 1 kolom, tanpa overflow horizontal.
     await page.setViewport({ width: 390, height: 844 });
     await sleep(400);
-    const p42mob = await page.evaluate(() => {
-      const tiles = [...document.querySelectorAll("#home-stat-row .home-stat")].map((el) => {
+    const p44mob = await page.evaluate(() => {
+      const tiles = [...document.querySelectorAll("#menu-grid .menu-tile")].map((el) => {
         const r = el.getBoundingClientRect();
         return { top: Math.round(r.top), left: Math.round(r.left), right: Math.round(r.right) };
       });
-      // Kartu tersembunyi (warga di mode Petugas) punya rect 0 — saring.
       const cards = [...document.querySelectorAll("#panel-home .bento-card")]
         .filter((el) => el.getBoundingClientRect().width > 0)
         .map((el) => Math.round(el.getBoundingClientRect().left));
       return {
         tiles,
-        twoPerRow: tiles.length === 4 && tiles[0].top === tiles[1].top &&
-          tiles[2].top > tiles[1].top && tiles[2].top === tiles[3].top,
+        threePerRow:
+          tiles.length === 10 && tiles[0].top === tiles[1].top &&
+          tiles[1].top === tiles[2].top && tiles[3].top > tiles[2].top &&
+          tiles[3].top === tiles[4].top && tiles[4].top === tiles[5].top,
         allInside: tiles.every((t) => t.left >= 0 && t.right <= 390),
         cardsOneCol: new Set(cards).size === 1,
         docOverflow: document.documentElement.scrollWidth - 390,
       };
     });
     check(
-      "Paket 42: at 390px stat tiles stay 2-per-row, panels stack 1 column, no horizontal overflow",
-      p42mob.twoPerRow && p42mob.allInside && p42mob.cardsOneCol && p42mob.docOverflow <= 0,
-      JSON.stringify(p42mob),
+      "Paket 44: at 390px menu grid is 3-per-row, panels stack 1 column, no horizontal overflow",
+      p44mob.threePerRow && p44mob.allInside && p44mob.cardsOneCol && p44mob.docOverflow <= 0,
+      JSON.stringify(p44mob),
     );
     await page.setViewport({ width: 1280, height: 900 });
     await sleep(300);
-    // Paket 43 — strip quick-stats lama disembunyikan HANYA saat tab
-    // Beranda aktif (duplikat baris statistik AIDEN); tampil lagi di
-    // tab lain. Data/binding strip tidak dihapus (4 hero-stat tetap ada
-    // di DOM, nilainya tetap live).
-    const p43qs = await page.evaluate(() => {
-      const qs = document.querySelector(".quick-stats");
-      const row = document.querySelector("#home-stat-row");
+    // Paket 44 — skor IKM 90,28 hanya muncul SATU KALI di permukaan
+    // ringkasan Beranda (di kartu SKOR IKM): tidak di strip
+    // quick-stats, tidak di ringkasan Briefing Pagi, tidak di baris
+    // Camat. (Cek dibatasi ke permukaan ringkasan itu — skor memang
+    // juga tampil di dalam tabel rincian pratinjau Laporan bulanan,
+    // itu rekap lengkap, bukan duplikasi ringkasan.)
+    const p44ikm = await page.evaluate(() => {
+      const score = document.getElementById("home-ikm-score")?.textContent ?? "";
+      const surfaces = [
+        document.getElementById("quick-stats")?.innerText ?? "",
+        document.getElementById("home-briefing-summary")?.textContent ?? "",
+        document.getElementById("home-camat-body")?.innerText ?? "",
+        document.getElementById("home-ikm-score")?.textContent ?? "",
+      ].join("\n");
       return {
-        bodyHome: document.body.classList.contains("tab-home"),
-        qsHidden: getComputedStyle(qs).display === "none",
-        rowVisible: row.getBoundingClientRect().width > 0,
-        qsItems: document.querySelectorAll("#quick-stats .hero-stat").length,
+        score,
+        countInSurfaces:
+          score && score !== "–" ? surfaces.split(score).length - 1 : -1,
+        qsHasScore: (document.getElementById("quick-stats")?.innerText ?? "").includes(score),
+        briefing: document.getElementById("home-briefing-summary")?.textContent ?? "",
+        camatIkmRow:
+          [...document.querySelectorAll("#home-camat-body .camat-row")]
+            .map((r) => r.textContent)
+            .find((t) => /IKM/.test(t)) ?? "",
       };
     });
     check(
-      "Paket 43: quick-stats strip hidden on Beranda, AIDEN stat row still visible",
-      p43qs.bodyHome && p43qs.qsHidden && p43qs.rowVisible && p43qs.qsItems === 4,
-      JSON.stringify(p43qs),
+      "Paket 44: IKM score appears exactly once on Beranda (SKOR IKM card only)",
+      p44ikm.score !== "" && p44ikm.score !== "–" && p44ikm.countInSurfaces === 1 &&
+        !p44ikm.qsHasScore && !p44ikm.briefing.includes(p44ikm.score) &&
+        !p44ikm.camatIkmRow.includes(p44ikm.score),
+      JSON.stringify(p44ikm),
     );
-    await page.click('[data-tab="letters"]');
-    await sleep(300);
-    const p43qsOther = await page.evaluate(() => ({
-      bodyHome: document.body.classList.contains("tab-home"),
-      qsVisible: getComputedStyle(document.querySelector(".quick-stats")).display !== "none",
-    }));
-    check(
-      "Paket 43: quick-stats strip visible again on other tabs",
-      !p43qsOther.bodyHome && p43qsOther.qsVisible,
-      JSON.stringify(p43qsOther),
-    );
-    await page.click('[data-tab="home"]');
-    await sleep(300);
     // Paket 41 — the follow-up card is gone, so its aggregate checks move
     // to the surviving surfaces. The "1 not yet dispositioned" aggregate
     // line has no home any more (noted in PAKET-41-LAPORAN.md); what
@@ -836,11 +850,14 @@ async function main() {
       year: "numeric",
     });
     check(
-      "briefing card shows today's date + summary counts (3 new complaints, IKM 90)",
+      // Paket 44 — ringkasan Briefing Pagi TANPA fragmen IKM (skor IKM
+      // dobel di Beranda bila ada di sini; satu-satunya kemunculan skor
+      // ada di kartu SKOR IKM).
+      "briefing card shows today's date + summary counts (3 new complaints, no IKM)",
       briefing.visible &&
         briefing.date === todayLong &&
         /3 (pengaduan baru|new complaints)/.test(briefing.summary) &&
-        /IKM 90/.test(briefing.summary),
+        !/IKM/.test(briefing.summary),
       `date=${briefing.date} summary=${briefing.summary}`,
     );
     check(
@@ -4092,14 +4109,17 @@ async function main() {
     const dlStatus = await page.$eval("#ikm-share-status", (el) => el.textContent);
     check("QR download button reports the download", /diunduh|downloaded/i.test(dlStatus), dlStatus);
     // Quick-stats strip reflects live data (1 letter draft seeded,
-    // IKM all-1s score 25.00, 2 complaints resolved, officers = personnel total)
+    // tile ke-2 kini jumlah draf tersimpan — bukan lagi skor IKM
+    // (Paket 44); 2 complaints resolved, officers = personnel total)
     const qs = await page.evaluate(() => ({
       letters: document.getElementById("qs-letters")?.textContent ?? "",
-      ikm: document.getElementById("qs-ikm")?.textContent ?? "",
+      drafts: document.getElementById("qs-drafts")?.textContent ?? "",
+      draftsExpected: String(
+        JSON.parse(localStorage.getItem("desaai-drafts-v1") ?? "[]").length,
+      ),
       aduan: document.getElementById("qs-aduan")?.textContent ?? "",
       perangkat: document.getElementById("qs-perangkat")?.textContent ?? "",
       kegTotal: document.getElementById("keg-stat-total")?.textContent ?? "",
-      dashIkm: document.getElementById("ikm-score")?.textContent ?? "",
       items: document.querySelectorAll("#quick-stats .hero-stat").length,
     }));
     check(
@@ -4108,10 +4128,10 @@ async function main() {
       `items=${qs.items}`,
     );
     check(
-      "quick-stats match live data (1 letter, IKM = dashboard, 2 resolved, officers = personnel total)",
-      qs.letters === "1" && qs.ikm === qs.dashIkm && qs.aduan === "2" &&
+      "quick-stats match live data (1 letter, drafts = total drafts, 2 resolved, officers = personnel total)",
+      qs.letters === "1" && qs.drafts === qs.draftsExpected && qs.aduan === "2" &&
         qs.perangkat === qs.kegTotal && qs.perangkat !== "",
-      `letters=${qs.letters} ikm=${qs.ikm} dash=${qs.dashIkm} aduan=${qs.aduan} perangkat=${qs.perangkat} kegTotal=${qs.kegTotal}`,
+      `letters=${qs.letters} drafts=${qs.drafts} draftsExpected=${qs.draftsExpected} aduan=${qs.aduan} perangkat=${qs.perangkat} kegTotal=${qs.kegTotal}`,
     );
 
     // 9b. Paket 7 — command palette, citizen mode, complaints chart
