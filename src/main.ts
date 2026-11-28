@@ -343,6 +343,7 @@ const TAB_HASHES: Record<string, string> = {
   ikm: "ikm",
   pengaduan: "pengaduan",
   agenda: "agenda",
+  kontak: "kontak",
   pengaturan: "settings",
 };
 const HASH_BY_TAB: Record<string, string> = Object.fromEntries(
@@ -612,7 +613,7 @@ function initMode(): void {
 // ---------- Paket 35 — Pengaturan (tab baru) ----------
 
 const APP_VERSION = "0.1.0";
-const APP_PAKET = 39;
+const APP_PAKET = 40;
 
 /** Kunci sesi login demo (Paket 36) — juga dibaca skrip inline di
  * index.html sebelum bundle boot. */
@@ -879,10 +880,9 @@ function initSettings(): void {
     activateTab("home");
   });
   $("set-contact-link").addEventListener("click", () => {
-    activateTab("home");
-    document
-      .getElementById("home-contact-card")
-      ?.scrollIntoView({ block: "start" });
+    // Paket 40 — tombol "Kontak kantor" membuka tab Contact Person
+    // (dulu scroll ke kartu Hubungi Kami di Beranda — kartu itu dihapus).
+    activateTab("kontak");
   });
 
   // Hapus semua data — konfirmasi dua langkah: ketuk pertama hanya
@@ -3180,6 +3180,7 @@ const ANIN_TAB_I18N: Record<string, string> = {
   ikm: "tabIkm",
   pengaduan: "tabPengaduan",
   agenda: "tabAgenda",
+  kontak: "tabKontak",
 };
 
 /** Suggestion chips under the chat input (rebuilt on language change). */

@@ -263,20 +263,19 @@ async function main() {
       ),
     }));
     const monthName = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
-    // Paket 39 — 15 kartu tersisa (3 kartu duplikat dihapus: pengaduan
-    // per jenis, perangkat per desa, komposisi jabatan — datanya ada di
-    // tab Pengaduan / Kepegawaian). Dicek sebagai himpunan, bukan sekadar
+    // Paket 40 — 14 kartu tersisa (kartu Hubungi Kami pindah ke tab
+    // Contact Person sendiri). Dicek sebagai himpunan, bukan sekadar
     // jumlah, supaya detail kegagalan menunjukkan kartu mana yang
     // hilang/lebih.
     const expectCards = [
       "bento-search", "home-anin", "home-briefing", "home-camat",
       "home-warga-card", "bento-ikm", "bento-kpi", "bento-kpi",
       "bento-masa", "bento-month", "bento-trend", "bento-report",
-      "home-contact-card", "home-adopsi-card", "home-followup-card",
+      "home-adopsi-card", "home-followup-card",
     ];
     check(
-      "bento shows 15 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
-      bento.cards.length === 15 &&
+      "bento shows 14 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
+      bento.cards.length === 14 &&
         expectCards.every((c) => bento.cards.includes(c)) &&
         !bento.cards.includes("home-backup-card") &&
         !bento.cards.includes("home-letterhead-card") &&
@@ -323,7 +322,6 @@ async function main() {
         aduanBaru: has(".bento-kpi"),
         masa: has(".bento-masa"),
         trend: has(".bento-trend"),
-        contact: has("#home-contact-card"),
         trendBtn: document.querySelector(".bento-trend .bento-collapse-btn") !== null,
         monthBtn: document.querySelector(".bento-month .bento-collapse-btn") !== null,
         reportBtn: document.querySelector(".bento-report .bento-collapse-btn") !== null,
@@ -335,11 +333,32 @@ async function main() {
       JSON.stringify(keptCards),
     );
     check(
-      "Paket 39: kept cards (This Month, Monthly Report, New Complaints, Terms of Office, IKM Trend, Hubungi Kami) still show with collapse buttons",
+      "Paket 39: kept cards (This Month, Monthly Report, New Complaints, Terms of Office, IKM Trend) still show with collapse buttons",
       keptCards.month && keptCards.report && keptCards.aduanBaru && keptCards.masa &&
-        keptCards.trend && keptCards.contact &&
+        keptCards.trend &&
         keptCards.monthBtn && keptCards.reportBtn && !keptCards.trendBtn,
       JSON.stringify(keptCards),
+    );
+    // Paket 40 — kartu Hubungi Kami TIDAK ada lagi di Beranda (pindah ke
+    // tab Contact Person); tab baru ada di sidebar tepat di atas Pengaturan.
+    const kontakTab = await page.evaluate(() => {
+      const tabs = [...document.querySelectorAll(".sidebar .tab")].map(
+        (b) => b.dataset.tab,
+      );
+      return {
+        goneCard: document.getElementById("home-contact-card") === null,
+        tabExists: tabs.includes("kontak"),
+        aboveSettings: tabs.indexOf("kontak") === tabs.indexOf("settings") - 1,
+        afterAgenda: tabs.indexOf("kontak") === tabs.indexOf("agenda") + 1,
+        label: document.querySelector('[data-tab="kontak"] span')?.textContent ?? "",
+        tabs: tabs.length,
+      };
+    });
+    check(
+      "Paket 40: Hubungi Kami card is gone from Beranda; Contact Person tab sits exactly above Settings (after Agenda Surat)",
+      kontakTab.goneCard && kontakTab.tabExists && kontakTab.aboveSettings &&
+        kontakTab.afterAgenda && kontakTab.label === "Contact Person",
+      JSON.stringify(kontakTab),
     );
 
     // Paket 38 — tombol lipat kartu Beranda (semua kartu kecuali IKM Trend).
@@ -357,8 +376,8 @@ async function main() {
       };
     });
     check(
-      "every Beranda card except IKM Trend has a collapse button (14 of 15)",
-      collapseInfo.total === 15 && collapseInfo.withBtn === 14 && !collapseInfo.trendBtn,
+      "every Beranda card except IKM Trend has a collapse button (13 of 14)",
+      collapseInfo.total === 14 && collapseInfo.withBtn === 13 && !collapseInfo.trendBtn,
       `total=${collapseInfo.total} withBtn=${collapseInfo.withBtn} trendBtn=${collapseInfo.trendBtn}`,
     );
     check(
@@ -3838,8 +3857,8 @@ async function main() {
       })),
     );
     check(
-      "all 10 tabs have an SVG icon + label",
-      tabIcons.length === 10 && tabIcons.every((t) => t.hasSvg && t.label.length > 0),
+      "all 11 tabs have an SVG icon + label (Paket 40 added Contact Person)",
+      tabIcons.length === 11 && tabIcons.every((t) => t.hasSvg && t.label.length > 0),
       tabIcons.map((t) => `${t.label}:${t.hasSvg ? "svg" : "NO-SVG"}`).join(" | "),
     );
     // Survey distribution: link + QR code (generated locally, offline)
@@ -4272,8 +4291,8 @@ async function main() {
       },
     );
     check(
-      "Paket 28 sidebar exists with all 10 tabs",
-      p28Shell.sidebar && p28Shell.tabs === 10,
+      "Paket 28 sidebar exists with all 11 tabs (Paket 40 added Contact Person)",
+      p28Shell.sidebar && p28Shell.tabs === 11,
       `sidebar=${p28Shell.sidebar} tabs=${p28Shell.tabs}`,
     );
     check(
@@ -4789,6 +4808,20 @@ async function main() {
       /Keterlambatan/.test(keluhanAnswer),
       keluhanAnswer.slice(0, 140),
     );
+    // Paket 40 — Anin "buka contact person" opens the Contact Person tab.
+    await aninAsk("buka contact person");
+    await sleep(300);
+    const aninKontak = await page.evaluate(() => ({
+      active: document.querySelector('[data-tab="kontak"]')?.classList.contains("active") ?? false,
+      visible: !document.getElementById("panel-kontak").hidden,
+    }));
+    check(
+      "Anin 'buka contact person' opens the Contact Person tab",
+      aninKontak.active && aninKontak.visible,
+      JSON.stringify(aninKontak),
+    );
+    await page.click('[data-tab="home"]');
+    await sleep(300);
     const perbaikiAnswer = await aninAsk("Apa yang harus diperbaiki?");
     check(
       "Anin analis suggests improvements (lowest IKM element + top complaint)",
@@ -5065,41 +5098,64 @@ async function main() {
     await page.click("#anin-panel-close");
     await sleep(200);
 
-    // 9. Settings tab (Paket 35) + Contact card on the home dashboard.
-    await page.click('[data-tab="home"]');
+    // 9. Settings tab (Paket 35) + Contact Person tab (Paket 40 — the
+    // "Hubungi Kami" card moved from Beranda to its own full page).
+    await page.click('[data-tab="kontak"]');
     await sleep(300);
     const contact = await page.evaluate(() => {
-      const card = document.getElementById("home-contact-card");
-      if (!card) return null;
-      const rows = [...card.querySelectorAll(".contact-list li")].map((li) => li.textContent ?? "");
+      const panel = document.getElementById("panel-kontak");
+      if (!panel || panel.hidden) return null;
+      const rows = [...panel.querySelectorAll(".contact-list li")].map((li) => li.textContent ?? "");
       return {
         rows: rows.length,
-        text: card.textContent ?? "",
-        tel: card.querySelector('a[href^="tel:"]')?.getAttribute("href") ?? "",
-        mail: card.querySelector('a[href^="mailto:"]')?.getAttribute("href") ?? "",
-        links: [...card.querySelectorAll("a")].map((a) => a.getAttribute("href") ?? ""),
+        text: panel.textContent ?? "",
+        tel: panel.querySelector('a[href^="tel:"]')?.getAttribute("href") ?? "",
+        mail: panel.querySelector('a[href^="mailto:"]')?.getAttribute("href") ?? "",
+        links: [...panel.querySelectorAll("a")].map((a) => a.getAttribute("href") ?? ""),
+        title: document.getElementById("page-title")?.textContent ?? "",
+        active: document.querySelector('[data-tab="kontak"]')?.classList.contains("active") ?? false,
       };
     });
     check(
-      "contact card shows on Beranda with all six rows",
+      "Contact Person tab shows the full contact page with all six rows",
       contact !== null &&
         contact.rows === 6 &&
+        contact.active &&
+        /Contact Person/.test(contact.title) &&
         /Jl\. Merdeka No 02 Desa Katis, Kode Pos 33674/.test(contact.text) &&
         /08117121844/.test(contact.text) &&
         /kec\.spkatis2014@gmail\.com/.test(contact.text) &&
         /kantor kecamatan simpangkatis/.test(contact.text) &&
         /@kec_simpangkatis/.test(contact.text) &&
         /kecamatansimpangkatis/.test(contact.text),
-      contact ? `${contact.rows} rows` : "card missing",
+      contact ? `${contact.rows} rows title="${contact.title}"` : "panel missing",
     );
     check(
-      "contact card phone + email are tappable (tel:/mailto:), socials have no invented links",
+      "contact phone + email are tappable (tel:/mailto:), socials have no invented links",
       contact !== null &&
         contact.tel === "tel:08117121844" &&
         contact.mail === "mailto:kec.spkatis2014@gmail.com" &&
         contact.links.length === 2,
-      contact ? JSON.stringify(contact.links) : "card missing",
+      contact ? JSON.stringify(contact.links) : "panel missing",
     );
+    // Contact Person stays visible in citizen mode (public office info,
+    // unlike the officer-only Settings tab).
+    await page.click("#mode-toggle");
+    await sleep(200);
+    const kontakWarga = await page.evaluate(() => ({
+      bodyWarga: document.body.classList.contains("mode-warga"),
+      kontakVisible:
+        getComputedStyle(document.querySelector('[data-tab="kontak"]')).display !== "none",
+      settingsHidden:
+        getComputedStyle(document.querySelector('[data-tab="settings"]')).display === "none",
+    }));
+    check(
+      "Contact Person tab is visible in citizen mode while Settings stays officer-only",
+      kontakWarga.bodyWarga && kontakWarga.kontakVisible && kontakWarga.settingsHidden,
+      JSON.stringify(kontakWarga),
+    );
+    await page.click("#mode-toggle");
+    await sleep(200);
 
     await page.click('[data-tab="settings"]');
     await sleep(300);
@@ -5115,6 +5171,19 @@ async function main() {
       settingsOpen.visible && settingsOpen.active && /Pengaturan|Settings/.test(settingsOpen.title),
       JSON.stringify(settingsOpen),
     );
+    await page.click("#set-contact-link");
+    await sleep(300);
+    const contactLink = await page.evaluate(() => ({
+      active: document.querySelector('[data-tab="kontak"]')?.classList.contains("active") ?? false,
+      visible: !document.getElementById("panel-kontak").hidden,
+    }));
+    check(
+      "settings 'Kontak kantor' button opens the Contact Person tab",
+      contactLink.active && contactLink.visible,
+      JSON.stringify(contactLink),
+    );
+    await page.click('[data-tab="settings"]');
+    await sleep(300);
     const account = await page.evaluate(() => ({
       user: document.getElementById("set-account-user")?.textContent ?? "",
       role: document.getElementById("set-account-role")?.textContent ?? "",

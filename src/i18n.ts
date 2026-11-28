@@ -1169,6 +1169,8 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   lettersFormTitle: { en: "Fill in the letter form", id: "Isi formulir surat" },
   // Paket 35 — Pengaturan (tab baru) + Kartu Kontak di Beranda
   tabSettings: { en: "Settings", id: "Pengaturan" },
+  // Paket 40 — tab Contact Person (di atas Pengaturan).
+  tabKontak: { en: "Contact Person", id: "Contact Person" },
   settingsTitle: { en: "Settings", id: "Pengaturan" },
   settingsHint: {
     en: "Account, display, language, Anin, letterhead, data and privacy — saved in this browser and applied immediately.",
@@ -1286,6 +1288,12 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     id: "© 2026 Kecamatan Simpangkatis – Bangka Tengah",
   },
   contactTitle: { en: "Contact us", id: "Hubungi Kami" },
+  // Paket 40 — halaman Contact Person (dulu kartu "Hubungi Kami" di Beranda).
+  contactPageTitle: { en: "Contact Person", id: "Contact Person" },
+  contactPageHint: {
+    en: "Public contact info for the Simpangkatis subdistrict office — address, phone, email, and social media.",
+    id: "Info kontak publik Kantor Kecamatan Simpangkatis — alamat, telepon, email, dan media sosial.",
+  },
   contactHint: {
     en: "Kecamatan Simpangkatis office — visit, call or write to us.",
     id: "Kantor Kecamatan Simpangkatis — kunjungi, telepon, atau kirim pesan.",

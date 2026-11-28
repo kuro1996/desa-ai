@@ -194,6 +194,10 @@
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M2 10h20"/></svg>
             <span data-i18n="tabAgenda">Mail Register</span>
           </button>
+          <button class="tab" data-tab="kontak" role="tab" aria-selected="false" type="button">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+            <span data-i18n="tabKontak">Contact Person</span>
+          </button>
           <button class="tab" data-tab="settings" role="tab" aria-selected="false" type="button">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             <span data-i18n="tabSettings">Settings</span>
@@ -520,57 +524,6 @@
                    28 Nov 10:40 WIB — jangan diubah/dikoreksi). Nama sosmed
                    tampil sebagai teks saja: tidak ada URL profil di gambar,
                    jadi tidak ada tautan yang dikarang. -->
-              <div class="bento-card bento-contact" id="home-contact-card" data-card="contact">
-                <p class="bento-label" data-i18n="contactTitle">Hubungi Kami</p>
-                <p class="hint bento-keep" data-i18n="contactHint">
-                  Kantor Kecamatan Simpangkatis — kunjungi, telepon, atau kirim pesan.
-                </p>
-                <ul class="contact-list">
-                  <li>
-                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    <div class="contact-text">
-                      <span class="contact-label" data-i18n="contactAddress">Alamat</span>
-                      <span>Jl. Merdeka No 02 Desa Katis, Kode Pos 33674</span>
-                    </div>
-                  </li>
-                  <li>
-                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                    <div class="contact-text">
-                      <span class="contact-label" data-i18n="contactPhone">Telepon</span>
-                      <a href="tel:08117121844">08117121844</a>
-                    </div>
-                  </li>
-                  <li>
-                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
-                    <div class="contact-text">
-                      <span class="contact-label" data-i18n="contactEmail">Email</span>
-                      <a href="mailto:kec.spkatis2014@gmail.com">kec.spkatis2014@gmail.com</a>
-                    </div>
-                  </li>
-                  <li>
-                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-                    <div class="contact-text">
-                      <span class="contact-label" data-i18n="contactFacebook">Facebook</span>
-                      <span>kantor kecamatan simpangkatis</span>
-                    </div>
-                  </li>
-                  <li>
-                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
-                    <div class="contact-text">
-                      <span class="contact-label" data-i18n="contactTwitter">Twitter / X</span>
-                      <span>@kec_simpangkatis</span>
-                    </div>
-                  </li>
-                  <li>
-                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></svg>
-                    <div class="contact-text">
-                      <span class="contact-label" data-i18n="contactInstagram">Instagram</span>
-                      <span>kecamatansimpangkatis</span>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-
               <!-- Paket 27 — Paket Adopsi Desa Lain: checklist + unduh paket JSON -->
               <div class="bento-card bento-adopsi" id="home-adopsi-card" data-card="adopsi">
                 <p class="bento-label" data-i18n="adopsiTitle">Paket Adopsi Desa Lain</p>
@@ -1626,6 +1579,65 @@
             <div id="agenda-export-status" class="status" aria-live="polite"></div>
           </section>
 
+          <!-- ============ PAKET 40 — CONTACT PERSON ============ -->
+          <!-- Info kontak publik kantor (data persis dari gambar Bos,
+               28 Nov 10:40 WIB — jangan diubah/dikoreksi). Dulu kartu
+               "Hubungi Kami" di Beranda; kini halaman penuh di tab sendiri,
+               tampil untuk Warga dan Petugas. Nama sosmed tampil sebagai
+               teks saja: tidak ada URL profil di gambar, jadi tidak ada
+               tautan yang dikarang. -->
+          <section id="panel-kontak" class="panel" role="tabpanel" hidden>
+            <h2 data-i18n="contactPageTitle">Contact Person</h2>
+            <p class="hint" data-i18n="contactPageHint">
+              Public contact info for the Simpangkatis subdistrict office —
+              address, phone, email, and social media.
+            </p>
+                <ul class="contact-list">
+                  <li>
+                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <div class="contact-text">
+                      <span class="contact-label" data-i18n="contactAddress">Alamat</span>
+                      <span>Jl. Merdeka No 02 Desa Katis, Kode Pos 33674</span>
+                    </div>
+                  </li>
+                  <li>
+                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <div class="contact-text">
+                      <span class="contact-label" data-i18n="contactPhone">Telepon</span>
+                      <a href="tel:08117121844">08117121844</a>
+                    </div>
+                  </li>
+                  <li>
+                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+                    <div class="contact-text">
+                      <span class="contact-label" data-i18n="contactEmail">Email</span>
+                      <a href="mailto:kec.spkatis2014@gmail.com">kec.spkatis2014@gmail.com</a>
+                    </div>
+                  </li>
+                  <li>
+                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                    <div class="contact-text">
+                      <span class="contact-label" data-i18n="contactFacebook">Facebook</span>
+                      <span>kantor kecamatan simpangkatis</span>
+                    </div>
+                  </li>
+                  <li>
+                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
+                    <div class="contact-text">
+                      <span class="contact-label" data-i18n="contactTwitter">Twitter / X</span>
+                      <span>@kec_simpangkatis</span>
+                    </div>
+                  </li>
+                  <li>
+                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></svg>
+                    <div class="contact-text">
+                      <span class="contact-label" data-i18n="contactInstagram">Instagram</span>
+                      <span>kecamatansimpangkatis</span>
+                    </div>
+                  </li>
+                </ul>
+          </section>
+
           <!-- ============ PAKET 35 — PENGATURAN ============ -->
           <!-- Urutan baku aplikasi umum: Akun paling atas, lalu preferensi
                harian (tampilan, bahasa), Anin, mode, kop surat, data &
@@ -1830,7 +1842,7 @@
               <h3 data-i18n="setHelp">Bantuan &amp; Tentang</h3>
               <div class="set-row">
                 <span data-i18n="setVersion">Versi</span>
-                <strong id="set-version-number">0.1.0 · Paket 39</strong>
+                <strong id="set-version-number">0.1.0 · Paket 40</strong>
               </div>
               <div class="set-row">
                 <span data-i18n="setContactLink">Kontak kantor</span>

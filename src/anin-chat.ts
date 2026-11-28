@@ -62,6 +62,7 @@ const TAB_KEYWORDS: Array<{ tab: string; keywords: string[] }> = [
   { tab: "ikm", keywords: ["ikm", "kepuasan", "survei kepuasan", "survey"] },
   { tab: "pengaduan", keywords: ["pengaduan", "aduan", "komplain", "keluhan"] },
   { tab: "agenda", keywords: ["agenda", "buku agenda", "mail register", "surat masuk"] },
+  { tab: "kontak", keywords: ["contact person", "kontak", "hubungi", "nomor telepon", "alamat kantor"] },
 ];
 
 // Analyst questions — checked BEFORE the app KB so "IKM rata-rata berapa?"
