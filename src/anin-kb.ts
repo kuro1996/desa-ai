@@ -87,7 +87,7 @@ export const ANIN_KB: AninKbEntry[] = [
     id: "pengaduan-selesai",
     titleId: "Menyelesaikan pengaduan",
     titleEn: "Resolving a complaint",
-    keywords: ["selesaikan pengaduan", "menyelesaikan pengaduan", "pengaduan selesai", "pengaduan bisa", "status pengaduan", "lacak pengaduan", "pengaduan saya", "pengaduan gimana", "ada pengaduan", "cara menyelesaikan pengaduan", "pengaduan ditindaklanjuti", "tindak lanjut pengaduan", "laporan pengaduan"],
+    keywords: ["selesaikan pengaduan", "menyelesaikan pengaduan", "pengaduan selesai", "pengaduan bisa", "pengaduan saya", "pengaduan gimana", "ada pengaduan", "cara menyelesaikan pengaduan", "pengaduan ditindaklanjuti", "tindak lanjut pengaduan", "laporan pengaduan"],
     answerKey: "aninFaqAduanSelesai",
   },
   {
@@ -196,14 +196,16 @@ export const ANIN_KB: AninKbEntry[] = [
     answerKey: "aninFaqSuara",
   },
   // Paket 46 — Lacak Surat, Radar Tenggat, Statistik Warga, TTE demo.
-  // "lacak-surat" diletakkan SEBELUM "pengaduan-selesai" supaya
-  // pertanyaan "lacak pengaduan" yang imbang skornya dijawab oleh
-  // pelacak status, bukan alur penyelesaian.
+  // "lacak pengaduan" dan "status pengaduan" HANYA ada di kata kunci
+  // entri ini (dipindah dari "pengaduan-selesai" di Paket 47):
+  // pertanyaan telanjang itu dulu seri skor dengan alur penyelesaian
+  // dan dijawab alur penyelesaian — padahal yang ditanya adalah
+  // MELACAK status, bukan menyelesaikan.
   {
     id: "lacak-surat",
     titleId: "Lacak Status Surat",
     titleEn: "Track a letter",
-    keywords: ["lacak surat", "lacak pengaduan", "cek status surat", "status surat", "nomor tiket", "lacak tiket", "cek tiket", "tiket aduan", "lacak nomor surat", "cek pengaduan", "pengaduan saya di mana", "surat saya sampai mana"],
+    keywords: ["lacak surat", "lacak pengaduan", "cek status surat", "status surat", "status pengaduan", "nomor tiket", "lacak tiket", "cek tiket", "tiket aduan", "lacak nomor surat", "cek pengaduan", "pengaduan saya di mana", "surat saya sampai mana"],
     answerKey: "aninFaqLacak",
   },
   {

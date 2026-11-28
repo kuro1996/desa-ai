@@ -5628,6 +5628,24 @@ async function main() {
       /Lacak Status Surat|Track a Letter/.test(lacakAnswer) && /ADU-2026-0001/.test(lacakAnswer),
       lacakAnswer.slice(0, 120),
     );
+    // Paket 47 — "lacak pengaduan" yang telanjang dulu seri skor dengan
+    // entri penyelesaian pengaduan dan dijawab alur penyelesaian (salah
+    // niat: yang ditanya adalah MELACAK). Kata kunci itu kini hanya ada
+    // di entri lacak-surat, jadi pertanyaan ini harus dijawab FAQ lacak.
+    const lacakAduanAnswer = await aninAsk("lacak pengaduan");
+    check(
+      "Paket 47: Anin menjawab 'lacak pengaduan' dengan FAQ lacak (bukan alur penyelesaian)",
+      /Lacak Status Surat|Track a Letter/.test(lacakAduanAnswer) && /ADU-2026-0001/.test(lacakAduanAnswer),
+      lacakAduanAnswer.slice(0, 120),
+    );
+    // Sama: "status pengaduan" juga frasa pelacakan, bukan penyelesaian —
+    // kata kuncinya dipindah dari entri penyelesaian ke entri lacak.
+    const statusAduanAnswer = await aninAsk("status pengaduan");
+    check(
+      "Paket 47: Anin menjawab 'status pengaduan' dengan FAQ lacak (bukan alur penyelesaian)",
+      /Lacak Status Surat|Track a Letter/.test(statusAduanAnswer) && /ADU-2026-0001/.test(statusAduanAnswer),
+      statusAduanAnswer.slice(0, 120),
+    );
     // "tenggat"/"deadline" memicu ringkasan Pengingat (langkah 2, sebelum
     // KB Anin) — jadi tanya radar lewat frasa "jatuh tempo", yang hanya
     // cocok di kata kunci entri ini.

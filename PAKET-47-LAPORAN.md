@@ -41,7 +41,7 @@ Semua perubahan memakai **data lokal nyata** aplikasi — tidak ada angka/nama/N
 ### e. Pustaka `docx` di-load dinamis (bundle awal mengecil)
 
 - `src/main.ts` tidak lagi mengimpor statis `buildKegDocx` / `buildMonthlyReportDocx` / `DOCX_MIME` (yang terakhir tidak terpakai); kedua fungsi ekspor kini `await import("./laporan-docx")` saat dipanggil, plus pemanasan latar saat idle (`requestIdleCallback`, timeout 5 dtk, fallback `setTimeout` 3 dtk) supaya ekspor pertama tetap instan.
-- Hasil build: bundle utama **1.332,19 kB → 1.149,10 kB** (gzip 351,88 → 299,68 kB); chunk baru `laporan-docx-*.js` 186,26 kB (gzip 53,52 kB). Ekspor tetap offline (chunk ada di module map + SW cache-first untuk aset ber-hash). Vite tidak mengemisikan tautan modulepreload untuk chunk itu di `dist/index.html` (terverifikasi).
+- Hasil build: bundle utama **1.332,19 kB → 1.149,08 kB** (gzip 351,88 → 299,68 kB); chunk baru `laporan-docx-*.js` 186,26 kB (gzip 53,52 kB). Ekspor tetap offline (chunk ada di module map + SW cache-first untuk aset ber-hash). Vite tidak mengemisikan tautan modulepreload untuk chunk itu di `dist/index.html` (terverifikasi).
 
 ### f. Validasi .docx dengan membacanya kembali (python-docx)
 
@@ -58,7 +58,23 @@ Semua perubahan memakai **data lokal nyata** aplikasi — tidak ada angka/nama/N
 
 ### h. Polish visual kecil
 
-- Padding bawah konten ditambah supaya tombol mengambang "Tanya Anin" tidak menutupi baris terakhir kartu (`src/styles.css`, `index.html`) — ada cek headlessnya (`padding-bottom=96px`).
+- Padding bawah konten ditambah supaya tombol mengambang "Tanya Anin" tidak menutupi baris terakhir kartu (`src/styles.css` 48px → 96px) — ada cek headlessnya (`padding-bottom=96px`).
+
+### i. TTE demo kini ikut tercetak (bug cetak yang ketahuan saat audit)
+
+- Dulu: lembar surat di layar menampilkan blok TTE CONTOH DEMO di bawah tanda tangan, tapi alur cetak (`#letter-print` dan `doArchivePrint()`) hanya mengisi badan surat + blok tanda tangan — **blok TTE diam-diam hilang dari hasil cetakan**. Surat yang dicetak jadi terlihat seperti memakai tanda tangan biasa tanpa label demo.
+- Kini: helper baru `tteDemoPrintLines()` (`src/main.ts`, 5 baris yang sama seperti cetak laporan bulanan: judul — label, penandatangan, waktu, kode, catatan BSrE) dipakai `printMonthlyReport()` (refaktor, tanpa duplikasi) dan kedua handler cetak; div baru `#letter-print-tte` + `#archive-print-tte` di `index.html` (urutannya sama seperti layar: tanda tangan lalu TTE). CSS cetak sudah menampilkan anak print-area, jadi tanpa perubahan CSS.
+- Tes baru membuktikan: cetak surat + cetak arsip sama-sama memuat "CONTOH DEMO" + "CONTOH-XXXX-0000" + "bukan tanda tangan elektronik resmi".
+
+### j. "0 hari lagi" menjadi "hari ini"
+
+- Seed relatif menaruh satu agenda tepat di hari jatuh temponya (selisih 0 hari) — kalimat pengingat/radar lama menulis "0 hari lagi", yang membingungkan. Kini `renderRadar()`, `renderReminderList()`, dan `formatReminderSentence()` (`src/main.ts`, kunci i18n baru `p34ReminderAgendaHariIni`) menulis **"hari ini" / "today"** bila selisihnya 0.
+
+### k. "lacak pengaduan" + "status pengaduan" dijawab Anin dengan niat yang benar
+
+- Temuan audit (dibuktikan lewat chat Anin, bukan tebakan): pertanyaan telanjang **"lacak pengaduan"** dijawab alur PENYELESAIAN pengaduan ("pengaduan ditindaklanjuti staf…"), padahal yang ditanya adalah MELACAK status. Penyebab: kata kunci "lacak pengaduan" ada di dua entri KB sekaligus — `pengaduan-selesai` (baris 87) dan `lacak-surat` (baris 203) — seri skor 3–3, dan urutan daftar memenangkan entri penyelesaian. Komentar lama di `src/anin-kb.ts` yang mengklaim `lacak-surat` "diletakkan SEBELUM `pengaduan-selesai`" **tidak sesuai isi file** — urutannya tidak pernah diubah.
+- Perbaikan (Paket 47, bersih, tanpa mengubah urutan daftar): kedua frasa pelacakan — **"lacak pengaduan" dan "status pengaduan"** (yang kedua juga terbukti salah arah saat diuji) — **dipindah** dari kata kunci `pengaduan-selesai` ke kata kunci `lacak-surat`. Kini "lacak pengaduan" → "Track a letter: … enter the complaint ticket (for example ADU-2026-0001)…"; "status pengaduan" → jawaban lacak yang sama. Entri penyelesaian tetap menjawab varian "Kalau ada pengaduan bisa selesaikan" lewat kata kunci "pengaduan bisa" (tes lamanya tetap lolos).
+- Dua cek headless baru membuktikan kedua frasa itu (cek 14–15 di §4).
 
 ## 3. File yang diubah
 
@@ -66,11 +82,11 @@ Semua perubahan memakai **data lokal nyata** aplikasi — tidak ada angka/nama/N
 - `src/agenda.ts` — `buildAgendaSeed(now)` + `seedRecordedAt()` (clamp masa lalu) + migrasi demo basi; hapus `AGENDA_SEED`.
 - `src/ikm.ts` — `buildIkmSeed(now)` (sebar 1..hari ini, clamp masa lalu) + migrasi demo basi; hapus `IKM_SEED`.
 - `src/anin-chat.ts` — `RADAR_KB_RE` sebelum `REMINDERS_RE`.
-- `src/main.ts` — `formatReminderSummary` (tanggal jatuh tempo + petunjuk radar); `docx` di-load dinamis + pemanasan idle; mic `onerror` membersihkan status (2 jalur).
-- `src/anin-kb.ts` — tie-break skor KB (kata kunci terpanjang dulu) + kata kunci statistik-warga.
-- `src/i18n.ts` — perbaiki `aninFaqRadar` (jatuh tempo = tanggal surat); kunci baru `p34ReminderRadarHint`.
-- `src/styles.css` + `index.html` — padding bawah konten (FAB tidak menutupi baris terakhir).
-- `scripts/headless-test.mjs` — 12 cek Paket 47 baru + 4 tes lama diperbaiki (lihat §2g); total 437 → **449 cek**.
+- `src/main.ts` — `formatReminderSummary` (tanggal jatuh tempo + petunjuk radar); `docx` di-load dinamis + pemanasan idle; mic `onerror` membersihkan status (2 jalur); **helper `tteDemoPrintLines()` + TTE demo di cetak surat/arsip (§2i); "hari ini" ganti "0 hari lagi" (§2j)**.
+- `src/anin-kb.ts` — tie-break skor KB (kata kunci terpanjang dulu) + kata kunci statistik-warga + **pindah kata kunci pelacakan ("lacak pengaduan", "status pengaduan") dari `pengaduan-selesai` ke `lacak-surat`** (§2k).
+- `src/i18n.ts` — perbaiki `aninFaqRadar` (jatuh tempo = tanggal surat); kunci baru `p34ReminderRadarHint` + `p34ReminderAgendaHariIni`.
+- `src/styles.css` + `index.html` — padding bawah konten (FAB tidak menutupi baris terakhir); **`index.html`: div `#letter-print-tte` + `#archive-print-tte` untuk cetak (§2i)**.
+- `scripts/headless-test.mjs` — 14 cek Paket 47 baru + 4 tes lama diperbaiki (lihat §2g); total 437 → **451 cek**.
 - `scripts/validate-docx.py` — baru (validasi .docx via python-docx).
 - `scripts/screenshot-p47.mjs` — baru (radar + jawaban pengingat Anin, 390px/980px × light/dark).
 - `.gitignore` — `test-out/` (byte .docx hasil tes).
@@ -83,8 +99,8 @@ Tidak ikut commit: `PAKET-32/33/34-RENCANA.md`, `VIDEO-BARU-RENCANA.md`, `show-2
 
 | Tes | Hasil |
 |---|---|
-| `npm run build` | Lolos (tsc + vite; bundle JS 1.149,10 kB / gzip 299,68 kB + chunk `laporan-docx` 186,26 kB / gzip 53,52 kB — peringatan chunk-size Vite, bukan error) |
-| `npm run test:headless` | **449/449 lolos** — dua run hijau berturut-turut (run 3 dan run 4, 28 Nov ~18:20–18:30 WIB) |
+| `npm run build` | Lolos (tsc + vite; bundle JS 1.149,08 kB / gzip 299,68 kB + chunk `laporan-docx` 186,26 kB / gzip 53,52 kB — peringatan chunk-size Vite, bukan error) |
+| `npm run test:headless` | **451/451 lolos** — lima run hijau (run 3 dan run 4 sibling, run 3 saya, **run 5** setelah perbaikan kata kunci lacak, 28 Nov ~18:20–18:40 WIB) |
 | `npm run test:pwa` | **16/16** |
 | `npm run check:secrets` | Bersih |
 
@@ -98,11 +114,13 @@ Cek headless baru Paket 47 (semua lolos, run 4):
 6. "Paket 47: Anin menjawab pengingat dengan tanggal jatuh tempo + petunjuk radar" — "Ada 4 pengingat hari ini: 1 agenda dekat, 1 agenda lewat, 2 pengaduan belum ditindaklanjuti…".
 7. "monthly report .docx opens in python-docx (readable document: title + month + score + tables)" — `ok=true tables=7`.
 8. "kepegawaian .docx opens in python-docx (title + full staff table)" — `ok=true rows=25`.
-9. "Paket 47: docx lazy-loaded as a separate chunk (smaller initial bundle)" — `index-CYqGb5v8.js,laporan-docx-Dle0domK.js`.
+9. "Paket 47: docx lazy-loaded as a separate chunk (smaller initial bundle)" — `index-BcCySAE3.js,laporan-docx-BUZgexx7.js`.
 10. "Paket 47: letter print includes the labelled TTE demo block" — blok TTE demo berlabel di cetak surat.
 11. "Paket 47: archive print includes the labelled TTE demo block" — blok TTE demo berlabel di cetak arsip.
 12. "Paket 47: bottom padding clears the floating Anin button" — `padding-bottom=96px`.
 13. (Perbaikan routing, tanpa cek baru bernama sendiri) "Anin answers … statistik kecamatan" kini memakai pertanyaan "Di mana **warga** bisa melihat statistik kecamatan?" dan lolos — sebelumnya pertanyaan itu sengaja dihindari karena seri skor.
+14. "Paket 47: Anin menjawab 'lacak pengaduan' dengan FAQ lacak (bukan alur penyelesaian)" — "lacak pengaduan" → "Track a letter: … enter the complaint ticket (for example ADU-2026-0001)…".
+15. "Paket 47: Anin menjawab 'status pengaduan' dengan FAQ lacak (bukan alur penyelesaian)" — "status pengaduan" → jawaban lacak yang sama.
 
 Kegagalan selama pengerjaan (bukan regresi) dan perbaikannya:
 
@@ -120,9 +138,9 @@ Screenshot (`screenshots/p47-*`, 8 file: radar + jawaban pengingat Anin × 390px
 
 ## 5. Commit
 
-- Pesan: `Paket 47: tanggal contoh relatif + KB radar + lazy-load docx + validasi python-docx` (satu commit, sesuai perintah; di atas `68dde39`).
-- Isi: `src/pengaduan.ts`, `src/agenda.ts`, `src/ikm.ts`, `src/anin-chat.ts`, `src/main.ts`, `src/anin-kb.ts`, `src/i18n.ts`, `src/styles.css`, `index.html`, `scripts/headless-test.mjs`, `scripts/validate-docx.py`, `scripts/screenshot-p47.mjs`, `screenshots/p47-*.png`, `.gitignore`, `devpost-update-pack-20261121.md`, `PAKET-47-LAPORAN.md`.
-- **HANYA lokal — tidak push, tidak fetch** (akses jaringan git diblokir di sesi ini; parent yang push nanti).
+- Commit utama: `fb0b585` — "Paket 47: tanggal contoh relatif + KB radar + lazy-load docx + validasi python-docx" (satu commit di atas `68dde39`, 23 file, dibuat 28 Nov 18:32 WIB).
+- Commit susulan (perbaikan §2i–k + 2 cek lacak, setelah commit utama): pesan `Paket 47: niat 'lacak/status pengaduan' dijawab FAQ lacak + lengkapi laporan §2i–k` — isi: `src/anin-kb.ts`, `scripts/headless-test.mjs`, `PAKET-47-LAPORAN.md`.
+- **HANYA lokal — tidak push, tidak fetch** (parent yang push/deploy nanti).
 
 ## 6. Catatan jujur
 
