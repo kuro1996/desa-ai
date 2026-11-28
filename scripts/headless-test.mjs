@@ -263,19 +263,20 @@ async function main() {
       ),
     }));
     const monthName = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
-    // Paket 37 — 18 kartu tersisa (backup + kop surat pindah ke
-    // Pengaturan). Dicek sebagai himpunan, bukan sekadar jumlah, supaya
-    // detail kegagalan menunjukkan kartu mana yang hilang/lebih.
+    // Paket 39 — 15 kartu tersisa (3 kartu duplikat dihapus: pengaduan
+    // per jenis, perangkat per desa, komposisi jabatan — datanya ada di
+    // tab Pengaduan / Kepegawaian). Dicek sebagai himpunan, bukan sekadar
+    // jumlah, supaya detail kegagalan menunjukkan kartu mana yang
+    // hilang/lebih.
     const expectCards = [
       "bento-search", "home-anin", "home-briefing", "home-camat",
       "home-warga-card", "bento-ikm", "bento-kpi", "bento-kpi",
-      "bento-masa", "bento-month", "bento-trend", "bento-chart",
-      "bento-desa-chart", "bento-jabatan-chart", "bento-report",
+      "bento-masa", "bento-month", "bento-trend", "bento-report",
       "home-contact-card", "home-adopsi-card", "home-followup-card",
     ];
     check(
-      "bento shows 18 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
-      bento.cards.length === 18 &&
+      "bento shows 15 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
+      bento.cards.length === 15 &&
         expectCards.every((c) => bento.cards.includes(c)) &&
         !bento.cards.includes("home-backup-card") &&
         !bento.cards.includes("home-letterhead-card") &&
@@ -305,6 +306,42 @@ async function main() {
       `bento ${masa.akan}/${masa.habis} vs keg ${kegStats.akan}/${kegStats.habis} items=${masa.items}`,
     );
 
+    // Paket 39 — 3 kartu duplikat dihapus dari Beranda; kartu yang
+    // dipertahankan tetap tampil (dengan tombol lipat Paket 38).
+    const keptCards = await page.evaluate(() => {
+      const has = (sel) => document.querySelector(sel) !== null;
+      return {
+        goneChart: !has(".bento-chart"),
+        goneDesa: !has(".bento-desa-chart"),
+        goneJabatan: !has(".bento-jabatan-chart"),
+        goneIds:
+          !document.getElementById("home-aduan-chart") &&
+          !document.getElementById("home-desa-chart") &&
+          !document.getElementById("home-jabatan-donut"),
+        month: has(".bento-month"),
+        report: has(".bento-report"),
+        aduanBaru: has(".bento-kpi"),
+        masa: has(".bento-masa"),
+        trend: has(".bento-trend"),
+        contact: has("#home-contact-card"),
+        trendBtn: document.querySelector(".bento-trend .bento-collapse-btn") !== null,
+        monthBtn: document.querySelector(".bento-month .bento-collapse-btn") !== null,
+        reportBtn: document.querySelector(".bento-report .bento-collapse-btn") !== null,
+      };
+    });
+    check(
+      "Paket 39: Complaints by Type, Officers per Village, Composition by Position are gone from Beranda",
+      keptCards.goneChart && keptCards.goneDesa && keptCards.goneJabatan && keptCards.goneIds,
+      JSON.stringify(keptCards),
+    );
+    check(
+      "Paket 39: kept cards (This Month, Monthly Report, New Complaints, Terms of Office, IKM Trend, Hubungi Kami) still show with collapse buttons",
+      keptCards.month && keptCards.report && keptCards.aduanBaru && keptCards.masa &&
+        keptCards.trend && keptCards.contact &&
+        keptCards.monthBtn && keptCards.reportBtn && !keptCards.trendBtn,
+      JSON.stringify(keptCards),
+    );
+
     // Paket 38 — tombol lipat kartu Beranda (semua kartu kecuali IKM Trend).
     const collapseInfo = await page.evaluate(() => {
       const cards = [...document.querySelectorAll("#panel-home .bento-card")];
@@ -320,8 +357,8 @@ async function main() {
       };
     });
     check(
-      "every Beranda card except IKM Trend has a collapse button (17 of 18)",
-      collapseInfo.total === 18 && collapseInfo.withBtn === 17 && !collapseInfo.trendBtn,
+      "every Beranda card except IKM Trend has a collapse button (14 of 15)",
+      collapseInfo.total === 15 && collapseInfo.withBtn === 14 && !collapseInfo.trendBtn,
       `total=${collapseInfo.total} withBtn=${collapseInfo.withBtn} trendBtn=${collapseInfo.trendBtn}`,
     );
     check(
@@ -3937,19 +3974,6 @@ async function main() {
     );
     await page.click('[data-tab="home"]');
     await sleep(200);
-    const chart = await page.$$eval("#home-aduan-chart .chart-row", (rows) => ({
-      n: rows.length,
-      sum: rows.reduce(
-        (s, r) => s + Number(r.querySelector(".chart-value")?.textContent ?? 0),
-        0,
-      ),
-    }));
-    check(
-      "complaints-by-type chart shows 5 rows with a positive total",
-      chart.n === 5 && chart.sum > 0,
-      `rows=${chart.n} sum=${chart.sum}`,
-    );
-
     // 9c. Paket 27 — Anin (guide), Surat Cepat, Paket Adopsi Desa Lain.
     // (Runs after the 9b reload: fresh page, officer mode, lang = English.)
     await page.click('[data-tab="home"]');
@@ -4225,7 +4249,8 @@ async function main() {
     await sleep(300);
 
     // 9d. Paket 28 — redesign model SIAP AKAD: sidebar biru, page head,
-    // kartu statistik cerah, grafik per desa/jabatan, form/tabel biru.
+    // kartu statistik cerah, form/tabel biru. (Grafik Beranda per
+    // desa/jabatan dihapus Paket 39 — datanya di tab Kepegawaian.)
     await page.click('[data-tab="home"]');
     await sleep(300);
     const p28Shell = await page.evaluate(() => ({
@@ -4287,29 +4312,9 @@ async function main() {
     );
     await page.click('[data-tab="home"]');
     await sleep(300);
-    // Home charts sum to the live personnel total.
-    const p28Charts = await page.evaluate(() => ({
-      desaSum: [...document.querySelectorAll("#home-desa-chart .chart-value")]
-        .reduce((s, el) => s + Number(el.dataset.count ?? "0"), 0),
-      desaRows: document.querySelectorAll("#home-desa-chart .chart-row").length,
-      jabSum: [...document.querySelectorAll("#home-jabatan-legend li")]
-        .reduce((s, el) => s + Number(el.dataset.count ?? "0"), 0),
-      jabTotal: document.querySelector("#home-jabatan-donut .donut-total")?.textContent ?? "",
-      perangkat: document.getElementById("qs-perangkat")?.textContent ?? "",
-    }));
-    // 11 bars: 10 desa + 1 baris Kecamatan (staf kecamatan adalah
-    // personel juga; tanpa baris itu jumlah bar hanya 15 dari total 23).
-    check(
-      "Paket 28 officers-per-village bars sum to the personnel total",
-      p28Charts.desaRows === 11 && String(p28Charts.desaSum) === p28Charts.perangkat,
-      `rows=${p28Charts.desaRows} sum=${p28Charts.desaSum} total=${p28Charts.perangkat}`,
-    );
-    check(
-      "Paket 28 position donut legend + center total match the personnel total",
-      String(p28Charts.jabSum) === p28Charts.perangkat &&
-        p28Charts.jabTotal === p28Charts.perangkat,
-      `legendSum=${p28Charts.jabSum} center=${p28Charts.jabTotal} total=${p28Charts.perangkat}`,
-    );
+    // Paket 39 — grafik Beranda (per desa / per jabatan) dihapus; jumlah
+    // perangkat per desa + per jabatan tetap terverifikasi di tab
+    // Kepegawaian (cek statistik Paket 21: group by jabatan/desa).
     // Form-card blue headers (6 forms) + blue table header.
     const p28Cards = await page.evaluate(() => ({
       heads: document.querySelectorAll(".form-card-head").length,

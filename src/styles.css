@@ -2282,9 +2282,6 @@ html[data-theme="dark"] ::placeholder {
   .bento-kpi,
   .bento-masa,
   .bento-month,
-  .bento-chart,
-  .bento-desa-chart,
-  .bento-jabatan-chart,
   .bento-trend,
   .bento-report,
   .bento-search,
@@ -2503,39 +2500,6 @@ body.mode-warga #home-adopsi-card {
 }
 .bento-warga {
   border: 2px solid var(--green);
-}
-
-/* Complaints-by-type bars — same visual language as the IKM bars. */
-.chart-bars {
-  display: grid;
-  gap: 8px;
-}
-.chart-row {
-  display: grid;
-  grid-template-columns: minmax(140px, 220px) 1fr 32px;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.86rem;
-}
-.chart-label {
-  font-weight: 600;
-  overflow-wrap: break-word;
-}
-.chart-track {
-  height: 12px;
-  border-radius: 999px;
-  background: var(--green-soft);
-  overflow: hidden;
-}
-.chart-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--green), var(--teal));
-}
-.chart-value {
-  font-weight: 700;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Paket 19: kalender agenda ---------- */
@@ -3165,84 +3129,6 @@ body.mode-warga #home-adopsi-card {
   width: 26px;
   height: 26px;
   color: #fff;
-}
-
-/* Kartu grafik Home: tiga kartu grafik berdampingan (pengaduan, per desa,
-   jabatan). Revisi dari rencana awal span 3: kartu pengaduan lama tidak
-   punya span (default 1), jadi ketiganya span 2 agar satu baris rapi.
-   Paket 30 — span 2 HANYA di layar lebar (min-width 1101px): di bawah itu
-   grid bento satu kolom, dan span 2 di grid satu kolom membuat kolom
-   implisit kedua yang menjepit semua kartu lain menjadi 42px. */
-@media (min-width: 1101px) {
-  .bento-chart,
-  .bento-desa-chart,
-  .bento-jabatan-chart {
-    grid-column: span 2;
-  }
-}
-
-/* Donut komposisi jabatan (SVG murni, legenda swatch + jumlah). */
-.donut-wrap {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.donut-chart {
-  flex: 0 0 auto;
-  width: 140px;
-  height: 140px;
-}
-
-.donut-chart svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.donut-total {
-  font-size: 1.5rem;
-  font-weight: 700;
-  fill: var(--ink);
-}
-
-.donut-total-label {
-  font-size: 0.7rem;
-  fill: var(--muted);
-}
-
-.donut-legend {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  flex: 1 1 160px;
-  display: grid;
-  gap: 6px;
-}
-
-.donut-legend li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.88rem;
-}
-
-.donut-swatch {
-  flex: 0 0 auto;
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-}
-
-.donut-label {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow-wrap: break-word;
-}
-
-.donut-legend strong {
-  font-variant-numeric: tabular-nums;
 }
 
 /* Kartu form: banner header biru solid + isi putih. */

@@ -612,7 +612,7 @@ function initMode(): void {
 // ---------- Paket 35 — Pengaturan (tab baru) ----------
 
 const APP_VERSION = "0.1.0";
-const APP_PAKET = 38;
+const APP_PAKET = 39;
 
 /** Kunci sesi login demo (Paket 36) — juga dibaca skrip inline di
  * index.html sebelum bundle boot. */
@@ -921,39 +921,6 @@ function initSettings(): void {
   renderSettings();
 }
 
-// ---------- complaints-by-type chart (home) — Paket 7 ----------
-
-function renderAduanChart(): void {
-  const wrap = $("home-aduan-chart");
-  const items = loadAduan();
-  $("home-aduan-chart-empty").hidden = items.length > 0;
-  wrap.innerHTML = "";
-  if (items.length === 0) return;
-  const counts = ADUAN_JENIS.map((j) => items.filter((a) => a.jenis === j).length);
-  const max = Math.max(1, ...counts);
-  ADUAN_JENIS.forEach((j, i) => {
-    const row = document.createElement("div");
-    row.className = "chart-row";
-    const label = document.createElement("span");
-    label.className = "chart-label";
-    label.textContent = t(`aduJenis${i + 1}`, lang);
-    const track = document.createElement("div");
-    track.className = "chart-track";
-    const fill = document.createElement("div");
-    fill.className = "chart-fill";
-    fill.style.width = `${Math.round((counts[i] / max) * 100)}%`;
-    track.appendChild(fill);
-    const value = document.createElement("span");
-    value.className = "chart-value";
-    value.dataset.count = String(counts[i]);
-    value.textContent = String(counts[i]);
-    row.appendChild(label);
-    row.appendChild(track);
-    row.appendChild(value);
-    wrap.appendChild(row);
-  });
-}
-
 // ---------- Paket 28 — page head, date pill, notification bell ----------
 
 // The page head (model: title + subtitle top-left) mirrors the active
@@ -993,109 +960,6 @@ function updateNotifBell(): void {
 }
 
 // ---------- Paket 28 — Home charts (model: bar + donut, live data) ----------
-
-// Officers per village, reusing the app's own horizontal-bar pattern from
-// renderAduanChart (.chart-row / .chart-track / .chart-fill).
-function renderDesaChart(): void {
-  const wrap = $("home-desa-chart");
-  const items = loadPerangkat();
-  $("home-desa-chart-empty").hidden = items.length > 0;
-  wrap.innerHTML = "";
-  if (items.length === 0) return;
-  // 10 desa + 1 baris Kecamatan: staf kecamatan (unit "kecamatan",
-  // desa "Kecamatan Simpangkatis") adalah personel juga — tanpa baris
-  // ini jumlah bar hanya 15 padahal total perangkat 23.
-  const entries = [
-    ...DESA_LIST.map((d) => ({
-      label: d,
-      count: items.filter((p) => p.desa === d).length,
-    })),
-    {
-      label: KECAMATAN_LABEL,
-      count: items.filter((p) => p.unit === "kecamatan").length,
-    },
-  ];
-  const max = Math.max(1, ...entries.map((e) => e.count));
-  entries.forEach(({ label, count }) => {
-    const row = document.createElement("div");
-    row.className = "chart-row";
-    const labelEl = document.createElement("span");
-    labelEl.className = "chart-label";
-    labelEl.textContent = label;
-    const track = document.createElement("div");
-    track.className = "chart-track";
-    const fill = document.createElement("div");
-    fill.className = "chart-fill";
-    fill.style.width = `${Math.round((count / max) * 100)}%`;
-    track.appendChild(fill);
-    const value = document.createElement("span");
-    value.className = "chart-value";
-    value.dataset.count = String(count);
-    value.textContent = String(count);
-    row.appendChild(labelEl);
-    row.appendChild(track);
-    row.appendChild(value);
-    wrap.appendChild(row);
-  });
-}
-
-// Officers by position, hand-rolled SVG (no chart library, offline):
-// one circle segment per position, rotated -90° so the first segment
-// starts at the top; the total sits in the middle.
-const CHART_COLORS = [
-  "#2563eb", "#16a34a", "#ea580c", "#e11d48", "#7c3aed",
-  "#0891b2", "#ca8a04", "#db2777", "#4d7c0f", "#0f766e", "#b91c1c",
-];
-
-// Jabatan desa + jabatan kecamatan: staf kecamatan (Camat, Sekcam, …)
-// adalah personel juga — tanpa mereka legenda donut hanya 15 padahal
-// total perangkat 23.
-const JABATAN_ALL = [...JABATAN_LIST, ...JABATAN_KECAMATAN];
-
-function renderJabatanChart(): void {
-  const donut = $("home-jabatan-donut");
-  const legend = $("home-jabatan-legend");
-  const items = loadPerangkat();
-  $("home-jabatan-chart-empty").hidden = items.length > 0;
-  donut.innerHTML = "";
-  legend.innerHTML = "";
-  if (items.length === 0) return;
-  const counts = JABATAN_ALL.map((j) => items.filter((p) => p.jabatan === j).length);
-  const total = items.length;
-  let offset = 0;
-  const segments: string[] = [];
-  JABATAN_ALL.forEach((j, i) => {
-    if (counts[i] === 0) return;
-    const pct = (counts[i] / total) * 100;
-    const color = CHART_COLORS[i % CHART_COLORS.length];
-    segments.push(
-      `<circle cx="60" cy="60" r="48" fill="none" stroke="${color}" stroke-width="22" ` +
-        `stroke-dasharray="${pct.toFixed(2)} 100" stroke-dashoffset="${(-offset).toFixed(2)}" ` +
-        `pathLength="100" transform="rotate(-90 60 60)" />`,
-    );
-    offset += pct;
-    const li = document.createElement("li");
-    li.dataset.count = String(counts[i]);
-    const swatch = document.createElement("span");
-    swatch.className = "donut-swatch";
-    swatch.style.backgroundColor = color;
-    const label = document.createElement("span");
-    label.className = "donut-label";
-    label.textContent = j;
-    const value = document.createElement("strong");
-    value.textContent = String(counts[i]);
-    li.appendChild(swatch);
-    li.appendChild(label);
-    li.appendChild(value);
-    legend.appendChild(li);
-  });
-  donut.innerHTML =
-    `<svg viewBox="0 0 120 120" role="img" aria-label="${t("homeJabatanTitle", lang)}">` +
-    segments.join("") +
-    `<text x="60" y="57" text-anchor="middle" class="donut-total">${total}</text>` +
-    `<text x="60" y="75" text-anchor="middle" class="donut-total-label">${t("kegStatTotal", lang)}</text>` +
-    `</svg>`;
-}
 
 // ---------- quick-stats strip (live counts from existing data) ----------
 
@@ -2063,10 +1927,8 @@ function renderHome(): void {
     loadAduan().filter((a) => inMonth(a.createdAt, now)).length,
   );
   renderTrend();
-  renderAduanChart();
-  // Paket 28 — model charts from live officer data.
-  renderDesaChart();
-  renderJabatanChart();
+  // Paket 39 — grafik Beranda (pengaduan per jenis, perangkat per desa,
+  // komposisi jabatan) dihapus: datanya ada di tab Pengaduan / Kepegawaian.
   updateNotifBell();
   renderReportPreview();
   renderMonthlyTrend();
