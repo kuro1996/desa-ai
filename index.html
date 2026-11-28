@@ -35,8 +35,8 @@
         /* storage unavailable — light theme by default */
       }
     </script>
-    <script type="module" crossorigin src="./assets/index-Cs_7aeTP.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-D8p1o6Vf.css">
+    <script type="module" crossorigin src="./assets/index-bIzYHLsW.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-C3MSQanM.css">
   </head>
   <body>
     <!-- Paket 36 — Layar Masuk (Login) Demo. Tampil HANYA sampai login;
@@ -567,6 +567,23 @@
                   All followed up ✓
                 </p>
               </div>
+
+              <!-- Paket 34 Ide 3 — Pengingat hari ini: agenda yang dekat
+                   waktunya + pengaduan yang menunggu lebih dari 3 hari. -->
+              <div class="bento-card bento-reminder" id="home-reminder-card" data-card="reminder">
+                <p class="bento-label">
+                  <span data-i18n="p34ReminderTitle">Pengingat hari ini</span>
+                  <span class="followup-badge" id="home-reminder-count">0</span>
+                </p>
+                <p class="hint" data-i18n="p34ReminderHint">
+                  Agenda yang dekat waktunya dan pengaduan yang menunggu lebih
+                  dari 3 hari — ketuk untuk membukanya.
+                </p>
+                <ul class="followup-list" id="home-reminder-list"></ul>
+                <p class="hint" id="home-reminder-empty" hidden data-i18n="p34ReminderEmpty">
+                  Tidak ada pengingat hari ini.
+                </p>
+              </div>
             </div>
             <!-- Print-only rendering of the monthly report (filled in by JS before window.print()). -->
             <div id="report-print-area" class="print-only" aria-hidden="true">
@@ -608,6 +625,18 @@
                 </button>
               </div>
               <div id="cepat-status" class="status" aria-live="polite"></div>
+              <!-- Paket 34 (Ide 9) — Mode Darurat: satu ketuk mengisi
+                   formulir dengan kerangka surat bencana; tombol dirender
+                   JS (8 tombol: 4 bencana × laporan/bantuan). -->
+              <div class="darurat-box">
+                <p class="bento-label"><span data-i18n="daruratTitle">Mode Darurat — surat bencana, satu ketuk</span></p>
+                <p class="hint" data-i18n="daruratHint">
+                  Satu ketuk mengisi formulir surat dengan kerangka bencana itu.
+                  Lengkapi lokasi, waktu, korban/kerusakan, lalu tekan Buat draf
+                  seperti biasa.
+                </p>
+                <div id="darurat-grid" class="darurat-grid" aria-label="Mode Darurat"></div>
+              </div>
             </div>
             <div class="form-card">
               <div class="form-card-head">
@@ -674,10 +703,15 @@
                 <button id="letter-whatsapp" class="btn" type="button" data-i18n="sendWhatsApp">
                   Kirim ke WhatsApp
                 </button>
+                <!-- Paket 34 Ide 2 — Anin pemeriksa surat (aturan lokal). -->
+                <button id="letter-check" class="btn" type="button" data-i18n="p34CheckDraft">
+                  Periksa draf
+                </button>
                 <button id="letter-save" class="btn" type="button" data-i18n="saveDraft">
                   Save draft
                 </button>
               </div>
+              <div id="letter-check-results" class="check-results" hidden></div>
             </div>
             <!-- Print-only rendering of the letter (filled in by JS before window.print()). -->
             <div id="letter-print-area" class="print-only" aria-hidden="true">
@@ -746,6 +780,57 @@
                 <button id="sum-save" class="btn" type="button" data-i18n="saveDraft">
                   Save as draft
                 </button>
+              </div>
+            </div>
+            <!-- Paket 34 (Ide 7) — Notulen Rapat: catatan rapat → notulen
+                 terstruktur (offline, tanpa mengarang) + surat tindak lanjut.
+                 Dikte suara hanya bila peramban mendukung SpeechRecognition
+                 (deteksi sama seperti mikrofon Anin); bila tidak, tombol
+                 disembunyikan dan tampil pesan jujur. -->
+            <div class="form-card" id="notulen-card">
+              <div class="form-card-head">
+                <h3 data-i18n="notulenTitle">Notulen Rapat — dari catatan rapat</h3>
+              </div>
+              <div class="form-card-body">
+                <p class="hint" data-i18n="notulenHint">
+                  Tempel catatan rapat — Anin menyusunnya jadi notulen (tanggal,
+                  peserta, agenda, keputusan, tindak lanjut + penanggung jawab
+                  bila disebut). Tidak ada yang dikarang: bagian yang tidak ada
+                  di catatan tetap kosong. Lalu buat surat tindak lanjut dari
+                  notulen itu.
+                </p>
+                <label class="field field-wide">
+                  <span data-i18n="notulenInputLabel">Catatan rapat</span>
+                  <textarea
+                    id="notulen-input"
+                    rows="8"
+                    data-i18n-ph="notulenPh"
+                    placeholder="cth: Rapat 28 November 2026. Peserta: Budi, Siti, Ahmad. Agenda: 1. Jadwal posyandu; 2. Perbaikan jalan. Keputusan: posyandu pindah ke balai desa. Tindak lanjut: Budi menyiapkan undangan…"
+                  ></textarea>
+                </label>
+                <p id="notulen-audio-note" class="hint" hidden data-i18n="notulenAudioUnsupported">Peramban ini tidak mendukung transkripsi audio — tempel teks rapat di kolom di atas.</p>
+                <div class="actions">
+                  <button id="notulen-mic" class="btn" type="button">
+                    🎙 <span data-i18n="notulenMic">Dikte catatan (suara)</span>
+                  </button>
+                  <button id="notulen-generate" class="btn btn-primary" type="button">
+                    <span data-i18n="notulenGenerate">Buat notulen</span>
+                  </button>
+                  <button id="notulen-clear" class="btn" type="button" data-i18n="clear">Clear</button>
+                </div>
+                <div id="notulen-status" class="status" aria-live="polite"></div>
+                <div id="notulen-output-wrap" class="output-wrap" hidden>
+                  <div id="notulen-output" class="output-text" aria-live="polite"></div>
+                  <div class="actions">
+                    <button id="notulen-copy" class="btn" type="button" data-i18n="copy">Copy</button>
+                    <button id="notulen-save" class="btn" type="button" data-i18n="saveDraft">
+                      Save as draft
+                    </button>
+                    <button id="notulen-to-letter" class="btn btn-primary" type="button">
+                      <span data-i18n="notulenToLetter">Buat surat tindak lanjut</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
@@ -835,6 +920,14 @@
               </label>
             </div>
             <div id="drafts-list" class="drafts-list"></div>
+            <!-- Paket 34 Ide 1 — tanya Anin soal arsip: nomor surat
+                 berikutnya + template yang pernah dipakai. -->
+            <div class="actions drafts-anin-actions">
+              <button id="drafts-anin-arsip" class="btn" type="button" data-i18n="p34ArchiveBtn">
+                Nomor &amp; template dari arsip
+              </button>
+            </div>
+            <div id="drafts-anin-result" class="status drafts-anin-result" aria-live="polite" hidden></div>
             <p id="drafts-empty" class="hint" data-i18n="draftsEmpty">
               No drafts yet. Generate a letter or summary and press “Save draft”.
             </p>
@@ -1917,7 +2010,25 @@
         </div>
         <button id="anin-panel-close" class="anin-panel-close" type="button" aria-label="Tutup chat Anin">✕</button>
       </header>
+      <!-- Paket 34 (Ide 8) — sakelar Bahasa Bangka: Anin menjawab dalam
+           Bahasa Bangka (KTP, KK, surat pengantar, pengaduan); tersimpan
+           di localStorage perangkat ini. -->
+      <label class="anin-bangka-row">
+        <input id="anin-bangka-toggle" type="checkbox" />
+        <span data-i18n="aninBangkaLabel">Jawab dalam Bahasa Bangka</span>
+      </label>
       <div id="anin-messages" class="anin-messages" aria-live="polite"></div>
+      <!-- Paket 34 Ide 3 — kartu Pengingat di panel Anin (dari data lokal). -->
+      <div id="anin-reminders" class="anin-reminders" aria-live="polite">
+        <p class="anin-reminders-title">
+          <span data-i18n="p34ReminderTitle">Pengingat hari ini</span>
+          <span class="followup-badge" id="anin-reminder-count">0</span>
+        </p>
+        <ul class="followup-list" id="anin-reminder-list"></ul>
+        <p class="hint" id="anin-reminder-empty" hidden data-i18n="p34ReminderEmpty">
+          Tidak ada pengingat hari ini.
+        </p>
+      </div>
       <div id="anin-chips" class="anin-chips" aria-label="Contoh pertanyaan"></div>
       <form id="anin-form" class="anin-form">
         <button id="anin-mic" class="anin-mic" type="button" title="Bicara" aria-label="Bicara">
