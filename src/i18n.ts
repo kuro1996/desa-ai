@@ -246,6 +246,20 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   copy: { en: "Copy", id: "Salin" },
   download: { en: "Download .txt", id: "Unduh .txt" },
   saveDraft: { en: "Save draft", id: "Simpan draf" },
+  // Paket 33 — kirim draf surat ke WhatsApp (wa.me, tanpa server).
+  sendWhatsApp: { en: "Send via WhatsApp", id: "Kirim ke WhatsApp" },
+  waOpened: {
+    en: "WhatsApp opened — pick a recipient, then send.",
+    id: "WhatsApp terbuka — pilih penerima lalu kirim.",
+  },
+  waCopiedLong: {
+    en: "Letter too long for a share link — text copied, paste it in WhatsApp.",
+    id: "Surat terlalu panjang untuk tautan — teks disalin, tempel di WhatsApp.",
+  },
+  waCopyFailed: {
+    en: "Letter too long for a share link and copying failed — copy the draft text manually.",
+    id: "Surat terlalu panjang untuk tautan dan penyalinan gagal — salin teks draf secara manual.",
+  },
   sumTitle: { en: "Summarize a document", id: "Ringkas dokumen" },
   sumHint: {
     en: "Paste a long document (minutes, regulation, report). Long documents are always summarized in the cloud — on-device inference is limited to 9,216 input tokens.",
@@ -711,6 +725,12 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     en: "Sorry, I don't understand that question yet — but I can help with: drafting a letter (“Draft an invitation to the village meeting”), procedure requirements (“What do I need for a KTP?”), Personnel Data, IKM, complaints, the Mail Register, and trend analysis (“What is the top complaint this month?”). Try one of those, or tap a suggestion below.",
     id: "Maaf, saya belum paham pertanyaan itu — tapi saya bisa membantu soal: membuat draf surat (“Buatkan surat undangan musyawarah desa”), syarat prosedur (“Syarat KTP apa saja?”), Data Kepegawaian, IKM, pengaduan, Buku Agenda, dan analisis tren (“Keluhan terbanyak bulan ini apa?”). Coba salah satu contoh itu, atau ketuk salah satu saran di bawah.",
   },
+  // Paket 32.1 — jawaban "belum paham" bukan jalan buntu: bila ada topik
+  // yang hampir cocok, Anin menyebutkannya di bawah jawaban ini.
+  aninChatMaybeMeant: {
+    en: "Did you mean one of these? %s — tap the suggestion chips below, or rephrase the question.",
+    id: "Mungkin yang Anda maksud: %s — ketuk saran di bawah, atau ulangi pertanyaannya dengan kata lain.",
+  },
   // Paket 32 — Anin mengambil alih Tanya Prosedur saat AI gagal (28 Nov 00:13).
   aninChatAiFailed: {
     en: "The cloud AI can't be reached, so I answered from the built-in procedure guide below — the guide works offline.",
@@ -752,6 +772,10 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     en: "Press “Print” on a draft — the letter prints with the official kop. Choose “Save as PDF” in the print dialog to save it as PDF.",
     id: "Tekan “Cetak” pada draf — surat tercetak dengan kop resmi. Pilih “Save as PDF” di dialog cetak untuk menyimpan sebagai PDF.",
   },
+  aninFaqWa: {
+    en: "Press “Send via WhatsApp” on a draft — or on a saved letter in Archive & Drafts. WhatsApp opens with the letter text already filled in; just pick a recipient and send. A very long letter is copied to the clipboard instead, so paste it in WhatsApp.",
+    id: "Tekan “Kirim ke WhatsApp” pada draf — atau pada surat tersimpan di Arsip & Draf. WhatsApp terbuka dengan isi surat sudah terisi; tinggal pilih penerima lalu kirim. Surat yang sangat panjang disalin ke clipboard, jadi tempel saja di WhatsApp.",
+  },
   aninFaqWord: {
     en: "Honest note: the “Export Word” button in Personnel Data currently downloads a CSV file (not a .docx yet) — open it in a spreadsheet. A real .docx export is still on the to-do list.",
     id: "Jujur saja: tombol “Export Word” di Data Kepegawaian saat ini mengunduh berkas CSV (bukan .docx) — buka di spreadsheet. Ekspor .docx asli masih dalam daftar perbaikan.",
@@ -763,6 +787,15 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   aninFaqAduan: {
     en: "Open the Complaints tab and press “New complaint” — fill in the reporter's name, category, and the complaint. New complaints appear on the home dashboard until followed up.",
     id: "Buka tab Pengaduan lalu tekan “Pengaduan baru” — isi nama pelapor, kategori, dan isi pengaduan. Pengaduan baru tampil di beranda sampai ditindaklanjuti.",
+  },
+  // Paket 32.1 — alur PENYELESAIAN pengaduan (kasus tangkapan layar Bos
+  // 28 Nov 08:55: "Kalau ada pengaduan bisa selesaikan" dijawab
+  // "belum paham"). Jawaban ini berpijak pada alur nyata aplikasi:
+  // status Baru → Diproses → Selesai, diubah petugas lewat menu status
+  // di tab Pengaduan; Anin tidak menyelesaikan sendiri.
+  aninFaqAduanSelesai: {
+    en: "Yes — a complaint is followed up by the office staff with the flow New → In progress → Resolved. Open the Complaints tab to see the list and track each complaint's status — staff change the status in the status menu of each complaint. When filing, describe the problem clearly (what happened, when) so staff can follow up; name and contact may be left empty (anonymous). I can't resolve a complaint myself — the office staff does that — but I can show the trend, for example ask “What is the top complaint this month?”. How long it takes is not fixed in this app — ask the staff for an estimate.",
+    id: "Bisa. Pengaduan ditindaklanjuti petugas dengan alur status Baru → Diproses → Selesai. Buka tab Pengaduan untuk melihat daftarnya dan memantau status tiap pengaduan — petugas mengubah status lewat menu status di tiap pengaduan. Saat membuat pengaduan, isi jenis dan isi pengaduan yang jelas (apa masalahnya, kapan terjadi) supaya petugas bisa menindaklanjuti; nama dan kontak boleh dikosongkan (anonim). Saya sendiri tidak bisa menyelesaikan pengaduan — yang menyelesaikan adalah petugas kantor — tapi saya bisa menunjukkan trennya, misalnya tanya “Keluhan terbanyak bulan ini?”. Soal berapa lama selesai, tidak ada batas waktu baku di aplikasi ini — tanyakan perkiraannya ke petugas.",
   },
   aninFaqWarga: {
     en: "Citizen mode (Mode Warga) is for residents: no login needed — they can fill in the IKM survey, file a complaint, or ask about procedures.",

@@ -7,8 +7,8 @@
 // the command does not state it clearly, and analyst answers only ever
 // contain aggregates (counts, averages, categories), never raw records.
 import { parseCepat, type CepatResult } from "./cepat";
-import { matchKb, type KbEntry } from "./kb";
-import { matchAninKb, type AninKbEntry } from "./anin-kb";
+import { matchKb, KB, type KbEntry } from "./kb";
+import { matchAninKb, ANIN_KB, type AninKbEntry } from "./anin-kb";
 
 export type AninExpression =
   | "tersenyum"
@@ -151,4 +151,66 @@ export function classifyAninText(raw: string): AninIntent {
   if (entries.length > 0) return { kind: "kb", entries };
 
   return { kind: "unknown" };
+}
+
+// ---------- Paket 32.1: topik terdekat (near-miss fallback) ----------
+
+/** Kata yang terlalu umum untuk dipakai sebagai sinyal topik. */
+const STOPWORDS = new Set([
+  "cara", "apa", "yang", "saya", "bisa", "bagaimana", "kapan", "dimana",
+  "apakah", "kalau", "ada", "ini", "itu", "dan", "atau", "saja", "mau",
+  "tolong", "kami", "kamu", "anda", "dengan", "untuk", "dari", "di", "ke",
+  "adalah", "seperti", "kenapa", "mengapa", "berapa", "siapa",
+]);
+
+export interface ClosestTopic {
+  titleId: string;
+  titleEn: string;
+}
+
+function topicWords(src: string): Set<string> {
+  const out = new Set<string>();
+  for (const w of src.toLowerCase().split(/[^a-z0-9]+/)) {
+    if (w.length >= 3 || w === "ktp" || w === "kk" || w === "sk") {
+      if (!STOPWORDS.has(w)) out.add(w);
+    }
+  }
+  return out;
+}
+
+/**
+ * Topik terdekat saat TIDAK ADA entri yang cocok penuh — pencocokan
+ * tingkat kata (bukan frasa penuh), sehingga "surat saya kapan selesai"
+ * tetap menyarankan topik surat, bukan jalan buntu. Dipakai main.ts
+ * untuk melengkapi jawaban "belum paham". Omong kosong murni (mis.
+ * "zxqv kltp 123") tidak menghasilkan saran apa pun.
+ */
+export function suggestClosestTopics(question: string, limit = 3): ClosestTopic[] {
+  const q = question.toLowerCase();
+  const qWords = topicWords(q);
+  if (qWords.size === 0) return [];
+  const scored: Array<{ topic: ClosestTopic; score: number }> = [];
+  const consider = (titleId: string, titleEn: string, keywords: string[]) => {
+    const bag = new Set<string>();
+    for (const src of [titleId, ...keywords]) {
+      for (const w of topicWords(src)) bag.add(w);
+    }
+    let score = 0;
+    for (const w of bag) {
+      if (qWords.has(w) || q.includes(w)) score += 1;
+    }
+    if (score > 0) scored.push({ topic: { titleId, titleEn }, score });
+  };
+  for (const e of ANIN_KB) consider(e.titleId, e.titleEn, e.keywords);
+  for (const e of KB) consider(e.titleId, e.titleEn, e.keywords);
+  scored.sort((a, b) => b.score - a.score);
+  const seen = new Set<string>();
+  const out: ClosestTopic[] = [];
+  for (const s of scored) {
+    if (seen.has(s.topic.titleId)) continue;
+    seen.add(s.topic.titleId);
+    out.push(s.topic);
+    if (out.length >= limit) break;
+  }
+  return out;
 }

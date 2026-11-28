@@ -33,6 +33,7 @@ import {
 import {
   ANIN_FACE_FILE,
   classifyAninText,
+  suggestClosestTopics,
   type AninExpression,
 } from "./anin-chat";
 import { parseCepat, type CepatResult } from "./cepat";
@@ -1909,6 +1910,42 @@ function downloadTxt(filename: string, text: string): void {
   downloadFile(filename, text, "text/plain;charset=utf-8");
 }
 
+// ---------- Paket 33 — kirim surat ke WhatsApp (wa.me, tanpa server) ----------
+// wa.me share links break on very long URLs (browsers and WhatsApp Web cap
+// URL length in practice), so a letter whose encoded share URL would pass
+// WA_MAX_SHARE_URL falls back to: copy the full text, then open plain
+// wa.me so the officer pastes it. Returns the URL that was opened
+// ("" when nothing could be opened).
+const WA_MAX_SHARE_URL = 6000;
+
+function whatsappShareUrl(text: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+async function shareLetterViaWhatsApp(
+  text: string,
+  status: HTMLElement,
+): Promise<string> {
+  if (!text.trim()) {
+    setStatus(status, t("statusNeedText", lang), true);
+    return "";
+  }
+  const url = whatsappShareUrl(text);
+  if (url.length <= WA_MAX_SHARE_URL) {
+    window.open(url, "_blank", "noopener");
+    setStatus(status, t("waOpened", lang));
+    return url;
+  }
+  const copied = await copyText(text);
+  if (!copied) {
+    setStatus(status, t("waCopyFailed", lang), true);
+    return "";
+  }
+  window.open("https://wa.me/", "_blank", "noopener");
+  setStatus(status, t("waCopiedLong", lang));
+  return "https://wa.me/";
+}
+
 /** Escape one CSV cell: quote when the value contains a separator (comma
  * or semicolon — both export flavours exist), quote, or newline; double
  * inner quotes. */
@@ -2360,6 +2397,13 @@ function initLetters(): void {
     // Which print area the @media print stylesheet shows.
     document.body.dataset.printTarget = "letter";
     window.print();
+  });
+  // Paket 33 — kirim draf ke WhatsApp (wa.me, tanpa server).
+  $("letter-whatsapp").addEventListener("click", async () => {
+    await shareLetterViaWhatsApp(
+      ($("letter-output") as HTMLTextAreaElement).value,
+      $("letter-status"),
+    );
   });
   $("letter-save").addEventListener("click", async () => {
     if (!svc) return;
@@ -2995,13 +3039,24 @@ function initAninChat(): void {
     return lines.join("\n");
   };
 
+  /** Paket 32.1 — jawaban "belum paham" bukan jalan buntu: bila ada
+   * topik yang hampir cocok, Anin menyebutkannya di bawah jawaban ini
+   * (topik dihitung dari kata-kata pertanyaan, bukan ditebak). */
+  const noUnderstandReply = (question: string): string => {
+    const base = t("aninChatNoUnderstand", lang);
+    const close = suggestClosestTopics(question);
+    if (close.length === 0) return base;
+    const titles = close.map((c) => (lang === "id" ? c.titleId : c.titleEn)).join(", ");
+    return `${base}\n\n${t("aninChatMaybeMeant", lang).replace("%s", titles)}`;
+  };
+
   /** Same grounded AI answer as Tanya Prosedur (KB grounding + streaming),
    * shown inside the chat bubble. Falls back to the offline KB text. */
   const answerWithAi = async (question: string, matches: KbEntry[]): Promise<void> => {
     if (!svc || svc.status !== "ready") {
       if (matches.length === 0) {
         setExpression("bingung", 2500);
-        addMessage("anin", t("aninChatNoUnderstand", lang));
+        addMessage("anin", noUnderstandReply(question));
         return;
       }
       setChatStatus(t("aninChatStatusOffline", lang));
@@ -3067,7 +3122,7 @@ function initAninChat(): void {
           `${formatKbAnswer(matches)}\n\n${t("sourcesLabel", lang)}${matches.map((m) => m.titleId).join(", ")}\n\n${t("aninChatAiFailed", lang)}`;
         setChatStatus(t("aninChatStatusOffline", lang));
       } else {
-        bubble.textContent = t("aninChatNoUnderstand", lang);
+        bubble.textContent = noUnderstandReply(question);
         setExpression("bingung", 2500);
         setChatStatus(t("aninChatStatusReady", lang));
       }
@@ -3256,6 +3311,15 @@ async function refreshDrafts(): Promise<void> {
         openArchivePrint(d);
       });
       actions.appendChild(printBtn);
+      // Paket 33 — kirim surat arsip ke WhatsApp (wa.me, tanpa server).
+      const waBtn = document.createElement("button");
+      waBtn.type = "button";
+      waBtn.className = "btn draft-wa-btn";
+      waBtn.textContent = t("sendWhatsApp", lang);
+      waBtn.addEventListener("click", async () => {
+        await shareLetterViaWhatsApp(d.content, $("drafts-status"));
+      });
+      actions.appendChild(waBtn);
     }
     const delBtn = document.createElement("button");
     delBtn.type = "button";

@@ -1121,12 +1121,12 @@ async function main() {
       letterStatus,
     );
 
-    // Letter copy/download/print/save buttons exist and are wired (no-op without text is fine)
+    // Letter copy/download/print/save/WhatsApp buttons exist and are wired (no-op without text is fine)
     const letterBtns = await page.$$eval(
-      "#letter-copy, #letter-download, #letter-print, #letter-save",
+      "#letter-copy, #letter-download, #letter-print, #letter-whatsapp, #letter-save",
       (els) => els.map((e) => e.id),
     );
-    check("letter actions present", letterBtns.length === 4, letterBtns.join(","));
+    check("letter actions present", letterBtns.length === 5, letterBtns.join(","));
 
     // 2d. Print: the letter renders into a print-only area and calls window.print()
     await page.evaluate(() => {
@@ -1162,6 +1162,106 @@ async function main() {
         /visibility:\s*hidden/.test(cssText),
       cssFiles.join(","),
     );
+
+    // 2e. Paket 33 — WhatsApp share: a short letter opens wa.me with the text encoded.
+    await page.evaluate(() => {
+      window.__origOpen = window.open;
+      window.open = (url) => {
+        window.__waOpened = url;
+        return null;
+      };
+      const out = document.getElementById("letter-output");
+      out.value = "SURAT UNDANGAN\n\nDengan hormat, warga diundang musyawarah desa.";
+      document.getElementById("letter-output-wrap").hidden = false;
+    });
+    await page.click("#letter-whatsapp");
+    await sleep(300);
+    const waShort = await page.evaluate(() => ({
+      opened: window.__waOpened ?? "",
+      status: document.getElementById("letter-status")?.textContent ?? "",
+    }));
+    // (Bagian 2 jalan dalam bahasa default aplikasi = Inggris; Anin
+    // baru beralih ke Indonesia di bagian 9c — cek terima kedua bahasa.)
+    check(
+      "WhatsApp share opens wa.me with the letter text encoded",
+      waShort.opened.startsWith("https://wa.me/?text=") &&
+        /musyawarah%20desa/i.test(waShort.opened) &&
+        /WhatsApp terbuka|WhatsApp opened/.test(waShort.status),
+      waShort.opened.slice(0, 80),
+    );
+
+    // 2f. Paket 33 — a very long letter falls back to copy + plain wa.me (no giant URL).
+    await page.evaluate(() => {
+      window.__waOpened = "";
+      window.__waCopied = "";
+      try {
+        Object.defineProperty(navigator, "clipboard", {
+          value: {
+            writeText: async (t) => {
+              window.__waCopied = t;
+            },
+          },
+          configurable: true,
+        });
+      } catch {
+        // Clipboard stub unavailable — copyText falls back to execCommand.
+      }
+      document.getElementById("letter-output").value = "A".repeat(9000);
+    });
+    await page.click("#letter-whatsapp");
+    await sleep(300);
+    const waLong = await page.evaluate(() => ({
+      opened: window.__waOpened ?? "",
+      copied: (window.__waCopied ?? "").length,
+      status: document.getElementById("letter-status")?.textContent ?? "",
+    }));
+    check(
+      "long letter falls back to copy + plain wa.me (no giant share URL)",
+      waLong.opened === "https://wa.me/" &&
+        waLong.copied === 9000 &&
+        /terlalu panjang|too long/i.test(waLong.status),
+      `opened=${waLong.opened} copied=${waLong.copied}`,
+    );
+
+    // 2g. Paket 33 — an archived letter also has a WhatsApp button.
+    await page.evaluate(() => {
+      window.__waOpened = "";
+      localStorage.setItem(
+        "desaai-drafts-v1",
+        JSON.stringify([
+          {
+            id: "wa-test-1",
+            kind: "letter",
+            title: "Undangan",
+            content: "SURAT UNDANGAN\n\nMusyawarah desa.",
+            createdAt: Date.now(),
+            source: "local",
+          },
+        ]),
+      );
+    });
+    await page.click('[data-tab="drafts"]');
+    await sleep(400);
+    const waArchiveLabel = await page.$eval(".draft-wa-btn", (el) => el.textContent);
+    check(
+      "archived letter shows a WhatsApp button",
+      /Kirim ke WhatsApp|Send via WhatsApp/.test(waArchiveLabel),
+      waArchiveLabel,
+    );
+    await page.click(".draft-wa-btn");
+    await sleep(300);
+    const waArchive = await page.evaluate(() => window.__waOpened ?? "");
+    check(
+      "archived letter WhatsApp button opens wa.me with its text",
+      waArchive.startsWith("https://wa.me/?text=") && /Musyawarah%20desa/.test(waArchive),
+      waArchive.slice(0, 80),
+    );
+    await page.evaluate(() => {
+      localStorage.removeItem("desaai-drafts-v1");
+      window.open = window.__origOpen;
+    });
+    await page.click('[data-tab="letters"]');
+    await sleep(200);
 
     // 2b. SK Pengangkatan template exists (kepegawaian integration)
     const tplOptions = await page.$$eval("#letter-template option", (els) => els.map((e) => e.value));
@@ -1238,9 +1338,10 @@ async function main() {
     const qaSources = await page.$eval("#qa-sources", (el) => el.textContent);
     check("Q&A lists KB sources", /KTP Elektronik/.test(qaSources), qaSources);
 
-    // KB guide section renders (8 original + 2 kepegawaian entries)
+    // KB guide section renders (8 original + 2 kepegawaian + 6 administrasi
+    // umum Paket 32.1)
     const kbItems = await page.$$eval("#kb-list .kb-item", (els) => els.length);
-    check("offline procedure guide renders", kbItems === 10, `${kbItems} entries`);
+    check("offline procedure guide renders", kbItems === 16, `${kbItems} entries`);
 
     // Document-requirements checklist: ticking a syarat marks it done
     const kbChecks = await page.$$eval(
@@ -4511,6 +4612,81 @@ async function main() {
       /IKM/.test(unknownAnswer) && /pengaduan/i.test(unknownAnswer) && /Buku Agenda/.test(unknownAnswer),
       unknownAnswer.slice(0, 160),
     );
+    // Paket 32.1 — omong kosong murni TIDAK memicu saran topik.
+    check(
+      "gibberish gets no near-miss suggestions (no false topics)",
+      !/Mungkin yang Anda maksud/.test(unknownAnswer),
+      unknownAnswer.slice(0, 80),
+    );
+    // Paket 32.1 — kasus tangkapan layar Bos 28 Nov 08:55: "Kalau ada
+    // pengaduan bisa selesaikan" sebelumnya dijawab "belum paham".
+    const aduSelesai = await aninAsk("Kalau ada pengaduan bisa selesaikan");
+    check(
+      "Anin answers the screenshot question (complaint resolution flow)",
+      /Baru/.test(aduSelesai) && /Diproses/.test(aduSelesai) && /Selesai/.test(aduSelesai) && /tab Pengaduan/.test(aduSelesai),
+      aduSelesai.slice(0, 160),
+    );
+    const aduSaya = await aninAsk("pengaduan saya gimana");
+    check(
+      "Anin answers the 'pengaduan saya gimana' variant",
+      /Baru/.test(aduSaya) && /Diproses/.test(aduSaya) && /Selesai/.test(aduSaya),
+      aduSaya.slice(0, 120),
+    );
+    const aduCara = await aninAsk("cara menyelesaikan pengaduan");
+    check(
+      "Anin answers the 'cara menyelesaikan pengaduan' variant",
+      /Baru/.test(aduCara) && /Diproses/.test(aduCara) && /Selesai/.test(aduCara),
+      aduCara.slice(0, 120),
+    );
+    const aduLapor = await aninAsk("Bagaimana cara lapor pengaduan?");
+    check(
+      "Anin explains how to file a complaint",
+      /Pengaduan baru/.test(aduLapor),
+      aduLapor.slice(0, 120),
+    );
+    // Paket 32.1 — administrasi umum DI LUAR fitur aplikasi (KB baru).
+    const domisiliAnswer = await aninAsk("Syarat surat domisili apa saja?");
+    check(
+      "Anin answers domicile certificate requirements (new KB entry)",
+      /Domisili/.test(domisiliAnswer) && /KTP/.test(domisiliAnswer),
+      domisiliAnswer.slice(0, 120),
+    );
+    const jamAnswer = await aninAsk("Jam layanan kantor jam berapa?");
+    check(
+      "Anin does NOT invent office hours (honest jam layanan answer)",
+      // "Konfirmasi" di awal kalimat (huruf besar) — regex harus
+      // case-insensitive, kalau tidak tes gagal padahal jawabannya benar.
+      /tidak tercantum/.test(jamAnswer) && /konfirmasi/i.test(jamAnswer),
+      jamAnswer.slice(0, 140),
+    );
+    const hukumAnswer = await aninAsk("Apa dasar hukum pelayanan publik?");
+    check(
+      "Anin cites the public service law (new KB entry)",
+      /UU No. 25 Tahun 2009/.test(hukumAnswer),
+      hukumAnswer.slice(0, 120),
+    );
+    const ktpHilangAnswer = await aninAsk("Bagaimana mengurus KTP hilang?");
+    check(
+      "Anin explains lost-KTP replacement (new KB entry)",
+      /kehilangan/.test(ktpHilangAnswer) && /polisi/.test(ktpHilangAnswer),
+      ktpHilangAnswer.slice(0, 140),
+    );
+    const disposisiAnswer = await aninAsk("Bagaimana disposisi surat?");
+    check(
+      "Anin explains mail disposition flow (new KB entry)",
+      /disposisi/i.test(disposisiAnswer) && /Buku Agenda/.test(disposisiAnswer),
+      disposisiAnswer.slice(0, 140),
+    );
+    // Paket 32.1 — near-miss: pertanyaan yang tidak cocok penuh tetap
+    // mendapat saran topik terdekat, bukan jalan buntu. (Sebelum 32.1,
+    // "surat saya kapan selesai" malah dijawab panduan Domisili karena
+    // bonus kata-judul di matchKb — ambang skor kini minimal 2.)
+    const nearMiss = await aninAsk("surat saya kapan selesai");
+    check(
+      "near-miss reply suggests the closest topics (never a dead end)",
+      /belum paham/.test(nearMiss) && /Mungkin yang Anda maksud/.test(nearMiss) && /surat/i.test(nearMiss),
+      nearMiss.slice(0, 200),
+    );
     // Voice: this VM's headless Chrome has no SpeechRecognition/mic and no
     // speech voices — both buttons must answer with a clear message, never
     // fail silently. (On a real phone the mic transcribes and Anin speaks.)
@@ -4568,9 +4744,20 @@ async function main() {
     check("Tanya shows Anin's face (Anin answers here)", qaAninImgOk);
     await page.$eval("#qa-input", (el) => { el.value = ""; });
     await page.type("#qa-input", "Bagaimana cara mengurus KK baru?");
+    const qaDebugQ = await page.$eval("#qa-input", (el) => el.value);
+    console.log("DEBUG 9d question value:", JSON.stringify(qaDebugQ));
     await page.click("#qa-ask");
     await sleep(600);
     const qaAninOutput = await page.$eval("#qa-output", (el) => el.textContent);
+    console.log("DEBUG 9d output @600ms:", JSON.stringify(qaAninOutput.slice(0, 150)));
+    const qaDebugLater = await page.evaluate(async () => {
+      await new Promise((r) => setTimeout(r, 9000));
+      return {
+        out: (document.getElementById("qa-output")?.textContent ?? "").slice(0, 150),
+        status: document.getElementById("qa-status")?.textContent ?? "",
+      };
+    });
+    console.log("DEBUG 9d output @~10s:", JSON.stringify(qaDebugLater));
     check(
       "Tanya answers a KK question from the offline guide (Anin takeover)",
       /Kartu Keluarga/.test(qaAninOutput) && /Surat pengantar/.test(qaAninOutput),

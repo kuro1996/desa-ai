@@ -45,6 +45,13 @@ export const ANIN_KB: AninKbEntry[] = [
     answerKey: "aninFaqCetak",
   },
   {
+    id: "kirim-wa",
+    titleId: "Kirim surat ke WhatsApp",
+    titleEn: "Sending a letter via WhatsApp",
+    keywords: ["kirim whatsapp", "kirim ke whatsapp", "kirim wa", "whatsapp", "wa", "bagikan surat", "share surat", "kirim surat"],
+    answerKey: "aninFaqWa",
+  },
+  {
     id: "export-word",
     titleId: "Export Word",
     titleEn: "Export Word",
@@ -64,6 +71,16 @@ export const ANIN_KB: AninKbEntry[] = [
     titleEn: "Filing a complaint",
     keywords: ["cara pengaduan", "cara aduan", "buat pengaduan", "lapor pengaduan", "lapor aduan", "mengadu", "pengaduan baru"],
     answerKey: "aninFaqAduan",
+  },
+  // Paket 32.1 — pertanyaan "Kalau ada pengaduan bisa selesaikan" (dan
+  // variannya) sebelumnya tidak cocok dengan entri apa pun dan dijawab
+  // "belum paham". Entri ini menjawab alur PENYELESAIAN pengaduan.
+  {
+    id: "pengaduan-selesai",
+    titleId: "Menyelesaikan pengaduan",
+    titleEn: "Resolving a complaint",
+    keywords: ["selesaikan pengaduan", "menyelesaikan pengaduan", "pengaduan selesai", "pengaduan bisa", "status pengaduan", "lacak pengaduan", "pengaduan saya", "pengaduan gimana", "ada pengaduan", "cara menyelesaikan pengaduan", "pengaduan ditindaklanjuti", "tindak lanjut pengaduan", "laporan pengaduan"],
+    answerKey: "aninFaqAduanSelesai",
   },
   {
     id: "mode-warga",
