@@ -1714,6 +1714,13 @@ footer {
     letter-spacing: 0.04em;
   }
 
+  /* Paket 45 — baris kontak kop surat di lembar laporan (dari Pengaturan). */
+  #report-print-area .print-head-contact {
+    margin: 0 0 2px;
+    font-size: 10pt;
+    color: #444;
+  }
+
   #letter-print-area .print-head-title,
   #report-print-area .print-head-title,
   #keg-print-area .print-head-title {
@@ -2180,6 +2187,41 @@ html[data-theme="dark"] ::placeholder {
 
 .report-preview {
   margin: 8px 0;
+}
+
+/* Paket 45 — Laporan Bulanan: pemilih bulan + rincian IKM/agenda. */
+.report-month-row {
+  display: flex;
+  gap: 8px;
+  align-items: end;
+  margin: 8px 0 4px;
+}
+
+.report-month-row .btn {
+  flex: 0 0 auto;
+  min-width: 40px;
+  padding: 8px 10px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.report-month-field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.report-month-field input[type="month"] {
+  width: 100%;
+}
+
+.report-elements,
+.report-agenda {
+  margin: 8px 0;
+}
+
+.report-elements .bento-sub,
+.report-agenda .bento-sub {
+  margin: 10px 0 2px;
 }
 
 /* Paket 14 — Backup & Restore card. */

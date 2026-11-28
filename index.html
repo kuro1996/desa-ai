@@ -389,7 +389,21 @@
                   Recap of this month's letters, survey and complaints — printable for
                   the office file.
                 </p>
+                <!-- Paket 45 — pemilih bulan Laporan Bulanan (default bulan berjalan). -->
+                <div class="report-month-row">
+                  <button id="home-report-prev" class="btn" type="button" aria-label="Bulan sebelumnya">‹</button>
+                  <label class="field report-month-field">
+                    <span data-i18n="reportMonthLabel">Bulan laporan</span>
+                    <input id="home-report-month" type="month" />
+                  </label>
+                  <button id="home-report-next" class="btn" type="button" aria-label="Bulan berikutnya">›</button>
+                </div>
                 <div id="home-report-preview" class="report-preview"></div>
+                <div id="home-report-empty" class="hint" hidden data-i18n="reportNoData">
+                  Belum ada data bulan ini.
+                </div>
+                <div id="home-report-ikm-elements" class="report-elements"></div>
+                <div id="home-report-agenda" class="report-agenda"></div>
                 <!-- Paket 18 — Grafik Tren Bulanan: 6 bulan terakhir, data lokal. -->
                 <div class="month-trend" id="home-month-trend-wrap">
                   <p class="bento-sub">
@@ -563,7 +577,8 @@
             </div>
             <!-- Print-only rendering of the monthly report (filled in by JS before window.print()). -->
             <div id="report-print-area" class="print-only" aria-hidden="true">
-              <p class="print-head-office">Kecamatan Simpangkatis • Kabupaten Bangka Tengah</p>
+              <p class="print-head-office" id="report-print-office">Kecamatan Simpangkatis • Kabupaten Bangka Tengah</p>
+              <p class="print-head-contact" id="report-print-contact" hidden></p>
               <p class="print-head-title" id="report-print-title"></p>
               <p class="print-head-date" id="report-print-date"></p>
               <hr />

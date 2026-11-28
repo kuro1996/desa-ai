@@ -25,6 +25,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { inflateRawSync } from "node:zlib";
 import puppeteer from "puppeteer-core";
 
 const ROOT = resolve(import.meta.dirname, "..");
@@ -50,6 +51,50 @@ function metaChromiumFlags() {
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Paket 45 — verify a downloaded .docx Blob is a REAL OOXML document:
+// ZIP magic, central directory lists word/document.xml, and the inflated
+// word/document.xml contains the expected text. A renamed CSV/HTML fails
+// all three (no PK magic, no document.xml entry).
+function docxCheck(bytes) {
+  const buf = Buffer.from(bytes);
+  const isZip =
+    buf.length > 4 && buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04;
+  const hasDocXml = buf.includes(Buffer.from("word/document.xml"));
+  const hasContentTypes = buf.includes(Buffer.from("[Content_Types].xml"));
+  return { buf, isZip, hasDocXml, hasContentTypes, xml: docxXml(buf) };
+}
+
+// Inflate word/document.xml from the .docx bytes via the central directory
+// (filenames there are stored in plain text; the entry data is DEFLATE).
+function docxXml(buf, entryName = "word/document.xml") {
+  const needle = Buffer.from(entryName);
+  let pos = 0;
+  while (true) {
+    const idx = buf.indexOf(needle, pos);
+    if (idx < 0) return "";
+    const rec = idx - 46;
+    if (rec >= 0 && buf.readUInt32LE(rec) === 0x02014b50) {
+      const localOff = buf.readUInt32LE(rec + 42);
+      if (buf.readUInt32LE(localOff) === 0x04034b50) {
+        const method = buf.readUInt16LE(localOff + 8);
+        const compSize = buf.readUInt32LE(localOff + 18);
+        const nameLen = buf.readUInt16LE(localOff + 26);
+        const extraLen = buf.readUInt16LE(localOff + 28);
+        const dataStart = localOff + 30 + nameLen + extraLen;
+        const data = buf.subarray(dataStart, dataStart + compSize);
+        try {
+          return method === 8
+            ? inflateRawSync(data).toString("utf8")
+            : data.toString("utf8");
+        } catch {
+          return "";
+        }
+      }
+    }
+    pos = idx + 1;
+  }
+}
 
 // Failures caused by this VM's blocked tunnel to Google/Firebase endpoints.
 const ENV_NOISE = /ERR_TUNNEL_CONNECTION_FAILED|JSHandle@error|firebaseinstallations\.googleapis\.com|googleapis\.com|recaptcha|identitytoolkit|firestore\.googleapis|firebaseremoteconfig/i;
@@ -995,38 +1040,132 @@ async function main() {
       `printed=${reportPrint.printed} title=${reportPrint.title} target=${reportPrint.target}`,
     );
     // Paket 13: monthly report CSV export (local data only, works offline).
+    // Paket 45 — Laporan Bulanan Otomatis: pemilih bulan + pratinjau data
+    // nyata + ekspor .docx ASLI (bukan CSV yang diganti nama).
+    const nowDate = new Date();
+    const nowYm = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, "0")}`;
+    const monthInput = await page.$("#home-report-month");
+    const monthVal = monthInput
+      ? await page.$eval("#home-report-month", (el) => el.value)
+      : "";
+    check(
+      "monthly report month picker exists, default = current month",
+      !!monthInput && monthVal === nowYm,
+      `value=${monthVal} expect=${nowYm}`,
+    );
+    const reportPreview = await page.evaluate(() => ({
+      text: document.getElementById("home-report-preview")?.textContent ?? "",
+      elements: document.querySelectorAll("#home-report-ikm-elements .report-row").length,
+      agenda: document.querySelectorAll("#home-report-agenda .notif-list li").length,
+      emptyHidden: document.getElementById("home-report-empty")?.hidden ?? false,
+    }));
+    check(
+      "monthly report preview shows real data (IKM score + 9 per-element rows + agenda list)",
+      /90,28/.test(reportPreview.text) &&
+        reportPreview.elements === 9 &&
+        reportPreview.agenda > 0 &&
+        reportPreview.emptyHidden,
+      `elements=${reportPreview.elements} agenda=${reportPreview.agenda} emptyHidden=${reportPreview.emptyHidden}`,
+    );
+    // Ganti bulan ke bulan kosong (Januari 2026): state kosong harus jujur.
+    await page.$eval("#home-report-month", (el) => { el.value = "2026-01"; });
+    await page.evaluate(() =>
+      document.getElementById("home-report-month")?.dispatchEvent(new Event("change", { bubbles: true })),
+    );
+    await sleep(300);
+    const emptyMonth = await page.evaluate(() => ({
+      emptyVisible: document.getElementById("home-report-empty")?.hidden === false,
+      previewEmpty: (document.getElementById("home-report-preview")?.textContent ?? "").trim() === "",
+      elementsEmpty: document.querySelectorAll("#home-report-ikm-elements .report-row").length === 0,
+    }));
+    check(
+      "empty month shows the honest empty state (no made-up zeros)",
+      emptyMonth.emptyVisible && emptyMonth.previewEmpty && emptyMonth.elementsEmpty,
+      JSON.stringify(emptyMonth),
+    );
+    // Kembali ke bulan berjalan: data muncul lagi.
+    await page.$eval("#home-report-month", (el) => { el.value = ""; });
+    await page.evaluate((ym) => {
+      const el = document.getElementById("home-report-month");
+      el.value = ym;
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    }, nowYm);
+    await sleep(300);
+    const backToNow = await page.evaluate(() => ({
+      emptyHidden: document.getElementById("home-report-empty")?.hidden ?? false,
+      hasScore: /90,28/.test(document.getElementById("home-report-preview")?.textContent ?? ""),
+    }));
+    check(
+      "switching back to the current month restores the real data",
+      backToNow.emptyHidden && backToNow.hasScore,
+      JSON.stringify(backToNow),
+    );
+    // Tombol ‹ › menggeser bulan satu langkah.
+    await page.click("#home-report-prev");
+    await sleep(300);
+    const prevYm = await page.$eval("#home-report-month", (el) => el.value);
+    const prevEmpty = await page.evaluate(
+      () => document.getElementById("home-report-empty")?.hidden === false,
+    );
+    await page.click("#home-report-next");
+    await sleep(300);
+    const nextYm = await page.$eval("#home-report-month", (el) => el.value);
+    check(
+      "prev/next buttons shift the report month by one",
+      prevYm !== nowYm && prevEmpty && nextYm === nowYm,
+      `prev=${prevYm} next=${nextYm} prevEmpty=${prevEmpty}`,
+    );
+    // Ekspor .docx: tangkap Blob-nya dan periksa struktur ZIP + isi XML.
     const reportExportBtn = await page.$("#home-report-export");
-    check("monthly report CSV export button exists", !!reportExportBtn);
+    check("monthly report Word export button exists", !!reportExportBtn);
     await page.evaluate(() => {
-      window.__csvBlobs = [];
+      window.__docxBlobs = [];
+      // Keep __csvBlobs alive: the backup-export check below (and other
+      // later sections) read the last downloaded Blob from it. The old
+      // CSV-export block used to install this capture; the .docx block
+      // must preserve the contract.
+      window.__csvBlobs = window.__csvBlobs ?? [];
       const orig = URL.createObjectURL.bind(URL);
       URL.createObjectURL = (blob) => {
+        window.__docxBlobs.push(blob);
         window.__csvBlobs.push(blob);
         return orig(blob);
       };
     });
-    await page.click("#home-report-export");
-    await sleep(300);
-    const readLastCsv = () =>
+    const readLastDocx = () =>
       page.evaluate(async () => {
-        const blobs = window.__csvBlobs ?? [];
+        const blobs = window.__docxBlobs ?? [];
         const last = blobs[blobs.length - 1];
-        return last ? await last.text() : "";
+        if (!last) return { type: "", bytes: [] };
+        const buf = await last.arrayBuffer();
+        return { type: last.type, bytes: Array.from(new Uint8Array(buf)) };
       });
-    const reportCsv = await readLastCsv();
+    await page.click("#home-report-export");
+    await sleep(900);
+    const docx1 = await readLastDocx();
+    const docxCheck1 = docxCheck(docx1.bytes);
     const reportStatus = await page.$eval("#home-report-status", (el) => el.textContent ?? "");
-    const nowDate = new Date();
-    const expectFile = `laporan-bulanan-${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, "0")}.csv`;
+    const expectFile = `laporan-bulanan-${nowYm}.docx`;
     check(
-      "monthly report CSV has Indonesian header + all five sections",
-      reportCsv.includes("Bagian,Metrik,Nilai") &&
-        ["Surat,", "Agenda,", "IKM,", "Pengaduan,", "Kepegawaian,"].every((s) =>
-          reportCsv.includes(s),
-        ),
-      reportCsv.split("\n").slice(0, 5).join(" | "),
+      "monthly report .docx is a real OOXML file (ZIP + word/document.xml + content)",
+      docx1.type ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" &&
+        docxCheck1.isZip &&
+        docxCheck1.hasDocXml &&
+        docxCheck1.hasContentTypes &&
+        /Laporan Bulanan/.test(docxCheck1.xml) &&
+        /November 2026/.test(docxCheck1.xml) &&
+        /90,28/.test(docxCheck1.xml) &&
+        /Kecamatan Simpangkatis/.test(docxCheck1.xml),
+      `type=${docx1.type} zip=${docxCheck1.isZip} docXml=${docxCheck1.hasDocXml} xmlLen=${docxCheck1.xml.length}`,
     );
-    // Agenda counts in the CSV match the register stored locally, computed
-    // independently here from localStorage (robust across months).
+    check(
+      "monthly report .docx export reports the filename",
+      reportStatus.includes(expectFile),
+      reportStatus,
+    );
+    // Agenda counts in the .docx match the register stored locally,
+    // computed independently here from localStorage (robust across months).
     const agsStored = await page.evaluate(() => {
       try {
         return JSON.parse(localStorage.getItem("desaai-agenda-v1") ?? "[]");
@@ -1041,31 +1180,58 @@ async function main() {
         d.getMonth() === nowDate.getMonth()
       );
     });
-    const csvAgsMasuk = agsMonth.filter((e) => e.arah === "masuk").length;
-    const csvAgsKeluar = agsMonth.filter((e) => e.arah === "keluar").length;
+    const docxAgsMasuk = agsMonth.filter((e) => e.arah === "masuk").length;
+    const docxAgsKeluar = agsMonth.filter((e) => e.arah === "keluar").length;
     check(
-      "monthly report CSV agenda counts match the local register",
-      reportCsv.includes(`Agenda,Surat masuk bulan ini,${csvAgsMasuk}`) &&
-        reportCsv.includes(`Agenda,Surat keluar bulan ini,${csvAgsKeluar}`),
-      `masuk=${csvAgsMasuk} keluar=${csvAgsKeluar}`,
+      "monthly report .docx agenda counts match the local register",
+      docxCheck1.xml.includes(`Agenda surat masuk`) &&
+        docxCheck1.xml.includes(String(docxAgsMasuk)) &&
+        docxCheck1.xml.includes(String(docxAgsKeluar)),
+      `masuk=${docxAgsMasuk} keluar=${docxAgsKeluar}`,
     );
-    check(
-      "monthly report CSV export reports the filename",
-      reportStatus.includes(expectFile),
-      reportStatus,
-    );
-    // Offline: the export still produces the same CSV with no network.
+    // Offline: the export still produces the same .docx with no network.
     await page.setOfflineMode(true);
     await page.click("#home-report-export");
-    await sleep(300);
-    const offlineCsv = await readLastCsv();
+    await sleep(900);
+    const offlineDocx = await readLastDocx();
+    const offlineCheck = docxCheck(offlineDocx.bytes);
     await page.setOfflineMode(false);
     check(
-      "monthly report CSV export works offline",
-      offlineCsv.includes("Bagian,Metrik,Nilai") &&
-        offlineCsv.includes("Agenda,Surat masuk bulan ini,"),
-      offlineCsv.split("\n").slice(3, 4).join(""),
+      "monthly report .docx export works offline",
+      offlineCheck.isZip &&
+        offlineCheck.hasDocXml &&
+        /Laporan Bulanan/.test(offlineCheck.xml),
+      `zip=${offlineCheck.isZip} docXml=${offlineCheck.hasDocXml}`,
     );
+    // Print memakai bulan yang dipilih: Januari 2026 di judul cetak.
+    await page.$eval("#home-report-month", (el) => { el.value = "2026-01"; });
+    await page.evaluate(() =>
+      document.getElementById("home-report-month")?.dispatchEvent(new Event("change", { bubbles: true })),
+    );
+    await sleep(300);
+    await page.evaluate(() => {
+      window.print = () => { window.__reportPrinted = true; };
+    });
+    await page.click("#home-report-print");
+    await sleep(300);
+    const printJan = await page.evaluate(() => ({
+      printed: window.__reportPrinted === true,
+      title: document.getElementById("report-print-title")?.textContent ?? "",
+      body: document.getElementById("report-print-body")?.textContent ?? "",
+    }));
+    check(
+      "monthly report print uses the selected month (January 2026)",
+      printJan.printed && /Januari 2026/.test(printJan.title) &&
+        /Belum ada data bulan ini/.test(printJan.body),
+      `title=${printJan.title}`,
+    );
+    // Kembalikan ke bulan berjalan untuk cek-cek berikutnya.
+    await page.evaluate((ym) => {
+      const el = document.getElementById("home-report-month");
+      el.value = ym;
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    }, nowYm);
+    await sleep(300);
     // Paket 18: Grafik Tren Bulanan — 6 bulan × 4 seri, data lokal.
     const trendDom = await page.evaluate(() => {
       const svg = document.querySelector("#home-month-trend svg");
@@ -2837,6 +3003,33 @@ async function main() {
         p25OfflineCsv.trim().split("\n").length === 25,
       `${p25OfflineCsv.trim().split("\n").length} lines`,
     );
+    // Paket 45 — tombol "Export Word" kepegawaian kini mengunduh .docx
+    // ASLI (dulu CSV — celah kejujuran Paket 28/30). Blob yang sama
+    // ditangkap penangkap CSV di atas (semua Blob lewat createObjectURL).
+    await page.click("#keg-export-word");
+    await sleep(900);
+    const kegDocx = await page.evaluate(async () => {
+      const blobs = window.__csvBlobs ?? [];
+      const last = blobs[blobs.length - 1];
+      if (!last) return { type: "", bytes: [] };
+      const buf = await last.arrayBuffer();
+      return { type: last.type, bytes: Array.from(new Uint8Array(buf)) };
+    });
+    const kegDocxCheck = docxCheck(kegDocx.bytes);
+    const kegDocxStatus = await page.$eval(
+      "#keg-export-status",
+      (el) => el.textContent ?? "",
+    );
+    check(
+      "kepegawaian Export Word downloads a real .docx (ZIP + word/document.xml + staff name)",
+      kegDocx.type ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" &&
+        kegDocxCheck.isZip &&
+        kegDocxCheck.hasDocXml &&
+        /Ahmad Fauzi/.test(kegDocxCheck.xml) &&
+        kegDocxStatus.includes(`daftar-pegawai-${todayStamp()}.docx`),
+      `type=${kegDocx.type} zip=${kegDocxCheck.isZip} docXml=${kegDocxCheck.hasDocXml} status=${kegDocxStatus}`,
+    );
     // Mode Warga hides the whole staff tab, export button included.
     await page.click("#mode-toggle");
     await sleep(200);
@@ -4566,26 +4759,35 @@ async function main() {
       p28Cards.thBg === "rgb(29, 78, 216)",
       `thBg=${p28Cards.thBg}`,
     );
-    // Export Word reuses the CSV download; Export PDF uses the print route.
+    // Paket 45 — Export Word now downloads a REAL .docx (the Paket 28
+    // behavior — a CSV behind a Word button — was the known honesty
+    // gap, now closed). Export PDF still uses the print route.
     await page.click('[data-tab="kepegawaian"]');
     await sleep(400);
     await installCsvCapture();
     await page.click("#keg-export-word");
-    await sleep(300);
+    await sleep(900);
     const p28Word = await page.evaluate(async () => {
       const blobs = window.__csvBlobs ?? [];
       const last = blobs[blobs.length - 1];
+      if (!last) return { type: "", bytes: [], rows: 0 };
+      const buf = await last.arrayBuffer();
       return {
-        csv: last ? await last.text() : "",
+        type: last.type,
+        bytes: Array.from(new Uint8Array(buf)),
         rows: document.querySelectorAll("#keg-table tbody tr").length,
       };
     });
-    const p28WordLines = p28Word.csv.trim().split("\n");
+    const p28WordCheck = docxCheck(p28Word.bytes);
     check(
-      "Paket 28 Export Word downloads the personnel CSV (header + shown rows)",
-      p28WordLines[0]?.startsWith("No,Nama,Unit,Jabatan,Desa,") &&
-        p28WordLines.length === p28Word.rows + 1,
-      `header=${p28WordLines[0] ?? ""} lines=${p28WordLines.length} rows=${p28Word.rows}`,
+      "Paket 28 Export Word downloads a real .docx (ZIP + word/document.xml + shown staff)",
+      p28Word.type ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" &&
+        p28WordCheck.isZip &&
+        p28WordCheck.hasDocXml &&
+        /Ahmad Fauzi/.test(p28WordCheck.xml) &&
+        /Nama/.test(p28WordCheck.xml),
+      `type=${p28Word.type} zip=${p28WordCheck.isZip} docXml=${p28WordCheck.hasDocXml} rows=${p28Word.rows}`,
     );
     await page.evaluate(() => {
       window.__printed = false;

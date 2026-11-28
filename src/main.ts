@@ -86,6 +86,12 @@ import {
   type LetterheadSettings,
 } from "./letterhead";
 import {
+  buildKegDocx,
+  buildMonthlyReportDocx,
+  DOCX_MIME,
+  type LaporanAgendaRow,
+} from "./laporan-docx";
+import {
   AGAMA_LIST,
   buildKepegawaianSummary,
   computeNotifications,
@@ -1115,6 +1121,12 @@ interface MonthlyReport {
   ikmCount: number;
   ikmScore: number;
   ikmCat: string;
+  // Paket 45 — rincian per unsur IKM + daftar agenda bulan itu.
+  ikmPerElement: number[];
+  agendaList: LaporanAgendaRow[];
+  /** True when any monthly source has data (kepegawaian is a snapshot,
+   * not a monthly count, so it does not count here). */
+  hasData: boolean;
   aduTotal: number;
   aduBaru: number;
   aduDiproses: number;
@@ -1123,6 +1135,14 @@ interface MonthlyReport {
   kegAktif: number;
   kegAkan: number;
   kegHabis: number;
+}
+
+// Paket 45 — bulan yang sedang ditampilkan kartu Laporan Bulanan
+// (default bulan berjalan; diubah lewat pemilih bulan di kartu).
+let reportMonthDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+function reportMonthYm(d = reportMonthDate): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function monthlyReportData(now = new Date()): MonthlyReport {
@@ -1136,6 +1156,25 @@ function monthlyReportData(now = new Date()): MonthlyReport {
   const keg = computeStats(loadPerangkat(), now);
   // Mail register for the month, by letter date (tanggal), not record date.
   const agsMonth = loadAgenda().filter((e) => inMonth(e.tanggal, now));
+  const agendaList: LaporanAgendaRow[] = [...agsMonth]
+    .sort((a, b) => a.tanggal - b.tanggal)
+    .map((e) => ({
+      nomorAgenda: e.nomorAgenda,
+      perihal: e.perihal,
+      pihak: e.pihak,
+      tanggalLabel: new Date(e.tanggal).toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }),
+      arahLabel: e.arah === "masuk" ? "Masuk" : "Keluar",
+      statusLabel:
+        e.status === "baru"
+          ? "Baru"
+          : e.status === "diproses"
+            ? "Diproses"
+            : "Selesai",
+    }));
   return {
     monthLabel: monthNameId(now),
     letters,
@@ -1147,6 +1186,10 @@ function monthlyReportData(now = new Date()): MonthlyReport {
     ikmCount: ikmMonth.length,
     ikmScore: ikmStats.overall,
     ikmCat: ikmStats.category,
+    ikmPerElement: ikmStats.perElement,
+    agendaList,
+    hasData:
+      letters > 0 || agsMonth.length > 0 || ikmMonth.length > 0 || aduMonth.length > 0,
     aduTotal: aduMonth.length,
     aduBaru: aduStats.baru,
     aduDiproses: aduStats.diproses,
@@ -1158,10 +1201,24 @@ function monthlyReportData(now = new Date()): MonthlyReport {
   };
 }
 
+// Paket 45 — pratinjau Laporan Bulanan untuk bulan yang dipilih di
+// pemilih bulan (default bulan berjalan). Semua angka dari data lokal
+// saja; bila bulan itu belum ada data, tampilkan jujur "Belum ada data
+// bulan ini" — bukan baris angka nol yang menyesatkan.
 function renderReportPreview(): void {
-  const d = monthlyReportData();
+  const d = monthlyReportData(reportMonthDate);
+  const monthInput = $("home-report-month") as HTMLInputElement;
+  if (monthInput.value !== reportMonthYm()) monthInput.value = reportMonthYm();
   const preview = $("home-report-preview");
+  const empty = $("home-report-empty");
+  const elements = $("home-report-ikm-elements");
+  const agenda = $("home-report-agenda");
   preview.innerHTML = "";
+  elements.innerHTML = "";
+  agenda.innerHTML = "";
+  // Honest empty state: no monthly source has data for this month.
+  empty.hidden = d.hasData;
+  if (!d.hasData) return;
   const rows: Array<[string, string]> = [
     [t("homeMonthLetters", lang), String(d.letters)],
     [
@@ -1192,6 +1249,44 @@ function renderReportPreview(): void {
     p.appendChild(document.createTextNode(": "));
     p.appendChild(span);
     preview.appendChild(p);
+  }
+  // IKM per unsur (skala 1–4) — hanya bila ada jawaban bulan ini.
+  if (d.ikmCount > 0) {
+    const h = document.createElement("p");
+    h.className = "bento-sub";
+    const hs = document.createElement("strong");
+    hs.textContent = t("reportIkmElements", lang);
+    h.appendChild(hs);
+    elements.appendChild(h);
+    IKM_ELEMENTS.forEach((el, i) => {
+      const p = document.createElement("p");
+      p.className = "report-row";
+      const strong = document.createElement("strong");
+      strong.textContent = lang === "id" ? el.labelId : el.labelEn;
+      const span = document.createElement("span");
+      span.textContent = ikmFmt(d.ikmPerElement[i]);
+      p.appendChild(strong);
+      p.appendChild(document.createTextNode(": "));
+      p.appendChild(span);
+      elements.appendChild(p);
+    });
+  }
+  // Daftar agenda bulan ini (maks. 5 di pratinjau; lengkap di .docx).
+  if (d.agendaList.length > 0) {
+    const h = document.createElement("p");
+    h.className = "bento-sub";
+    const hs = document.createElement("strong");
+    hs.textContent = t("reportAgendaList", lang);
+    h.appendChild(hs);
+    agenda.appendChild(h);
+    const ul = document.createElement("ul");
+    ul.className = "notif-list";
+    for (const e of d.agendaList.slice(0, 5)) {
+      const li = document.createElement("li");
+      li.textContent = `${e.nomorAgenda} — ${e.perihal} (${e.pihak}, ${e.tanggalLabel})`;
+      ul.appendChild(li);
+    }
+    agenda.appendChild(ul);
   }
 }
 
@@ -1306,16 +1401,10 @@ function renderMonthlyTrend(): void {
     `</svg>`;
 }
 
-function printMonthlyReport(): void {
-  const d = monthlyReportData();
-  $("report-print-title").textContent = `Laporan Bulanan — ${d.monthLabel}`;
-  $("report-print-date").textContent = new Date().toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  // Attention list for the printed file: oldest open complaints + terms
-  // expiring soon, so the paper copy is actionable, not just counts.
+// Paket 45 — daftar "Perlu perhatian" untuk laporan (cetak + .docx):
+// pengaduan terbuka tertua + masa bhakti yang mendesak, supaya salinan
+// kertasnya bisa ditindaklanjuti, bukan sekadar angka.
+function monthlyAttentionLines(): string[] {
   const attention: string[] = [];
   const openAduan = loadAduan()
     .filter((a) => a.status !== "selesai")
@@ -1337,62 +1426,130 @@ function printMonthlyReport(): void {
         : `- ${n.perangkat.nama} — ${n.perangkat.jabatan}, ${n.perangkat.desa} (masa bhakti habis ${formatDateId(n.perangkat.masaSelesai)}, ${n.days} hari lagi)`,
     );
   }
-  $("report-print-body").textContent = [
-    `Surat tersimpan bulan ini: ${d.letters}`,
-    `Agenda surat bulan ini: masuk ${d.agsMasuk}, keluar ${d.agsKeluar} (Baru ${d.agsBaru}, Diproses ${d.agsDiproses}, Selesai ${d.agsSelesai})`,
-    `IKM: skor ${d.ikmCount === 0 ? "–" : ikmFmt(d.ikmScore)} (kategori ${d.ikmCat}), ${d.ikmCount} responden`,
-    `Pengaduan bulan ini: ${d.aduTotal} (Baru ${d.aduBaru}, Diproses ${d.aduDiproses}, Selesai ${d.aduSelesai})`,
-    `Kepegawaian: ${d.kegTotal} pegawai — aktif ${d.kegAktif}, akan habis ${d.kegAkan}, habis ${d.kegHabis}`,
+  return attention;
+}
+
+function printMonthlyReport(): void {
+  const d = monthlyReportData(reportMonthDate);
+  const lh = loadLetterhead();
+  $("report-print-office").textContent =
+    `${lh.instansi1 || "—"} • ${lh.instansi2 || "—"}`;
+  const contact = letterheadContactLine(lh);
+  const contactEl = $("report-print-contact");
+  contactEl.textContent = contact;
+  contactEl.hidden = contact === "";
+  $("report-print-title").textContent = `Laporan Bulanan — ${d.monthLabel}`;
+  $("report-print-date").textContent = new Date().toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const attention = monthlyAttentionLines();
+  const lines: string[] = [];
+  if (!d.hasData) {
+    lines.push("Belum ada data bulan ini.");
+    lines.push(
+      "Belum ada surat, jawaban survei, pengaduan, atau agenda yang tercatat pada bulan ini.",
+    );
+  } else {
+    lines.push(
+      `Surat tersimpan bulan ini: ${d.letters}`,
+      `Agenda surat bulan ini: masuk ${d.agsMasuk}, keluar ${d.agsKeluar} (Baru ${d.agsBaru}, Diproses ${d.agsDiproses}, Selesai ${d.agsSelesai})`,
+      `IKM: skor ${d.ikmCount === 0 ? "–" : ikmFmt(d.ikmScore)} (kategori ${d.ikmCat}), ${d.ikmCount} responden`,
+    );
+    if (d.ikmCount > 0) {
+      lines.push("IKM per unsur (rata-rata 1–4):");
+      IKM_ELEMENTS.forEach((el, i) => {
+        lines.push(`- ${el.labelId}: ${ikmFmt(d.ikmPerElement[i])}`);
+      });
+    }
+    if (d.agendaList.length > 0) {
+      lines.push("Agenda surat bulan ini:");
+      for (const e of d.agendaList) {
+        lines.push(`- ${e.nomorAgenda} — ${e.perihal} (${e.pihak}, ${e.tanggalLabel})`);
+      }
+    }
+    lines.push(
+      `Pengaduan bulan ini: ${d.aduTotal} (Baru ${d.aduBaru}, Diproses ${d.aduDiproses}, Selesai ${d.aduSelesai})`,
+      `Kepegawaian: ${d.kegTotal} pegawai — aktif ${d.kegAktif}, akan habis ${d.kegAkan}, habis ${d.kegHabis}`,
+    );
+  }
+  lines.push(
     "",
     "Perlu perhatian:",
     ...(attention.length > 0 ? attention : ["- Tidak ada."]),
     "",
     "Data contoh ditandai pada masing-masing modul (bukan data asli).",
-  ].join("\n");
+  );
+  $("report-print-body").textContent = lines.join("\n");
   document.body.dataset.printTarget = "report";
   window.print();
   setStatus($("home-report-status"), t("homeReportPrinted", lang));
 }
 
-// Paket 13 — export the monthly report as a comma-separated CSV (header
-// Bahasa Indonesia). Local data only, so it works fully offline — no
-// Firebase call, same sources as the on-screen recap + mail register.
-function monthlyReportCsv(now = new Date()): { filename: string; text: string } {
-  const d = monthlyReportData(now);
-  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const rows: Array<[string, string, string]> = [
-    ["Surat", "Surat tersimpan bulan ini", String(d.letters)],
-    ["Agenda", "Surat masuk bulan ini", String(d.agsMasuk)],
-    ["Agenda", "Surat keluar bulan ini", String(d.agsKeluar)],
-    ["Agenda", "Agenda berstatus Baru", String(d.agsBaru)],
-    ["Agenda", "Agenda berstatus Diproses", String(d.agsDiproses)],
-    ["Agenda", "Agenda berstatus Selesai", String(d.agsSelesai)],
-    ["IKM", "Responden bulan ini", String(d.ikmCount)],
-    ["IKM", "Skor IKM rata-rata", d.ikmCount === 0 ? "–" : d.ikmScore.toFixed(2)],
-    ["IKM", "Kategori IKM", d.ikmCat],
-    ["Pengaduan", "Total pengaduan bulan ini", String(d.aduTotal)],
-    ["Pengaduan", "Berstatus Baru", String(d.aduBaru)],
-    ["Pengaduan", "Berstatus Diproses", String(d.aduDiproses)],
-    ["Pengaduan", "Berstatus Selesai", String(d.aduSelesai)],
-    ["Kepegawaian", "Total pegawai", String(d.kegTotal)],
-    ["Kepegawaian", "Aktif", String(d.kegAktif)],
-    ["Kepegawaian", "Akan habis masa bhakti", String(d.kegAkan)],
-    ["Kepegawaian", "Masa bhakti habis", String(d.kegHabis)],
-  ];
-  const lines = [
-    `Laporan Bulanan,${d.monthLabel}`,
-    "Kecamatan Simpangkatis,Kabupaten Bangka Tengah",
-    "",
-    "Bagian,Metrik,Nilai",
-    ...rows.map((r) => r.map(csvEscape).join(",")),
-  ];
-  return { filename: `laporan-bulanan-${ym}.csv`, text: lines.join("\n") };
+/** Download a Blob (binary) via a temporary anchor — used for .docx. */
+function downloadBlob(filename: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function exportMonthlyReportCsv(): void {
-  const { filename, text } = monthlyReportCsv();
-  downloadFile(filename, text, "text/csv;charset=utf-8");
-  setStatus($("home-report-status"), `${t("homeReportExported", lang)} ${filename}`);
+// Paket 45 — export the monthly report as a REAL .docx (OOXML, via the
+// `docx` library; MIME application/vnd.openxmlformats-officedocument...
+// — NOT a renamed CSV/HTML). Local data only, works fully offline.
+// The old CSV export is gone: a monthly report that claims to be a Word
+// file must actually open in Word/LibreOffice.
+async function exportMonthlyReportDocx(): Promise<void> {
+  const d = monthlyReportData(reportMonthDate);
+  const lh = loadLetterhead();
+  const generatedLabel = new Date().toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const filename = `laporan-bulanan-${reportMonthYm()}.docx`;
+  try {
+    const blob = await buildMonthlyReportDocx({
+      monthLabel: d.monthLabel,
+      generatedLabel,
+      letters: d.letters,
+      agsMasuk: d.agsMasuk,
+      agsKeluar: d.agsKeluar,
+      agsBaru: d.agsBaru,
+      agsDiproses: d.agsDiproses,
+      agsSelesai: d.agsSelesai,
+      ikmCount: d.ikmCount,
+      ikmScore: d.ikmScore,
+      ikmCat: d.ikmCat,
+      ikmCatLabel: t(`ikmCat${d.ikmCat}`, lang),
+      ikmPerElement: d.ikmPerElement,
+      ikmElementLabels: IKM_ELEMENTS.map((el) =>
+        lang === "id" ? el.labelId : el.labelEn,
+      ),
+      aduTotal: d.aduTotal,
+      aduBaru: d.aduBaru,
+      aduDiproses: d.aduDiproses,
+      aduSelesai: d.aduSelesai,
+      kegTotal: d.kegTotal,
+      kegAktif: d.kegAktif,
+      kegAkan: d.kegAkan,
+      kegHabis: d.kegHabis,
+      agendaList: d.agendaList,
+      attention: monthlyAttentionLines(),
+      hasData: d.hasData,
+      letterhead: lh,
+    });
+    downloadBlob(filename, blob);
+    setStatus($("home-report-status"), `${t("homeReportExported", lang)} ${filename}`);
+  } catch (e) {
+    console.warn("DesaAI: monthly .docx export failed.", e);
+    setStatus($("home-report-status"), t("reportExportDocxFail", lang), true);
+  }
 }
 
 // ---------- Backup & Restore (Paket 14) ----------
@@ -2007,7 +2164,34 @@ function initHome(): void {
     document.querySelector<HTMLButtonElement>('[data-tab="kepegawaian"]')?.click(),
   );
   $("home-report-print").addEventListener("click", printMonthlyReport);
-  $("home-report-export").addEventListener("click", exportMonthlyReportCsv);
+  $("home-report-export").addEventListener("click", () => void exportMonthlyReportDocx());
+  // Paket 45 — pemilih bulan Laporan Bulanan (default bulan berjalan).
+  const reportMonthInput = $("home-report-month") as HTMLInputElement;
+  reportMonthInput.addEventListener("change", () => {
+    const m = /^(\d{4})-(\d{2})$/.exec(reportMonthInput.value);
+    if (!m) {
+      reportMonthInput.value = reportMonthYm();
+      return;
+    }
+    reportMonthDate = new Date(Number(m[1]), Number(m[2]) - 1, 1);
+    renderReportPreview();
+  });
+  $("home-report-prev").addEventListener("click", () => {
+    reportMonthDate = new Date(
+      reportMonthDate.getFullYear(),
+      reportMonthDate.getMonth() - 1,
+      1,
+    );
+    renderReportPreview();
+  });
+  $("home-report-next").addEventListener("click", () => {
+    reportMonthDate = new Date(
+      reportMonthDate.getFullYear(),
+      reportMonthDate.getMonth() + 1,
+      1,
+    );
+    renderReportPreview();
+  });
   $("home-briefing-copy").addEventListener("click", () => void copyBriefing());
   // Paket 37 — Backup & Restore + Kop Surat pindah dari Beranda ke
   // Pengaturan; listener-nya ada di initSettings().
@@ -5186,6 +5370,26 @@ function kegStaffCsv(rows: Perangkat[], now = new Date()): { filename: string; t
 // (print target "keg-table"). The hidden print area is filled from the
 // rows currently shown (kegLastRows: filtered + sorted), and the browser's
 // "Save as PDF" produces a real PDF file.
+// Column labels match the on-screen table header (hardcoded Indonesian
+// there, except Unit which has an i18n key); "Aksi" is left out — a
+// printout / Word file has no buttons. Shared by print + .docx export.
+function kegTableData(): { headRow: string[]; rows: string[][] } {
+  const headRow = ["No", "Nama", t("kegUnitCol", lang), "Jabatan", "Desa", "TTL", "Agama", "No HP", "Masa Bhakti", "Status"];
+  const rows = kegLastRows.map((p, i) => [
+    String(i + 1),
+    p.nama,
+    p.unit === "kecamatan" ? t("kegUnitKecOpt", lang) : t("kegUnitDesaOpt", lang),
+    p.jabatan,
+    p.desa,
+    `${p.tempatLahir}, ${formatDateId(p.tglLahir)}`,
+    p.agama,
+    p.noHp || "-",
+    `${formatDateId(p.masaMulai)} - ${formatDateId(p.masaSelesai)}`,
+    kegStatusPill(p).text,
+  ]);
+  return { headRow, rows };
+}
+
 function printKegTable(): void {
   if (kegLastRows.length === 0) {
     setStatus($("keg-export-status"), t("kegExportEmpty", lang));
@@ -5201,22 +5405,7 @@ function printKegTable(): void {
     month: "long",
     year: "numeric",
   });
-  // Column labels match the on-screen table header (hardcoded Indonesian
-  // there, except Unit which has an i18n key); "Aksi" is left out — a
-  // printout has no buttons.
-  const headRow = ["No", "Nama", t("kegUnitCol", lang), "Jabatan", "Desa", "TTL", "Agama", "No HP", "Masa Bhakti", "Status"];
-  const rows = kegLastRows.map((p, i) => [
-    String(i + 1),
-    p.nama,
-    p.unit === "kecamatan" ? t("kegUnitKecOpt", lang) : t("kegUnitDesaOpt", lang),
-    p.jabatan,
-    p.desa,
-    `${p.tempatLahir}, ${formatDateId(p.tglLahir)}`,
-    p.agama,
-    p.noHp || "-",
-    `${formatDateId(p.masaMulai)} - ${formatDateId(p.masaSelesai)}`,
-    kegStatusPill(p).text,
-  ]);
+  const { headRow, rows } = kegTableData();
   const esc = (s: string): string =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   body.innerHTML =
@@ -5238,6 +5427,38 @@ function exportKegCsv(): void {
   const { filename, text } = kegStaffCsv(kegLastRows);
   downloadFile(filename, text, "text/csv;charset=utf-8");
   setStatus($("keg-export-status"), `${t("kegExported", lang)} ${filename}`);
+}
+
+// Paket 45 — tombol "Export Word" di Data Kepegawaian kini mengunduh
+// .docx ASLI (dulu CSV — celah kejujuran Paket 28/30). Baris yang sama
+// dengan yang tampil di layar (terfilter + terurut).
+async function exportKegDocx(): Promise<void> {
+  if (kegLastRows.length === 0) {
+    setStatus($("keg-export-status"), t("kegExportEmpty", lang));
+    return;
+  }
+  const { headRow, rows } = kegTableData();
+  const stamp = new Date().toISOString().slice(0, 10);
+  const generatedLabel = new Date().toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  try {
+    const blob = await buildKegDocx(
+      headRow,
+      rows,
+      t("kegTitle", lang),
+      generatedLabel,
+      loadLetterhead(),
+    );
+    const filename = `daftar-pegawai-${stamp}.docx`;
+    downloadBlob(filename, blob);
+    setStatus($("keg-export-status"), `${t("kegExportedDocx", lang)} ${filename}`);
+  } catch (e) {
+    console.warn("DesaAI: kepegawaian .docx export failed.", e);
+    setStatus($("keg-export-status"), t("reportExportDocxFail", lang), true);
+  }
 }
 
 function kegSetLetterField(key: string, value: string): void {
@@ -5340,8 +5561,10 @@ function initKepegawaian(): void {
   $("keg-export-csv").addEventListener("click", exportKegCsv);
   // Paket 28 — model export buttons: PDF via the print route, Word via the
   // existing CSV download (there is no native .docx writer offline).
+  // Paket 45 — "Export Word" kini .docx asli (library `docx`); tombol CSV
+  // tetap mengunduh CSV seperti labelnya.
   $("keg-export-pdf").addEventListener("click", printKegTable);
-  $("keg-export-word").addEventListener("click", exportKegCsv);
+  $("keg-export-word").addEventListener("click", () => void exportKegDocx());
 
   // Paket 23 — sortable column headers: click (or Enter/Space on the
   // focused header) cycles asc -> desc -> cleared (stored order).

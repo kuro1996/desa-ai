@@ -58,13 +58,25 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   homeCollapse: { en: "Collapse card", id: "Kecilkan kartu" },
   homeExpand: { en: "Show details", id: "Tampilkan detail" },
   homeReportHint: {
-    en: "Recap of this month's letters, survey and complaints — printable for the office file.",
-    id: "Rekap surat, survei, dan pengaduan bulan berjalan — bisa dicetak untuk arsip kantor.",
+    en: "Pick a month: recap of its letters, survey and complaints — printable for the office file, exportable as a real Word file.",
+    id: "Pilih bulan: rekap surat, survei, dan pengaduan bulan itu — bisa dicetak untuk arsip kantor dan diekspor sebagai berkas Word asli.",
   },
   homeReportPrint: { en: "Print report", id: "Cetak laporan" },
   homeReportPrinted: { en: "Report sent to print.", id: "Laporan dikirim ke printer." },
-  homeReportExport: { en: "Export CSV", id: "Ekspor CSV" },
-  homeReportExported: { en: "Monthly report CSV downloaded.", id: "Laporan CSV diunduh." },
+  homeReportExport: { en: "Export Word (.docx)", id: "Ekspor Word (.docx)" },
+  homeReportExported: { en: "Monthly report Word file downloaded.", id: "Laporan Word (.docx) diunduh." },
+  // Paket 45 — Laporan Bulanan Otomatis (pemilih bulan + .docx asli).
+  reportMonthLabel: { en: "Report month", id: "Bulan laporan" },
+  reportMonthPrev: { en: "Previous month", id: "Bulan sebelumnya" },
+  reportMonthNext: { en: "Next month", id: "Bulan berikutnya" },
+  reportNoData: {
+    en: "No data for this month yet — the numbers will appear once letters, surveys or complaints are recorded.",
+    id: "Belum ada data bulan ini — angka akan muncul setelah ada surat, survei, atau pengaduan yang tercatat.",
+  },
+  reportIkmElements: { en: "IKM per element (average 1–4)", id: "IKM per unsur (rata-rata 1–4)" },
+  reportAgendaList: { en: "Mail register this month", id: "Agenda surat bulan ini" },
+  reportExportDocxFail: { en: "Word export failed — try again.", id: "Ekspor Word gagal — coba lagi." },
+  kegExportedDocx: { en: "Personnel Word file downloaded.", id: "Daftar pegawai Word (.docx) diunduh." },
   // Paket 18 — Grafik Tren Bulanan (6 bulan terakhir)
   homeMonthTrendTitle: { en: "Monthly trend — last 6 months", id: "Tren bulanan — 6 bulan terakhir" },
   homeMonthTrendHint: {
@@ -905,8 +917,12 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     id: "Tekan “Kirim ke WhatsApp” pada draf — atau pada surat tersimpan di Arsip & Draf. WhatsApp terbuka dengan isi surat sudah terisi; tinggal pilih penerima lalu kirim. Surat yang sangat panjang disalin ke clipboard, jadi tempel saja di WhatsApp.",
   },
   aninFaqWord: {
-    en: "Honest note: the “Export Word” button in Personnel Data currently downloads a CSV file (not a .docx yet) — open it in a spreadsheet. A real .docx export is still on the to-do list.",
-    id: "Jujur saja: tombol “Export Word” di Data Kepegawaian saat ini mengunduh berkas CSV (bukan .docx) — buka di spreadsheet. Ekspor .docx asli masih dalam daftar perbaikan.",
+    en: "The “Export Word” buttons download a real .docx file (Word/LibreOffice): the monthly report in the Home card, and the personnel list in Personnel Data. The file opens in Word — it is not a renamed spreadsheet.",
+    id: "Tombol “Export Word” mengunduh berkas .docx asli (Word/LibreOffice): laporan bulanan di kartu Beranda, dan daftar pegawai di Data Kepegawaian. Berkasnya bisa dibuka di Word — bukan spreadsheet yang diganti nama.",
+  },
+  aninFaqLaporan: {
+    en: "Monthly report: open the Home dashboard, find the “Monthly report” card, pick the month, and the recap appears — letters, mail register, IKM score per element, and complaints, all from the data already in this app. “Print report” prints the official sheet (or Save as PDF); “Export Word (.docx)” downloads a real Word file with the office letterhead. A month with no data says so honestly instead of showing made-up zeros.",
+    id: "Laporan bulanan: buka Beranda, cari kartu “Laporan bulanan”, pilih bulan, dan rekapnya muncul — surat, agenda, skor IKM per unsur, dan pengaduan, semuanya dari data yang sudah ada di aplikasi. “Cetak laporan” mencetak lembar resmi (atau Simpan sebagai PDF); “Ekspor Word (.docx)” mengunduh berkas Word asli dengan kop surat kantor. Bulan yang belum ada datanya ditulis jujur, bukan angka nol karangan.",
   },
   aninFaqIkm: {
     en: "IKM is the satisfaction survey: residents answer it in the Satisfaction (IKM) tab, and the score appears on the home dashboard. Share the survey link or QR code at the counter to collect more answers.",

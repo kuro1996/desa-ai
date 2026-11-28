@@ -3,8 +3,8 @@
 // fully offline. Each entry points at an i18n answer key (all user-facing
 // strings live in i18n.ts); the procedure guide itself (KTP, KK, SKTM…)
 // stays in kb.ts and is used by Tanya Prosedur.
-// NOTE: the "Export Word" entry is deliberately honest — the button
-// downloads CSV today, not .docx (known gap, Paket 28/30).
+// NOTE (Paket 45): the "Export Word" buttons now download a REAL .docx
+// (library `docx`) — the old CSV note is gone from aninFaqWord.
 
 export interface AninKbEntry {
   id: string;
@@ -57,6 +57,14 @@ export const ANIN_KB: AninKbEntry[] = [
     titleEn: "Export Word",
     keywords: ["export word", "ekspor word", "word", "unduh docx", "download docx"],
     answerKey: "aninFaqWord",
+  },
+  // Paket 45 — Laporan Bulanan Otomatis (pemilih bulan + .docx asli).
+  {
+    id: "laporan-bulanan",
+    titleId: "Laporan Bulanan",
+    titleEn: "Monthly report",
+    keywords: ["laporan bulanan", "laporan bulan", "rekap bulanan", "buat laporan bulanan", "laporan bulanan otomatis", "ekspor laporan", "unduh laporan", "laporan word", "cara buat laporan", "laporan kantor"],
+    answerKey: "aninFaqLaporan",
   },
   {
     id: "ikm",
