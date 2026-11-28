@@ -652,7 +652,7 @@ function initMode(): void {
 // ---------- Paket 35 — Pengaturan (tab baru) ----------
 
 const APP_VERSION = "0.1.0";
-const APP_PAKET = 40;
+const APP_PAKET = 41;
 
 /** Kunci sesi login demo (Paket 36) — juga dibaca skrip inline di
  * index.html sebelum bundle boot. */
@@ -923,6 +923,15 @@ function initSettings(): void {
     // (dulu scroll ke kartu Hubungi Kami di Beranda — kartu itu dihapus).
     activateTab("kontak");
   });
+  // Paket 41 — Paket Adopsi Desa Lain pindah dari Beranda ke Pengaturan
+  // (grup Bantuan & Tentang): logika unduh yang sama, hanya tombolnya
+  // yang pindah — berkas JSON tetap berisi kop surat, 7 template surat,
+  // dan checklist adopsi 5 langkah, tanpa data kantor.
+  $("set-adopsi-download").addEventListener("click", () => {
+    const { filename, text } = buildAdoptionPack(loadLetterhead());
+    downloadFile(filename, text, "application/json");
+    setStatus($("set-adopsi-status"), t("adopsiDownloaded", lang));
+  });
 
   // Hapus semua data — konfirmasi dua langkah: ketuk pertama hanya
   // mengaktifkan tombol (10 detik), ketuk kedua menghapus + reload.
@@ -1030,65 +1039,6 @@ function inMonth(ts: number, now = new Date()): boolean {
 
 function monthNameId(d = new Date()): string {
   return d.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
-}
-
-/** Cumulative IKM score after each answer (answers sorted by date). */
-function ikmTrendPoints(
-  items: IkmResponse[],
-): Array<{ date: string; score: number; count: number }> {
-  const sorted = [...items].sort((a, b) => a.createdAt - b.createdAt);
-  return sorted.map((r, i) => ({
-    date: new Date(r.createdAt).toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "short",
-    }),
-    score: computeIkm(sorted.slice(0, i + 1)).overall,
-    count: i + 1,
-  }));
-}
-
-function renderTrend(): void {
-  const wrap = $("home-ikm-trend");
-  const pts = ikmTrendPoints(loadIkm());
-  $("home-trend-empty").hidden = pts.length >= 2;
-  if (pts.length < 2) {
-    wrap.innerHTML = "";
-    return;
-  }
-  // Hand-rolled SVG line chart (no dependency): score 25–100 on the Y axis.
-  const W = 600;
-  const H = 180;
-  const L = 40;
-  const R = 10;
-  const T = 14;
-  const B = 26;
-  const y = (s: number): number => T + (1 - (s - 25) / 75) * (H - T - B);
-  const x = (i: number): number => L + (i / (pts.length - 1)) * (W - L - R);
-  const grid = [25, 50, 75, 100]
-    .map(
-      (v) =>
-        `<line x1="${L}" y1="${y(v)}" x2="${W - R}" y2="${y(v)}" class="trend-grid"/>` +
-        `<text x="${L - 6}" y="${y(v) + 4}" class="trend-axis" text-anchor="end">${v}</text>`,
-    )
-    .join("");
-  const line = pts
-    .map((p, i) => `${x(i).toFixed(1)},${y(p.score).toFixed(1)}`)
-    .join(" ");
-  const circles = pts
-    .map(
-      (p, i) =>
-        `<circle cx="${x(i).toFixed(1)}" cy="${y(p.score).toFixed(1)}" r="4" ` +
-        `data-score="${p.score.toFixed(2)}" data-date="${p.date}">` +
-        `<title>${p.date}: ${ikmFmt(p.score)} (${p.count})</title></circle>`,
-    )
-    .join("");
-  wrap.innerHTML =
-    `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Tren IKM" ` +
-    `preserveAspectRatio="none" style="width:100%;height:auto;display:block">` +
-    `${grid}<polyline points="${line}" class="trend-line"/>${circles}` +
-    `<text x="${L}" y="${H - 6}" class="trend-axis">${pts[0].date}</text>` +
-    `<text x="${W - R}" y="${H - 6}" class="trend-axis" text-anchor="end">${pts[pts.length - 1].date}</text>` +
-    `</svg>`;
 }
 
 interface MonthlyReport {
@@ -1291,119 +1241,6 @@ function renderMonthlyTrend(): void {
     `preserveAspectRatio="none" style="width:100%;height:auto;display:block">` +
     `${grid.join("")}${bars.join("")}` +
     `</svg>`;
-}
-
-// ---------- Paket 16 — "Perlu Ditindaklanjuti" ----------
-// One list of everything still needing officer action, oldest first:
-// open complaints + open mail-register items. A register entry for an
-// incoming letter without a disposition is flagged "Belum didisposisi"
-// (the disposition itself is the missing action). Local data only, so
-// it works fully offline — same sources as the monthly report.
-
-interface FollowUpItem {
-  kind: "pengaduan" | "agenda" | "kepegawaian";
-  id: string;
-  title: string;
-  date: number; // createdAt (complaint) / tanggal (register) / masaSelesai (SK)
-  status: AduanStatus | AgendaStatus | "habis" | "akan-habis";
-  needDisposisi: boolean;
-  skDays?: number; // days until SK expiry (negative = expired) — kepegawaian only
-}
-
-function followUpItems(): FollowUpItem[] {
-  const items: FollowUpItem[] = [];
-  for (const a of loadAduan()) {
-    if (a.status === "selesai") continue;
-    items.push({
-      kind: "pengaduan",
-      id: a.id,
-      title: `${a.nama || t("ikmAnon", lang)} — ${a.jenis}`,
-      date: a.createdAt,
-      status: a.status,
-      needDisposisi: false,
-    });
-  }
-  for (const e of loadAgenda()) {
-    if (e.status === "selesai") continue;
-    items.push({
-      kind: "agenda",
-      id: e.id,
-      title: `${e.nomorAgenda} — ${e.perihal}`,
-      date: e.tanggal,
-      status: e.status,
-      needDisposisi: e.arah === "masuk" && e.disposisi === "",
-    });
-  }
-  // Paket 20 — expired / soon-expiring staff decrees (SK) join the list.
-  // Sort key is the SK end date, so the most overdue SK sorts first.
-  for (const n of computeSkReminders(loadPerangkat())) {
-    items.push({
-      kind: "kepegawaian",
-      id: n.perangkat.id,
-      title: `${n.perangkat.nama} — ${n.perangkat.jabatan}, ${n.perangkat.desa}`,
-      date: new Date(`${n.perangkat.masaSelesai}T00:00:00`).getTime(),
-      status: n.kind,
-      needDisposisi: false,
-      skDays: n.days,
-    });
-  }
-  return items.sort((a, b) => a.date - b.date);
-}
-
-function renderFollowUp(): void {
-  const items = followUpItems();
-  const nAduan = items.filter((i) => i.kind === "pengaduan").length;
-  const nAgenda = items.filter((i) => i.kind === "agenda").length;
-  const nSk = items.filter((i) => i.kind === "kepegawaian").length;
-  const nDisp = items.filter((i) => i.needDisposisi).length;
-  $("home-followup-count").textContent = String(items.length);
-  $("home-followup-summary").textContent =
-    `${nAduan} ${t("homeFollowupAduan", lang)} · ${nAgenda} ${t("homeFollowupAgenda", lang)}` +
-    (nSk > 0 ? ` · ${nSk} ${t("homeFollowupSk", lang)}` : "") +
-    (nDisp > 0 ? ` · ${nDisp} ${t("homeFollowupNoDisposisi", lang)}` : "");
-  const list = $("home-followup-list");
-  list.innerHTML = "";
-  $("home-followup-empty").hidden = items.length > 0;
-  for (const item of items) {
-    const li = document.createElement("li");
-    li.className = "notif-item followup-item";
-    li.dataset.tab = item.kind;
-    li.dataset.id = item.id;
-    const strong = document.createElement("strong");
-    strong.textContent = item.title;
-    li.appendChild(strong);
-    const detail = document.createElement("span");
-    const dateStr = new Date(item.date).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-    if (item.kind === "kepegawaian") {
-      const d = item.skDays ?? 0;
-      detail.textContent =
-        `${t("homeFollowupSk", lang)} · ` +
-        (d < 0
-          ? `${t("kegSkHabis", lang)} ${-d} ${t("kegNotifDaysAgo", lang)}`
-          : `${t("kegSkAkanHabis", lang)} ${d} ${t("kegNotifDays", lang)}`) +
-        ` (${dateStr})`;
-    } else {
-      const days = Math.max(
-        0,
-        Math.floor((Date.now() - item.date) / 86_400_000),
-      );
-      const statusLabel =
-        item.status === "baru"
-          ? t("aduStatusBaru", lang)
-          : t("aduStatusDiproses", lang);
-      detail.textContent =
-        `${item.kind === "pengaduan" ? t("tabPengaduan", lang) : t("tabAgenda", lang)} · ` +
-        statusLabel +
-        (item.needDisposisi ? ` · ${t("homeFollowupNoDisposisi", lang)}` : "") +
-        ` · ${days} ${t("homeAduanWaiting", lang)} (${dateStr})`;
-    }
-    li.appendChild(detail);
-    list.appendChild(li);
-  }
 }
 
 function printMonthlyReport(): void {
@@ -1896,12 +1733,9 @@ function renderHome(): void {
             ? IKM_ELEMENTS[ikmStats.minIdx].labelId
             : IKM_ELEMENTS[ikmStats.minIdx].labelEn
         } (${ikmFmt(ikmStats.perElement[ikmStats.minIdx])})`;
-  // Letters saved today.
+  // Paket 41 — kartu "Surat hari ini" dihapus dari Beranda; draf hari ini
+  // tetap terlihat di tab Draf Surat (panel-letters + panel-drafts).
   const drafts = listLocalDrafts();
-  $("home-letters-today").textContent = String(
-    drafts.filter((d) => d.kind === "letter" && sameDay(new Date(d.createdAt), now))
-      .length,
-  );
   // New complaints.
   $("home-aduan-baru").textContent = String(
     computeAduanStats(loadAduan()).baru,
@@ -1965,13 +1799,14 @@ function renderHome(): void {
   $("home-month-aduan").textContent = String(
     loadAduan().filter((a) => inMonth(a.createdAt, now)).length,
   );
-  renderTrend();
   // Paket 39 — grafik Beranda (pengaduan per jenis, perangkat per desa,
   // komposisi jabatan) dihapus: datanya ada di tab Pengaduan / Kepegawaian.
+  // Paket 41 — kartu Tren IKM + Perlu Ditindaklanjuti juga dihapus dari
+  // Beranda (tren kumulatif hanya ada di Beranda, dicatat di laporan;
+  // daftar tindak lanjut ada di tab Pengaduan / Agenda / Kepegawaian).
   updateNotifBell();
   renderReportPreview();
   renderMonthlyTrend();
-  renderFollowUp();
   renderBriefing();
   renderCamatDashboard();
   renderHomeSearch();
@@ -2069,15 +1904,12 @@ function renderCamatDashboard(): void {
 
 function initHome(): void {
   renderHome();
-  // Paket 38 — tombol lipat kartu Beranda (semua kartu kecuali IKM Trend).
+  // Paket 38 — tombol lipat kartu Beranda (semua kartu punya data-card).
   initHomeCollapse();
   ($("home-search") as HTMLInputElement).addEventListener("input", (ev) => {
     homeSearchQuery = (ev.target as HTMLInputElement).value;
     renderHomeSearch();
   });
-  $("home-go-letters").addEventListener("click", () =>
-    document.querySelector<HTMLButtonElement>('[data-tab="letters"]')?.click(),
-  );
   $("home-go-ikm").addEventListener("click", () =>
     document.querySelector<HTMLButtonElement>('[data-tab="ikm"]')?.click(),
   );
@@ -2096,14 +1928,6 @@ function initHome(): void {
       .querySelector<HTMLButtonElement>(`[data-tab="${li.dataset.tab}"]`)
       ?.click();
   });
-  // Paket 16 — tapping a follow-up item jumps to its tab.
-  $("home-followup-list").addEventListener("click", (ev) => {
-    const li = (ev.target as HTMLElement).closest<HTMLElement>("li[data-tab]");
-    if (!li) return;
-    document
-      .querySelector<HTMLButtonElement>(`[data-tab="${li.dataset.tab}"]`)
-      ?.click();
-  });
   $("home-go-keg").addEventListener("click", () =>
     document.querySelector<HTMLButtonElement>('[data-tab="kepegawaian"]')?.click(),
   );
@@ -2112,18 +1936,15 @@ function initHome(): void {
   $("home-briefing-copy").addEventListener("click", () => void copyBriefing());
   // Paket 37 — Backup & Restore + Kop Surat pindah dari Beranda ke
   // Pengaturan; listener-nya ada di initSettings().
-  // Paket 27 — Anin + Paket Adopsi Desa Lain.
+  // Paket 41 — Paket Adopsi Desa Lain juga pindah ke Pengaturan
+  // (Bantuan & Tentang); listener-nya ada di initSettings().
+  // Paket 27 — Anin, pemandu DesaAI.
   $("anin-go-letters").addEventListener("click", () =>
     document.querySelector<HTMLButtonElement>('[data-tab="letters"]')?.click(),
   );
   $("anin-go-aduan").addEventListener("click", () =>
     document.querySelector<HTMLButtonElement>('[data-tab="pengaduan"]')?.click(),
   );
-  $("home-adopsi-download").addEventListener("click", () => {
-    const { filename, text } = buildAdoptionPack(loadLetterhead());
-    downloadFile(filename, text, "application/json");
-    setStatus($("home-adopsi-status"), t("adopsiDownloaded", lang));
-  });
 }
 
 // ---------- Paket 38 — tombol lipat kartu Beranda ----------
@@ -2187,8 +2008,8 @@ function updateCollapseButtons(): void {
 
 /**
  * Pasang tombol lipat (− / +) di kanan atas tiap kartu Beranda yang punya
- * `data-card`. Kartu IKM Trend (`.bento-trend`) TIDAK punya `data-card`,
- * jadi tidak dapat tombol dan tampilannya tidak berubah sama sekali.
+ * `data-card` (Paket 41: semua kartu Beranda punya tombol — kartu Tren IKM
+ * yang dulu tanpa tombol sudah dihapus dari Beranda).
  * Judul + angka ringkas (`.bento-label`, `.bento-keep`) tetap terlihat saat
  * terlipat — isi lainnya disembunyikan CSS (`.bento-card.collapsed`).
  * Pilihan tersimpan di localStorage dan dipulihkan saat buka lagi.

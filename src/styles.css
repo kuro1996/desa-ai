@@ -207,6 +207,8 @@ h3 {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .chip {
@@ -2135,7 +2137,6 @@ html[data-theme="dark"] ::placeholder {
   grid-column: span 2;
 }
 
-.bento-trend,
 .bento-report {
   grid-column: 1 / -1;
 }
@@ -2260,11 +2261,8 @@ html[data-theme="dark"] ::placeholder {
   .bento-kpi,
   .bento-masa,
   .bento-month,
-  .bento-trend,
   .bento-report,
-  .bento-search,
-  .bento-adopsi,
-  .bento-followup {
+  .bento-search {
     grid-column: 1 / -1;
     grid-row: auto;
   }
@@ -2282,11 +2280,8 @@ html[data-theme="dark"] ::placeholder {
   .bento-kpi,
   .bento-masa,
   .bento-month,
-  .bento-trend,
   .bento-report,
-  .bento-search,
-  .bento-adopsi,
-  .bento-followup {
+  .bento-search {
     grid-column: 1 / -1;
     grid-row: auto;
   }
@@ -2730,19 +2725,6 @@ html[data-theme="dark"] .darurat-btn:hover {
   cursor: pointer;
 }
 
-.bento-adopsi {
-  border-left: 5px solid var(--blue-strong);
-}
-
-.adopsi-steps {
-  margin: 0 0 12px;
-  padding-left: 22px;
-}
-
-.adopsi-steps li {
-  margin-bottom: 4px;
-}
-
 @media (max-width: 560px) {
   .anin-face {
     width: 72px;
@@ -2956,7 +2938,12 @@ html[data-theme="dark"] .darurat-btn:hover {
    tema — selalu biru gelap, jadi kontrolnya selalu terbaca. Foto
    dibundel lewat src/assets/kantor.jpg (Vite) supaya URL relatif tetap
    jalan di gh-pages maupun file://. Bila foto gagal dimuat, gradien
-   saja sudah cukup sebagai latar. */
+   saja sudah cukup sebagai latar.
+   Paket 41 — gradien dilonggarkan (gelap di kiri tempat teks, makin
+   transparan ke kanan) supaya foto kantor benar-benar kelihatan; padding
+   dilonggarkan; kanan header jadi tiga baris rapi (meta, chip status,
+   tombol aksi) yang masing-masing membungkus — tidak ada lagi yang
+   terpotong di layar 390px. */
 .page-head {
   position: relative;
   overflow: hidden;
@@ -2968,18 +2955,26 @@ html[data-theme="dark"] .darurat-btn:hover {
   max-width: 1100px;
   width: 100%;
   margin: 16px auto 0;
-  padding: 22px 24px;
+  padding: 26px 28px;
   border-radius: var(--radius);
   color: #fff;
   background:
     linear-gradient(
-      115deg,
-      rgb(8 28 64 / 0.94) 0%,
-      rgb(29 78 216 / 0.88) 52%,
-      rgb(13 116 128 / 0.9) 100%
+      100deg,
+      rgb(8 28 64 / 0.92) 0%,
+      rgb(8 28 64 / 0.78) 42%,
+      rgb(29 78 216 / 0.55) 72%,
+      rgb(13 116 128 / 0.45) 100%
     ),
     url("./assets/kantor.jpg") center 38% / cover no-repeat;
   box-shadow: var(--shadow-lg);
+}
+
+/* Paket 41 — judul rata kiri dengan lebar maks yang nyaman dibaca. */
+.page-head-titles {
+  flex: 1 1 340px;
+  min-width: 0;
+  max-width: 600px;
 }
 
 /* Paket 29 — kelasnya .page-head-titles (sesuai index.html); aturan lama
@@ -3001,19 +2996,43 @@ html[data-theme="dark"] .darurat-btn:hover {
   font-size: 0.95rem;
 }
 
+/* Paket 41 — kanan header jadi kolom tiga baris (meta, chip status,
+   tombol aksi): tiap baris membungkus sendiri, jadi tidak ada kontrol
+   yang terpotong di kanan pada layar sempit. */
 .page-head-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 340px;
+}
+
+.page-head-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   min-width: 0;
+  max-width: 100%;
 }
 
 .page-head-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Paket 41 — tombol aksi header seukuran dan tidak terpotong: label tidak
+   patah tengah kata, tinggi konsisten 40px; bila tidak muat, tombol turun
+   ke baris berikut (bukan terpotong di kanan). */
+.page-head-actions .btn {
+  min-height: 40px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Paket 31 — kontrol di atas banner: kaca putih tembus pandang + teks
@@ -3359,10 +3378,12 @@ html[data-theme="dark"] .sidebar .tab.active {
   }
 
   .page-head {
-    padding: 16px;
+    padding: 20px 18px;
     /* Paket 29 — di HP judul di atas (lebar penuh), pill + lonceng + aksi
        membungkus rapi di bawahnya; tanpa ini baris aksi terpotong.
-       Paket 31 — banner butuh padding bawah penuh (bukan 0). */
+       Paket 31 — banner butuh padding bawah penuh (bukan 0).
+       Paket 41 — basis flex direset: di arah kolom, basis 340px akan
+       memaksa tinggi blok kanan; judul melebar penuh. */
     flex-direction: column;
     align-items: stretch;
   }
@@ -3370,6 +3391,11 @@ html[data-theme="dark"] .sidebar .tab.active {
   .page-head-titles {
     flex: 1 1 auto;
     min-width: 0;
+    max-width: none;
+  }
+
+  .page-head-right {
+    flex: 1 1 auto;
   }
 
   .page-head-titles h1 {

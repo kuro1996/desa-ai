@@ -36,8 +36,6 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   homeSearchAduan: { en: "Complaints", id: "Pengaduan" },
   homeIkm: { en: "IKM score", id: "Skor IKM" },
   homeIkmLowest: { en: "Lowest element", id: "Unsur terendah" },
-  homeLettersToday: { en: "Letters today", id: "Surat hari ini" },
-  homeLettersTodayHint: { en: "drafts saved today", id: "draf tersimpan hari ini" },
   homeAduanBaru: { en: "New complaints", id: "Pengaduan baru" },
   homeAduanBaruHint: { en: "waiting for follow-up", id: "menunggu ditindaklanjuti" },
   homeAduanWaiting: { en: "days waiting", id: "hari menunggu" },
@@ -50,9 +48,6 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   homeMonthLetters: { en: "Letters saved", id: "Surat tersimpan" },
   homeMonthIkm: { en: "Survey answers", id: "Jawaban survei" },
   homeMonthAduan: { en: "Complaints", id: "Pengaduan" },
-  homeTrendTitle: { en: "IKM trend — score over time", id: "Tren IKM — skor dari waktu ke waktu" },
-  homeTrendHint: { en: "Cumulative IKM score after each survey answer.", id: "Skor IKM kumulatif setelah tiap jawaban survei." },
-  homeTrendEmpty: { en: "Not enough answers yet for a trend.", id: "Jawaban belum cukup untuk menampilkan tren." },
   homeReportTitle: { en: "Monthly report", id: "Laporan bulanan" },
   // Paket 38 — tombol lipat kartu Beranda.
   homeCollapse: { en: "Collapse card", id: "Kecilkan kartu" },
@@ -105,18 +100,6 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     id: "File backup tidak bisa dibaca — tidak ada yang diubah.",
   },
   cmdBackup: { en: "Backup data", id: "Backup data" },
-  // Paket 16 — "Perlu Ditindaklanjuti" (needs follow-up)
-  homeFollowupTitle: { en: "Needs follow-up", id: "Perlu Ditindaklanjuti" },
-  homeFollowupHint: {
-    en: "Open complaints, mail-register items, and expiring staff decrees (SK), oldest first — tap an item to open it.",
-    id: "Pengaduan, agenda, dan SK pegawai yang belum selesai, dari yang terlama — ketuk item untuk membukanya.",
-  },
-  homeFollowupEmpty: { en: "All followed up ✓", id: "Semua sudah ditindaklanjuti ✓" },
-  homeFollowupAduan: { en: "complaints", id: "pengaduan" },
-  homeFollowupAgenda: { en: "register items", id: "agenda" },
-  homeFollowupNoDisposisi: { en: "not yet dispositioned", id: "belum didisposisi" },
-  // Paket 20 — SK pegawai ikut di kartu "Perlu Ditindaklanjuti"
-  homeFollowupSk: { en: "staff SK", id: "SK pegawai" },
   // Paket 17 — Pengaturan Kop Surat (letterhead settings)
   homeLetterheadTitle: { en: "Letterhead settings", id: "Pengaturan Kop Surat" },
   homeLetterheadHint: {
@@ -218,7 +201,6 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   cmdTheme: { en: "Toggle dark mode", id: "Ganti mode gelap" },
   cmdLang: { en: "Switch language", id: "Ganti bahasa" },
   homeQuickTitle: { en: "Quick actions", id: "Aksi cepat" },
-  homeGoLetters: { en: "Draft a letter", id: "Buat surat" },
   homeGoIkm: { en: "Open the survey", id: "Buka survei" },
   homeGoAduan: { en: "New complaint", id: "Pengaduan baru" },
   homeGoKeg: { en: "Personnel list", id: "Daftar pegawai" },
@@ -993,16 +975,16 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   // Paket 32 — KB dimaksimalkan (28 Nov 00:20): beranda, Tanya Prosedur,
   // dan Paket Adopsi Desa Lain juga tercakup, tanpa celah.
   aninFaqBeranda: {
-    en: "The Home tab shows the office at a glance: quick stats (letters, residents' satisfaction, complaints), Anin's tip of the day, the letterhead settings, data backup, and the adoption pack for other villages.",
-    id: "Tab Beranda menampilkan kantor sekilas: statistik cepat (surat, kepuasan warga, pengaduan), tips Anin hari ini, pengaturan kop surat, cadangan data, dan paket adopsi untuk desa lain.",
+    en: "The Home tab shows the office at a glance: quick stats (letters, residents' satisfaction, complaints), Anin's tip of the day, the letterhead settings, and data backup.",
+    id: "Tab Beranda menampilkan kantor sekilas: statistik cepat (surat, kepuasan warga, pengaduan), tips Anin hari ini, pengaturan kop surat, dan cadangan data.",
   },
   aninFaqTanya: {
     en: "Open the “Ask about Procedures” tab and type your question — for example “What do I need for a new KK?”. Anin answers from the built-in procedure guide (KTP, KK, SKTM, and more), and the guide itself works fully offline. You can also press “Bacakan” to hear the answer, or “Lanjutkan dengan Anin” to keep asking in the chat.",
     id: "Buka tab “Tanya Prosedur” lalu ketik pertanyaan — contoh “Bagaimana cara mengurus KK baru?”. Anin menjawab dari panduan prosedur bawaan (KTP, KK, SKTM, dan lainnya), dan panduannya sendiri bekerja penuh offline. Anda juga bisa menekan “Bacakan” untuk mendengar jawabannya, atau “Lanjutkan dengan Anin” untuk bertanya lanjut di chat.",
   },
   aninFaqAdopsi: {
-    en: "Yes — another village office can use this app: on the Home tab, press “Download adoption pack” to get a file with the letterhead, the letter templates, and a 5-step adoption checklist. No office data is included in the pack.",
-    id: "Bisa — kantor desa lain bisa memakai aplikasi ini: di tab Beranda, tekan “Unduh paket adopsi” untuk mendapatkan berkas berisi kop surat, templat surat, dan checklist adopsi 5 langkah. Tidak ada data kantor yang ikut dalam paket itu.",
+    en: "Yes — another village office can use this app: in Settings, under Help & About, press “Download adoption pack” to get a file with the letterhead, the letter templates, and a 5-step adoption checklist. No office data is included in the pack.",
+    id: "Bisa — kantor desa lain bisa memakai aplikasi ini: di Pengaturan, bagian Bantuan & Tentang, tekan “Unduh paket adopsi” untuk mendapatkan berkas berisi kop surat, templat surat, dan checklist adopsi 5 langkah. Tidak ada data kantor yang ikut dalam paket itu.",
   },
   // Paket 32 — Anin bicara (voice): gratis, tanpa server.
   aninVoiceMic: { en: "Speak", id: "Bicara" },

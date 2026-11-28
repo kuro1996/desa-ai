@@ -248,7 +248,6 @@ async function main() {
       ikm: document.getElementById("home-ikm-score")?.textContent ?? "",
       dashIkm: document.getElementById("ikm-score")?.textContent ?? "",
       cat: document.getElementById("home-ikm-cat")?.textContent ?? "",
-      lettersToday: document.getElementById("home-letters-today")?.textContent ?? "",
       aduanBaru: document.getElementById("home-aduan-baru")?.textContent ?? "",
       monthIkm: document.getElementById("home-month-ikm")?.textContent ?? "",
       monthAduan: document.getElementById("home-month-aduan")?.textContent ?? "",
@@ -263,28 +262,30 @@ async function main() {
       ),
     }));
     const monthName = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
-    // Paket 40 — 14 kartu tersisa (kartu Hubungi Kami pindah ke tab
-    // Contact Person sendiri). Paket 34 Ide 3 menambah 1 kartu
-    // "Pengingat hari ini" → 15 kartu. Dicek sebagai himpunan, bukan
-    // sekadar jumlah, supaya detail kegagalan menunjukkan kartu mana yang
-    // hilang/lebih.
+    // Paket 41 — 11 kartu tersisa: kartu Adoption Pack, Needs Follow-Up,
+    // Tren IKM, dan Surat Hari Ini dihapus dari Beranda. Dicek sebagai
+    // himpunan, bukan sekadar jumlah, supaya detail kegagalan menunjukkan
+    // kartu mana yang hilang/lebih.
     const expectCards = [
       "bento-search", "home-anin", "home-briefing", "home-camat",
-      "home-warga-card", "bento-ikm", "bento-kpi", "bento-kpi",
-      "bento-masa", "bento-month", "bento-trend", "bento-report",
-      "home-adopsi-card", "home-followup-card", "home-reminder-card",
+      "home-warga-card", "bento-ikm", "bento-kpi",
+      "bento-masa", "bento-month", "bento-report",
+      "home-reminder-card",
     ];
     check(
-      "bento shows 15 cards with live numbers (IKM = dashboard, 0 letters today, 3 new complaints, 12 IKM + 6 complaints this month)",
-      bento.cards.length === 15 &&
+      "bento shows 11 cards with live numbers (IKM = dashboard, 3 new complaints, 12 IKM + 6 complaints this month)",
+      bento.cards.length === 11 &&
         expectCards.every((c) => bento.cards.includes(c)) &&
         !bento.cards.includes("home-backup-card") &&
         !bento.cards.includes("home-letterhead-card") &&
+        !bento.cards.includes("home-adopsi-card") &&
+        !bento.cards.includes("home-followup-card") &&
+        !bento.cards.includes("bento-trend") &&
         bento.ikm === bento.dashIkm && bento.cat.startsWith("A") &&
-        bento.lettersToday === "0" && bento.aduanBaru === "3" &&
+        bento.aduanBaru === "3" &&
         bento.monthIkm === "12" && bento.monthAduan === "6" && bento.monthLetters === "0" &&
         bento.monthName === monthName,
-      `cards=${bento.cards.length} [${bento.cards.join(",")}] ikm=${bento.ikm} cat=${bento.cat} lettersToday=${bento.lettersToday} aduanBaru=${bento.aduanBaru} month=${bento.monthName} ${bento.monthIkm}/${bento.monthAduan}/${bento.monthLetters}`,
+      `cards=${bento.cards.length} [${bento.cards.join(",")}] ikm=${bento.ikm} cat=${bento.cat} aduanBaru=${bento.aduanBaru} month=${bento.monthName} ${bento.monthIkm}/${bento.monthAduan}/${bento.monthLetters}`,
     );
     // Bento masa-bhakti counts match the kepegawaian tab's live stats.
     await page.click('[data-tab="kepegawaian"]');
@@ -322,8 +323,6 @@ async function main() {
         report: has(".bento-report"),
         aduanBaru: has(".bento-kpi"),
         masa: has(".bento-masa"),
-        trend: has(".bento-trend"),
-        trendBtn: document.querySelector(".bento-trend .bento-collapse-btn") !== null,
         monthBtn: document.querySelector(".bento-month .bento-collapse-btn") !== null,
         reportBtn: document.querySelector(".bento-report .bento-collapse-btn") !== null,
       };
@@ -334,10 +333,9 @@ async function main() {
       JSON.stringify(keptCards),
     );
     check(
-      "Paket 39: kept cards (This Month, Monthly Report, New Complaints, Terms of Office, IKM Trend) still show with collapse buttons",
+      "Paket 39: kept cards (This Month, Monthly Report, New Complaints, Terms of Office) still show with collapse buttons — IKM Trend removed by Paket 41",
       keptCards.month && keptCards.report && keptCards.aduanBaru && keptCards.masa &&
-        keptCards.trend &&
-        keptCards.monthBtn && keptCards.reportBtn && !keptCards.trendBtn,
+        keptCards.monthBtn && keptCards.reportBtn,
       JSON.stringify(keptCards),
     );
     // Paket 40 — kartu Hubungi Kami TIDAK ada lagi di Beranda (pindah ke
@@ -362,29 +360,29 @@ async function main() {
       JSON.stringify(kontakTab),
     );
 
-    // Paket 38 — tombol lipat kartu Beranda (semua kartu kecuali IKM Trend).
+    // Paket 38 — tombol lipat kartu Beranda. Paket 41: semua 11 kartu
+    // punya tombol (kartu Tren IKM yang dulu tanpa tombol sudah dihapus).
     const collapseInfo = await page.evaluate(() => {
       const cards = [...document.querySelectorAll("#panel-home .bento-card")];
       const btn = (sel) => document.querySelector(`${sel} .bento-collapse-btn`);
       return {
         total: cards.length,
         withBtn: cards.filter((c) => c.querySelector(".bento-collapse-btn")).length,
-        trendBtn: btn(".bento-trend") !== null,
-        trendChartVisible:
-          document.getElementById("home-ikm-trend")?.offsetParent !== null,
+        trendGone: document.querySelector(".bento-trend") === null &&
+          document.getElementById("home-ikm-trend") === null,
         monthBtnText: btn(".bento-month")?.textContent ?? "",
         monthAria: btn(".bento-month")?.getAttribute("aria-expanded") ?? "",
       };
     });
     check(
-      "every Beranda card except IKM Trend has a collapse button (14 of 15)",
-      collapseInfo.total === 15 && collapseInfo.withBtn === 14 && !collapseInfo.trendBtn,
-      `total=${collapseInfo.total} withBtn=${collapseInfo.withBtn} trendBtn=${collapseInfo.trendBtn}`,
+      "every Beranda card has a collapse button (11 of 11)",
+      collapseInfo.total === 11 && collapseInfo.withBtn === 11,
+      `total=${collapseInfo.total} withBtn=${collapseInfo.withBtn}`,
     );
     check(
-      "IKM Trend has no collapse button and its chart still renders",
-      !collapseInfo.trendBtn && collapseInfo.trendChartVisible,
-      `trendBtn=${collapseInfo.trendBtn} chartVisible=${collapseInfo.trendChartVisible}`,
+      "IKM Trend card is gone from Beranda (Paket 41)",
+      collapseInfo.trendGone,
+      `trendGone=${collapseInfo.trendGone}`,
     );
     check(
       "collapse buttons start open ('−', aria-expanded=true)",
@@ -471,94 +469,118 @@ async function main() {
       homeAduan.items === 3 && /Biaya tidak sesuai/.test(homeAduan.first) && /waiting|menunggu/.test(homeAduan.first),
       `items=${homeAduan.items} first=${homeAduan.first.slice(0, 60)}`,
     );
-    // Paket 16: "Perlu Ditindaklanjuti" — open complaints + register
-    // items, oldest first; tap jumps to the tab; empty state; offline.
-    const readFollowup = () =>
-      page.evaluate(() => ({
-        count: document.getElementById("home-followup-count")?.textContent ?? "",
-        summary: document.getElementById("home-followup-summary")?.textContent ?? "",
-        items: [...document.querySelectorAll("#home-followup-list li")].map(
-          (li) => li.textContent ?? "",
-        ),
-        emptyHidden: document.getElementById("home-followup-empty").hidden,
-      }));
-    const followup = await readFollowup();
-    // Paket 20: expired / soon-expiring SKs join the card — the expected
-    // count is computed from localStorage + today's date (robust across
-    // months, as SKs keep expiring).
-    const nSk = await page.evaluate(() => {
-      const items = JSON.parse(localStorage.getItem("desaai-perangkat-v1") ?? "[]");
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      let n = 0;
-      let firstName = "";
-      let firstDate = "";
-      for (const p of items) {
-        if (!p.masaSelesai) continue;
-        const end = new Date(`${p.masaSelesai}T00:00:00`);
-        const d = Math.round((end.getTime() - today.getTime()) / 86400000);
-        if (d < 0 || d <= 30) {
-          n += 1;
-          if (d < 0 && (!firstDate || p.masaSelesai < firstDate)) {
-            firstDate = p.masaSelesai;
-            firstName = p.nama;
-          }
-        }
-      }
-      return { n, firstName };
-    });
-    const followupTotal = 7 + nSk.n;
+    // Paket 41 — 4 kartu Beranda dihapus: Adoption Pack, Needs Follow-Up,
+    // IKM Trend, Surat Hari Ini. Fungsinya tetap terjangkau di menu
+    // masing-masing; yang hilang hanya tampilan agregatnya di Beranda.
+    const p41gone = await page.evaluate(() => ({
+      adopsi: document.getElementById("home-adopsi-card") === null,
+      followup: document.getElementById("home-followup-card") === null,
+      trend: document.querySelector(".bento-trend") === null &&
+        document.getElementById("home-ikm-trend") === null,
+      lettersToday:
+        document.querySelector('[data-card="letters-today"]') === null &&
+        document.getElementById("home-letters-today") === null,
+      ikmScoreStays: document.getElementById("home-ikm-score") !== null,
+      monthStays: document.querySelector(".bento-month") !== null,
+    }));
     check(
-      "follow-up card lists 7 open items + SK reminders, most urgent first",
-      followup.count === String(followupTotal) &&
-        /5 complaints/.test(followup.summary) &&
-        /2 register items/.test(followup.summary) &&
-        new RegExp(`${nSk.n} staff SK`).test(followup.summary) &&
-        followup.items.length === followupTotal &&
-        new RegExp(nSk.firstName).test(followup.items[0]) &&
-        /Permohonan rekomendasi bantuan sosial/.test(followup.items[followupTotal - 1]) &&
-        followup.emptyHidden,
-      `count=${followup.count} summary=${followup.summary} first=${followup.items[0]?.slice(0, 50)} last=${followup.items[followupTotal - 1]?.slice(0, 50)}`,
+      "Paket 41: the 4 removed Beranda cards are gone, the blue IKM score card + This Month stay",
+      p41gone.adopsi && p41gone.followup && p41gone.trend && p41gone.lettersToday &&
+        p41gone.ikmScoreStays && p41gone.monthStays,
+      JSON.stringify(p41gone),
     );
-    // Tap the first item (an expired SK) -> kepegawaian tab opens.
-    await page.click("#home-followup-list li");
+    // Paket 41 — sumber data kartu yang dihapus tetap terjangkau di menu:
+    // SK pegawai di Data Kepegawaian, pengaduan di Pengaduan, agenda di
+    // Agenda Surat, draf hari ini di Draf Surat / Arsip & Draf.
+    await page.click('[data-tab="kepegawaian"]');
     await sleep(300);
+    const p41keg = await page.evaluate(() => ({
+      skList: document.getElementById("keg-sk-list") !== null,
+      skCount: document.getElementById("keg-sk-count") !== null,
+    }));
+    await page.click('[data-tab="pengaduan"]');
+    await sleep(300);
+    const p41aduan = await page.evaluate(() => ({
+      panel: !document.getElementById("panel-pengaduan").hidden,
+    }));
+    await page.click('[data-tab="agenda"]');
+    await sleep(300);
+    const p41agenda = await page.evaluate(() => ({
+      panel: !document.getElementById("panel-agenda").hidden,
+    }));
+    await page.click('[data-tab="letters"]');
+    await sleep(300);
+    const p41letters = await page.evaluate(() => ({
+      panel: !document.getElementById("panel-letters").hidden,
+      generate: document.getElementById("letter-generate") !== null,
+    }));
+    await page.click('[data-tab="drafts"]');
+    await sleep(300);
+    const p41drafts = await page.evaluate(() => ({
+      panel: !document.getElementById("panel-drafts").hidden,
+      list: document.getElementById("drafts-list") !== null,
+    }));
     check(
-      "tapping a follow-up SK item opens the kepegawaian tab",
-      await page.$eval('[data-tab="kepegawaian"]', (el) => el.classList.contains("active")),
+      "Paket 41: follow-up sources reachable in their menus (SK in Kepegawaian, complaints in Pengaduan, register in Agenda, drafts in Draf Surat / Arsip & Draf)",
+      p41keg.skList && p41keg.skCount && p41aduan.panel && p41agenda.panel &&
+        p41letters.panel && p41letters.generate && p41drafts.panel && p41drafts.list,
+      JSON.stringify({ p41keg, p41aduan, p41agenda, p41letters, p41drafts }),
     );
+    // Paket 41 — tab Kepuasan/IKM menampilkan skor + unsur, tanpa grafik
+    // tren kumulatif (yang memang hanya ada di Beranda — dicatat di laporan).
+    await page.click('[data-tab="ikm"]');
+    await sleep(300);
+    const p41ikm = await page.evaluate(() => ({
+      score: document.getElementById("ikm-score") !== null,
+      bars: document.querySelectorAll("#ikm-bars .ikm-fill").length,
+      noTrend: document.getElementById("home-ikm-trend") === null,
+    }));
+    check(
+      "Paket 41: IKM tab still shows score + per-element bars, no cumulative trend chart",
+      p41ikm.score && p41ikm.bars > 0 && p41ikm.noTrend,
+      JSON.stringify(p41ikm),
+    );
+    // Paket 41 — header Dashboard kantor di 390px: tidak ada overflow
+    // horizontal, pil tanggal + lonceng + tombol ⌘K terlihat utuh.
     await page.click('[data-tab="home"]');
     await sleep(300);
-    // Tap a complaint item -> complaints tab opens.
-    await page.evaluate(() => {
-      const li = [...document.querySelectorAll("#home-followup-list li")].find((el) =>
-        (el.textContent ?? "").includes("Biaya tidak sesuai"),
-      );
-      li?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await page.setViewport({ width: 390, height: 844 });
+    await sleep(400);
+    const p41head = await page.evaluate(() => {
+      const head = document.querySelector(".page-head");
+      const palette = document.getElementById("palette-open");
+      const datePill = document.getElementById("date-pill");
+      const r = (el) => el?.getBoundingClientRect();
+      const hr = r(head);
+      const pr = r(palette);
+      const dr = r(datePill);
+      return {
+        docOverflow: document.documentElement.scrollWidth - 390,
+        headRight: hr ? Math.round(hr.right) : -1,
+        headLeft: hr ? Math.round(hr.left) : -1,
+        paletteRight: pr ? Math.round(pr.right) : -1,
+        paletteVisible: pr ? pr.width > 0 && pr.height > 0 : false,
+        dateVisible: dr ? dr.width > 0 && dr.height > 0 : false,
+      };
     });
-    await sleep(300);
     check(
-      "tapping a follow-up complaint opens the complaints tab",
-      await page.$eval('[data-tab="pengaduan"]', (el) => el.classList.contains("active")),
+      "Paket 41: header fits at 390px — no horizontal overflow, date pill + palette button fully visible",
+      p41head.docOverflow <= 0 && p41head.headRight <= 390 && p41head.headLeft >= 0 &&
+        p41head.paletteRight <= 390 && p41head.paletteVisible && p41head.dateVisible,
+      JSON.stringify(p41head),
     );
-    await page.click('[data-tab="home"]');
+    await page.setViewport({ width: 1280, height: 900 });
     await sleep(300);
-    // Tap a register item -> mail register tab opens.
-    await page.evaluate(() => {
-      const li = [...document.querySelectorAll("#home-followup-list li")].find((el) =>
-        (el.textContent ?? "").includes("Permohonan rekomendasi bantuan sosial"),
-      );
-      li?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-    await sleep(300);
-    check(
-      "tapping a follow-up register item opens the mail register tab",
-      await page.$eval('[data-tab="agenda"]', (el) => el.classList.contains("active")),
-    );
-    await page.click('[data-tab="home"]');
-    await sleep(300);
-    // Incoming letter without a disposition is flagged, not duplicated.
+    // Paket 41 — the follow-up card is gone, so its aggregate checks move
+    // to the surviving surfaces. The "1 not yet dispositioned" aggregate
+    // line has no home any more (noted in PAKET-41-LAPORAN.md); what
+    // remains testable is the per-item truth in the Agenda tab: an
+    // undispositioned letter shows no disposition in its row, exactly once.
     const seedAgsRaw = await page.evaluate(() => localStorage.getItem("desaai-agenda-v1"));
+    const seedAgsFirst = await page.evaluate(() => {
+      const items = JSON.parse(localStorage.getItem("desaai-agenda-v1") ?? "[]");
+      return items[0] ? { id: items[0].id, disposisi: items[0].disposisi ?? "" } : null;
+    });
     await page.evaluate(() => {
       const items = JSON.parse(localStorage.getItem("desaai-agenda-v1") ?? "[]");
       items[0].disposisi = "";
@@ -566,22 +588,33 @@ async function main() {
     });
     await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
     await sleep(400);
-    const followupDisp = await readFollowup();
+    await page.click('[data-tab="agenda"]');
+    await sleep(300);
+    const agendaDisp = await page.evaluate((firstId) => {
+      // Baris agenda = anak langsung #agenda-list; tombol aksi di dalam
+      // baris ikut membawa data-id yang sama, jadi jangan hitung mereka.
+      const rows = [...document.querySelectorAll("#agenda-list > [data-id]")];
+      const first = rows.find((el) => el.dataset.id === firstId);
+      return {
+        rows: rows.length,
+        firstOnce: rows.filter((el) => el.dataset.id === firstId).length,
+        firstMeta: first?.querySelector("p")?.textContent ?? "",
+      };
+    }, seedAgsFirst?.id);
     await page.evaluate((raw) => {
       if (raw) localStorage.setItem("desaai-agenda-v1", raw);
     }, seedAgsRaw);
     await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
     await sleep(400);
     check(
-      "incoming letter without disposition is flagged once (not duplicated)",
-      followupDisp.count === String(followupTotal) &&
-        /1 not yet dispositioned/.test(followupDisp.summary) &&
-        followupDisp.items.filter((t) => /not yet dispositioned/.test(t)).length === 1,
-      `count=${followupDisp.count} summary=${followupDisp.summary}`,
+      "incoming letter without disposition shows no disposition in its Agenda row, exactly once",
+      !!seedAgsFirst && seedAgsFirst.disposisi !== "" &&
+        agendaDisp.firstOnce === 1 && !agendaDisp.firstMeta.includes(seedAgsFirst.disposisi),
+      `rows=${agendaDisp.rows} firstOnce=${agendaDisp.firstOnce} meta=${agendaDisp.firstMeta.slice(0, 80)}`,
     );
-    // Empty state: everything resolved -> positive message, badge 0.
-    // (Paket 20: SK reminders must be cleared too — push every term end
-    // far into the future, then restore.)
+    // Empty state: everything resolved -> Briefing Pagi shows 0 new
+    // complaints (the surviving all-clear surface); restoring the seed
+    // data brings the counts back.
     const seedAduRaw = await page.evaluate(() => localStorage.getItem("desaai-pengaduan-v1"));
     const seedAgsRaw2 = await page.evaluate(() => localStorage.getItem("desaai-agenda-v1"));
     const seedKegRaw = await page.evaluate(() => localStorage.getItem("desaai-perangkat-v1"));
@@ -598,7 +631,11 @@ async function main() {
     });
     await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
     await sleep(400);
-    const followupEmpty = await readFollowup();
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    const briefingEmpty = await page.evaluate(() => ({
+      summary: document.getElementById("home-briefing-summary")?.textContent ?? "",
+    }));
     await page.evaluate(
       ({ adu, ags, keg }) => {
         if (adu) localStorage.setItem("desaai-pengaduan-v1", adu);
@@ -609,28 +646,32 @@ async function main() {
     );
     await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
     await sleep(400);
-    const followupRestored = await readFollowup();
+    await page.click('[data-tab="home"]');
+    await sleep(300);
+    const briefingRestored = await page.evaluate(() => ({
+      summary: document.getElementById("home-briefing-summary")?.textContent ?? "",
+    }));
     check(
-      "follow-up card shows the all-clear message when nothing is open",
-      followupEmpty.count === "0" &&
-        followupEmpty.items.length === 0 &&
-        !followupEmpty.emptyHidden &&
-        followupRestored.count === String(followupTotal),
-      `empty count=${followupEmpty.count} items=${followupEmpty.items.length} restored=${followupRestored.count}`,
+      "briefing shows 0 new complaints when everything is resolved, counts return after restore",
+      /^0 /.test(briefingEmpty.summary) && /^3 /.test(briefingRestored.summary),
+      `empty=${JSON.stringify(briefingEmpty.summary)} restored=${JSON.stringify(briefingRestored.summary)}`,
     );
-    // Offline: the card still renders from local data (no reload — the
-    // network is off, so re-render by leaving and returning to Home).
+    // Offline: the home dashboard still renders from local data (no reload
+    // — the network is off, so re-render by leaving and returning to Home).
+    const briefingBeforeOffline = briefingRestored.summary;
     await page.setOfflineMode(true);
     await page.click('[data-tab="ikm"]');
     await sleep(200);
     await page.click('[data-tab="home"]');
     await sleep(300);
-    const followupOffline = await readFollowup();
+    const briefingOffline = await page.evaluate(() => ({
+      summary: document.getElementById("home-briefing-summary")?.textContent ?? "",
+    }));
     await page.setOfflineMode(false);
     check(
-      "follow-up card renders offline (local data only)",
-      followupOffline.count === String(followupTotal) && followupOffline.items.length === followupTotal,
-      `count=${followupOffline.count} items=${followupOffline.items.length}`,
+      "briefing renders offline (local data only)",
+      briefingOffline.summary === briefingBeforeOffline && briefingOffline.summary !== "",
+      `offline=${JSON.stringify(briefingOffline.summary)}`,
     );
     // Paket 10 — Briefing Pagi: date, summary counts, focus list, copy, nav.
     const briefing = await page.evaluate(() => ({
@@ -698,24 +739,22 @@ async function main() {
       /Perlu perhatian/.test(reportBody) && /hari menunggu/.test(reportBody),
       reportBody.slice(0, 120),
     );
-    // IKM trend chart: SVG line with one point per answer, last point = score.
+    // Paket 41 — grafik tren IKM Beranda dihapus; grafik tren BULANAN
+    // (di kartu Bulan Ini) tetap tampil — itu grafik BATANG (6 bulan ×
+    // 4 seri = 24 rect), bukan garis seperti tren IKM.
     const trend = await page.evaluate(() => {
-      const svg = document.querySelector("#home-ikm-trend svg");
-      const circles = [...document.querySelectorAll("#home-ikm-trend circle")];
-      const last = circles[circles.length - 1];
+      const svg = document.querySelector("#home-month-trend svg");
+      const rects = [...document.querySelectorAll("#home-month-trend rect")];
       return {
+        ikmTrendGone: document.getElementById("home-ikm-trend") === null,
         hasSvg: !!svg,
-        hasLine: !!document.querySelector("#home-ikm-trend polyline"),
-        points: circles.length,
-        lastScore: last ? Number(last.dataset.score ?? 0) : 0,
-        dashScore: Number(document.getElementById("ikm-score")?.dataset.score ?? 0),
+        bars: rects.length,
       };
     });
     check(
-      "IKM trend chart renders with one point per answer",
-      trend.hasSvg && trend.hasLine && trend.points === 12 &&
-        Math.abs(trend.lastScore - trend.dashScore) < 0.01,
-      `points=${trend.points} last=${trend.lastScore} dash=${trend.dashScore}`,
+      "IKM trend chart is gone, monthly trend chart still renders",
+      trend.ikmTrendGone && trend.hasSvg && trend.bars === 24,
+      `bars=${trend.bars} ikmTrendGone=${trend.ikmTrendGone}`,
     );
     // Global search: officer found, complaint group found, empty state works.
     await page.type("#home-search", "Ahmad");
@@ -3971,14 +4010,13 @@ async function main() {
         getComputedStyle(document.getElementById("home-briefing")).display === "none",
       backupHidden: !document.getElementById("home-backup-card"),
       letterheadHidden: !document.getElementById("home-letterhead-card"),
-      followupHidden:
-        getComputedStyle(document.getElementById("home-followup-card")).display === "none",
+      followupGone: document.getElementById("home-followup-card") === null,
       agendaHidden:
         getComputedStyle(document.querySelector('[data-tab="agenda"]')).display === "none",
     }));
     check(
-      "citizen mode hides officer tabs + briefing + agenda + follow-up cards and shows resident card (backup + letterhead cards no longer exist)",
-      warga.bodyWarga && warga.lettersHidden && warga.cardVisible && warga.briefingHidden && warga.agendaHidden && warga.backupHidden && warga.letterheadHidden && warga.followupHidden,
+      "citizen mode hides officer tabs + briefing + agenda and shows resident card (backup + letterhead + follow-up cards no longer exist)",
+      warga.bodyWarga && warga.lettersHidden && warga.cardVisible && warga.briefingHidden && warga.agendaHidden && warga.backupHidden && warga.letterheadHidden && warga.followupGone,
       JSON.stringify(warga),
     );
     await page.click("#warga-go-ikm");
@@ -4202,16 +4240,18 @@ async function main() {
     });
     await sleep(300);
     // Paket Adopsi Desa Lain: checklist + downloadable JSON pack.
-    await page.click('[data-tab="home"]');
+    // Paket 41 — kartu adopsi pindah dari Beranda ke Pengaturan
+    // (Bantuan & Tentang); unduhannya tetap sama, hanya tombolnya pindah.
+    await page.click('[data-tab="settings"]');
     await sleep(300);
     const adopsiPanel = await page.evaluate(() => ({
-      visible: !document.getElementById("home-adopsi-card")?.hidden,
-      steps: document.querySelectorAll("#home-adopsi-card .adopsi-steps li").length,
+      homeGone: document.getElementById("home-adopsi-card") === null,
+      settingsBtn: document.getElementById("set-adopsi-download") !== null,
     }));
     check(
-      "adoption pack panel shows the 5-step checklist",
-      adopsiPanel.visible && adopsiPanel.steps === 5,
-      `steps=${adopsiPanel.steps}`,
+      "adoption pack moved to Settings (Bantuan & Tentang), home card gone",
+      adopsiPanel.homeGone && adopsiPanel.settingsBtn,
+      JSON.stringify(adopsiPanel),
     );
     await page.evaluate(() => {
       window.__adoptBlobs = [];
@@ -4221,14 +4261,14 @@ async function main() {
         return orig(blob);
       };
     });
-    await page.click("#home-adopsi-download");
+    await page.click("#set-adopsi-download");
     await sleep(300);
     const adoptJson = await page.evaluate(async () => {
       const blobs = window.__adoptBlobs ?? [];
       const last = blobs[blobs.length - 1];
       return last ? await last.text() : "";
     });
-    const adoptStatus = await page.$eval("#home-adopsi-status", (el) => el.textContent ?? "");
+    const adoptStatus = await page.$eval("#set-adopsi-status", (el) => el.textContent ?? "");
     let adoptPack = null;
     try {
       adoptPack = JSON.parse(adoptJson);
