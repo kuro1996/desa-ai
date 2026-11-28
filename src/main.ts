@@ -396,6 +396,11 @@ function surveyLink(): string {
 
 function activateTab(tab: string, updateHash = true): void {
   currentTab = tab;
+  // Paket 43 — the old quick-stats strip duplicates the new AIDEN stat
+  // row on Beranda; hide it only while the Beranda tab is active. It
+  // stays visible on every other tab (same body-class pattern as
+  // mode-warga). Data/bindings untouched.
+  document.body.classList.toggle("tab-home", tab === "home");
   document.querySelectorAll(".tab").forEach((b) => {
     const isActive = (b as HTMLButtonElement).dataset.tab === tab;
     b.classList.toggle("active", isActive);

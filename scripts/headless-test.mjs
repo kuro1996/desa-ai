@@ -683,6 +683,38 @@ async function main() {
     );
     await page.setViewport({ width: 1280, height: 900 });
     await sleep(300);
+    // Paket 43 — strip quick-stats lama disembunyikan HANYA saat tab
+    // Beranda aktif (duplikat baris statistik AIDEN); tampil lagi di
+    // tab lain. Data/binding strip tidak dihapus (4 hero-stat tetap ada
+    // di DOM, nilainya tetap live).
+    const p43qs = await page.evaluate(() => {
+      const qs = document.querySelector(".quick-stats");
+      const row = document.querySelector("#home-stat-row");
+      return {
+        bodyHome: document.body.classList.contains("tab-home"),
+        qsHidden: getComputedStyle(qs).display === "none",
+        rowVisible: row.getBoundingClientRect().width > 0,
+        qsItems: document.querySelectorAll("#quick-stats .hero-stat").length,
+      };
+    });
+    check(
+      "Paket 43: quick-stats strip hidden on Beranda, AIDEN stat row still visible",
+      p43qs.bodyHome && p43qs.qsHidden && p43qs.rowVisible && p43qs.qsItems === 4,
+      JSON.stringify(p43qs),
+    );
+    await page.click('[data-tab="letters"]');
+    await sleep(300);
+    const p43qsOther = await page.evaluate(() => ({
+      bodyHome: document.body.classList.contains("tab-home"),
+      qsVisible: getComputedStyle(document.querySelector(".quick-stats")).display !== "none",
+    }));
+    check(
+      "Paket 43: quick-stats strip visible again on other tabs",
+      !p43qsOther.bodyHome && p43qsOther.qsVisible,
+      JSON.stringify(p43qsOther),
+    );
+    await page.click('[data-tab="home"]');
+    await sleep(300);
     // Paket 41 — the follow-up card is gone, so its aggregate checks move
     // to the surviving surfaces. The "1 not yet dispositioned" aggregate
     // line has no home any more (noted in PAKET-41-LAPORAN.md); what

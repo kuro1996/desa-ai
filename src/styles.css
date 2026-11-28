@@ -312,6 +312,14 @@ main {
   margin: 4px 0 18px;
 }
 
+/* Paket 43 — the old quick-stats strip duplicates the new AIDEN stat
+   row on Beranda (IKM shown twice). Hide the strip only while the
+   Beranda tab is active (body.tab-home is set by activateTab); it stays
+   visible on every other tab. Its live data/bindings are untouched. */
+body.tab-home .quick-stats {
+  display: none;
+}
+
 .quick-stat {
   display: flex;
   flex-direction: column;
