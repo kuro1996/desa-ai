@@ -2000,12 +2000,82 @@ html[data-theme="dark"] ::placeholder {
 }
 
 .bento-card {
+  position: relative;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 18px;
   background: var(--surface);
   box-shadow: var(--shadow);
   min-width: 0;
+}
+
+/* Paket 38 — tombol lipat (− / +) di kanan atas tiap kartu Beranda
+ * (kecuali IKM Trend, yang tidak punya tombol sama sekali). Judul kartu
+ * + angka ringkas (`.bento-label`, `.bento-keep`) tetap terlihat saat
+ * terlipat; isi lainnya disembunyikan. Tombol 40×40 px — cukup besar
+ * untuk jari di HP — dan ikut mode gelap lewat variabel tema. */
+.bento-collapse-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.bento-collapse-btn:hover,
+.bento-collapse-btn:focus-visible {
+  border-color: var(--blue-strong);
+  outline: 2px solid var(--blue-strong);
+  outline-offset: 1px;
+}
+
+.bento-ikm .bento-collapse-btn {
+  background: rgb(255 255 255 / 0.2);
+  border-color: rgb(255 255 255 / 0.45);
+  color: #fff;
+}
+
+/* Ruang untuk tombol supaya tidak menutupi judul / kolom pencarian. */
+.bento-card.has-collapse .bento-label {
+  padding-right: 44px;
+}
+
+.bento-search.has-collapse #home-search {
+  padding-right: 48px;
+}
+
+/* Kartu terlipat: sembunyikan semua anak langsung kecuali judul, angka
+ * ringkas (`.bento-keep`), dan tombol lipatnya sendiri. */
+.bento-card.collapsed:not(.bento-search):not(.bento-anin)
+  > :not(.bento-label):not(.bento-keep):not(.bento-collapse-btn) {
+  display: none;
+}
+
+/* Dua kartu berstruktur khusus (judulnya bukan anak langsung kartu):
+ * kartu pencarian — sembunyikan kolom + hasil; kartu Anin — sembunyikan
+ * wajah, tips, dan tombol aksi, tapi biarkan judul + sapaan terlihat. */
+.bento-search.collapsed #home-search,
+.bento-search.collapsed #home-search-results {
+  display: none;
+}
+
+.bento-anin.collapsed .anin-face,
+.bento-anin.collapsed #anin-tip,
+.bento-anin.collapsed .actions {
+  display: none;
 }
 
 .bento-search {

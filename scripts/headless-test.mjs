@@ -255,7 +255,11 @@ async function main() {
       monthLetters: document.getElementById("home-month-letters")?.textContent ?? "",
       monthName: document.getElementById("home-month-name")?.textContent ?? "",
       cards: [...document.querySelectorAll("#panel-home .bento-card")].map(
-        (el) => el.id || el.className.split(" ").slice(1).join("."),
+        (el) =>
+          el.id ||
+          [...el.classList].find(
+            (c) => c.startsWith("bento-") && c !== "bento-card",
+          ),
       ),
     }));
     const monthName = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
@@ -299,6 +303,106 @@ async function main() {
       "bento masa-bhakti counts match kepegawaian stats",
       masa.akan === kegStats.akan && masa.habis === kegStats.habis && masa.items > 0,
       `bento ${masa.akan}/${masa.habis} vs keg ${kegStats.akan}/${kegStats.habis} items=${masa.items}`,
+    );
+
+    // Paket 38 — tombol lipat kartu Beranda (semua kartu kecuali IKM Trend).
+    const collapseInfo = await page.evaluate(() => {
+      const cards = [...document.querySelectorAll("#panel-home .bento-card")];
+      const btn = (sel) => document.querySelector(`${sel} .bento-collapse-btn`);
+      return {
+        total: cards.length,
+        withBtn: cards.filter((c) => c.querySelector(".bento-collapse-btn")).length,
+        trendBtn: btn(".bento-trend") !== null,
+        trendChartVisible:
+          document.getElementById("home-ikm-trend")?.offsetParent !== null,
+        monthBtnText: btn(".bento-month")?.textContent ?? "",
+        monthAria: btn(".bento-month")?.getAttribute("aria-expanded") ?? "",
+      };
+    });
+    check(
+      "every Beranda card except IKM Trend has a collapse button (17 of 18)",
+      collapseInfo.total === 18 && collapseInfo.withBtn === 17 && !collapseInfo.trendBtn,
+      `total=${collapseInfo.total} withBtn=${collapseInfo.withBtn} trendBtn=${collapseInfo.trendBtn}`,
+    );
+    check(
+      "IKM Trend has no collapse button and its chart still renders",
+      !collapseInfo.trendBtn && collapseInfo.trendChartVisible,
+      `trendBtn=${collapseInfo.trendBtn} chartVisible=${collapseInfo.trendChartVisible}`,
+    );
+    check(
+      "collapse buttons start open ('−', aria-expanded=true)",
+      collapseInfo.monthBtnText === "−" && collapseInfo.monthAria === "true",
+      `text=${JSON.stringify(collapseInfo.monthBtnText)} aria=${collapseInfo.monthAria}`,
+    );
+    // Lipat kartu This Month: judul + angka ringkas tetap terlihat, tombol jadi "+".
+    await page.$eval('.bento-month .bento-collapse-btn', (el) => el.click());
+    await sleep(200);
+    const monthCollapsed = await page.evaluate(() => {
+      const card = document.querySelector(".bento-month");
+      const btn = document.querySelector(".bento-month .bento-collapse-btn");
+      const rows = document.querySelector(".month-rows");
+      return {
+        collapsed: card?.classList.contains("collapsed") ?? false,
+        btnText: btn?.textContent ?? "",
+        aria: btn?.getAttribute("aria-expanded") ?? "",
+        ariaLabel: btn?.getAttribute("aria-label") ?? "",
+        rowsVisible: rows ? rows.offsetParent !== null : false,
+      };
+    });
+    check(
+      "clicking '−' collapses This Month: body hidden, title + month numbers stay, button becomes '+'",
+      monthCollapsed.collapsed && monthCollapsed.btnText === "+" &&
+        monthCollapsed.aria === "false" && monthCollapsed.rowsVisible &&
+        /Tampilkan detail|Show details/.test(monthCollapsed.ariaLabel),
+      JSON.stringify(monthCollapsed),
+    );
+    // Lipat kartu Monthly Report juga: pratinjau + tombol aksi ikut tersembunyi.
+    await page.$eval('.bento-report .bento-collapse-btn', (el) => el.click());
+    await sleep(200);
+    const reportCollapsed = await page.evaluate(() => ({
+      collapsed: document.querySelector(".bento-report")?.classList.contains("collapsed") ?? false,
+      previewVisible: document.getElementById("home-report-preview")?.offsetParent !== null,
+      actionsVisible: document.getElementById("home-report-print")?.offsetParent !== null,
+    }));
+    check(
+      "collapsing Monthly Report hides its preview + Print/Export actions",
+      reportCollapsed.collapsed && !reportCollapsed.previewVisible && !reportCollapsed.actionsVisible,
+      JSON.stringify(reportCollapsed),
+    );
+    // Status lipat tersimpan di localStorage dan bertahan setelah reload.
+    const storedBefore = await page.evaluate(() =>
+      localStorage.getItem("desaai-home-collapsed-v1"),
+    );
+    await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+    await sleep(1200);
+    const afterReload = await page.evaluate(() => ({
+      monthCollapsed: document.querySelector(".bento-month")?.classList.contains("collapsed") ?? false,
+      reportCollapsed: document.querySelector(".bento-report")?.classList.contains("collapsed") ?? false,
+      stored: localStorage.getItem("desaai-home-collapsed-v1") ?? "",
+      homeVisible: !document.getElementById("panel-home").hidden,
+    }));
+    check(
+      "collapsed state persists in localStorage across reload",
+      afterReload.monthCollapsed && afterReload.reportCollapsed &&
+        afterReload.stored.includes("month") && afterReload.stored.includes("report") &&
+        afterReload.homeVisible,
+      `storedBefore=${storedBefore} stored=${afterReload.stored} month=${afterReload.monthCollapsed} report=${afterReload.reportCollapsed}`,
+    );
+    // Kembalikan semua kartu terbuka supaya cek-cek sesudahnya melihat Beranda utuh.
+    await page.$eval('.bento-month .bento-collapse-btn', (el) => el.click());
+    await page.$eval('.bento-report .bento-collapse-btn', (el) => el.click());
+    await sleep(200);
+    const reopened = await page.evaluate(() => ({
+      monthOpen: !document.querySelector(".bento-month")?.classList.contains("collapsed"),
+      reportOpen: !document.querySelector(".bento-report")?.classList.contains("collapsed"),
+      btnText: document.querySelector(".bento-month .bento-collapse-btn")?.textContent ?? "",
+      stored: localStorage.getItem("desaai-home-collapsed-v1") ?? "",
+    }));
+    check(
+      "clicking '+' reopens the cards and clears their stored collapsed state",
+      reopened.monthOpen && reopened.reportOpen && reopened.btnText === "−" &&
+        !reopened.stored.includes("month") && !reopened.stored.includes("report"),
+      JSON.stringify(reopened),
     );
     // Paket 6: dashboard lists the oldest unresolved complaints (waiting longest first).
     const homeAduan = await page.evaluate(() => ({

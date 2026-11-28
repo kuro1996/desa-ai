@@ -182,6 +182,9 @@ function applyLang(): void {
     micBtn.title = t("aninVoiceMic", lang);
     micBtn.setAttribute("aria-label", t("aninVoiceMic", lang));
   }
+  // Paket 38 — keep the Beranda collapse buttons' aria-labels in the
+  // current language (their label depends on collapsed/open state).
+  updateCollapseButtons();
   renderKepegawaian();
   renderIkm();
   renderPengaduan();
@@ -609,7 +612,7 @@ function initMode(): void {
 // ---------- Paket 35 — Pengaturan (tab baru) ----------
 
 const APP_VERSION = "0.1.0";
-const APP_PAKET = 37;
+const APP_PAKET = 38;
 
 /** Kunci sesi login demo (Paket 36) — juga dibaca skrip inline di
  * index.html sebelum bundle boot. */
@@ -2163,6 +2166,8 @@ function renderCamatDashboard(): void {
 
 function initHome(): void {
   renderHome();
+  // Paket 38 — tombol lipat kartu Beranda (semua kartu kecuali IKM Trend).
+  initHomeCollapse();
   ($("home-search") as HTMLInputElement).addEventListener("input", (ev) => {
     homeSearchQuery = (ev.target as HTMLInputElement).value;
     renderHomeSearch();
@@ -2208,6 +2213,97 @@ function initHome(): void {
     downloadFile(filename, text, "application/json");
     setStatus($("home-adopsi-status"), t("adopsiDownloaded", lang));
   });
+}
+
+// ---------- Paket 38 — tombol lipat kartu Beranda ----------
+
+/** Kunci localStorage untuk status lipat/buka tiap kartu Beranda. */
+const HOME_COLLAPSED_KEY = "desaai-home-collapsed-v1";
+
+/** Kartu yang sedang terlipat (kunci `data-card`). Default: semua terbuka. */
+let homeCollapsed = new Set<string>();
+
+function loadHomeCollapsed(): Set<string> {
+  try {
+    const raw = localStorage.getItem(HOME_COLLAPSED_KEY);
+    if (!raw) return new Set();
+    const arr: unknown = JSON.parse(raw);
+    if (!Array.isArray(arr)) return new Set();
+    return new Set(arr.filter((x): x is string => typeof x === "string"));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveHomeCollapsed(): void {
+  try {
+    localStorage.setItem(HOME_COLLAPSED_KEY, JSON.stringify([...homeCollapsed]));
+  } catch {
+    // Storage unavailable — the choice still applies for this session.
+  }
+}
+
+/** Terapkan status lipat/buka ke satu kartu + tombolnya (tanpa menyimpan). */
+function setCardCollapsed(card: HTMLElement, collapsed: boolean): void {
+  const key = card.dataset.card;
+  if (!key) return;
+  card.classList.toggle("collapsed", collapsed);
+  const btn = card.querySelector<HTMLButtonElement>(".bento-collapse-btn");
+  if (!btn) return;
+  btn.textContent = collapsed ? "+" : "−";
+  btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  btn.setAttribute(
+    "aria-label",
+    t(collapsed ? "homeExpand" : "homeCollapse", lang),
+  );
+}
+
+/** Segarkan aria-label semua tombol lipat (dipakai applyLang saat bahasa
+ *  berganti — labelnya tergantung status lipat/buka tiap kartu). */
+function updateCollapseButtons(): void {
+  document
+    .querySelectorAll<HTMLElement>("#panel-home .bento-card[data-card]")
+    .forEach((card) => {
+      const btn = card.querySelector<HTMLButtonElement>(".bento-collapse-btn");
+      if (!btn) return;
+      const collapsed = card.classList.contains("collapsed");
+      btn.setAttribute(
+        "aria-label",
+        t(collapsed ? "homeExpand" : "homeCollapse", lang),
+      );
+    });
+}
+
+/**
+ * Pasang tombol lipat (− / +) di kanan atas tiap kartu Beranda yang punya
+ * `data-card`. Kartu IKM Trend (`.bento-trend`) TIDAK punya `data-card`,
+ * jadi tidak dapat tombol dan tampilannya tidak berubah sama sekali.
+ * Judul + angka ringkas (`.bento-label`, `.bento-keep`) tetap terlihat saat
+ * terlipat — isi lainnya disembunyikan CSS (`.bento-card.collapsed`).
+ * Pilihan tersimpan di localStorage dan dipulihkan saat buka lagi.
+ */
+function initHomeCollapse(): void {
+  homeCollapsed = loadHomeCollapsed();
+  document
+    .querySelectorAll<HTMLElement>("#panel-home .bento-card[data-card]")
+    .forEach((card) => {
+      if (card.querySelector(".bento-collapse-btn")) return;
+      const key = card.dataset.card;
+      if (!key) return;
+      card.classList.add("has-collapse");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "bento-collapse-btn";
+      btn.addEventListener("click", () => {
+        const nowCollapsed = !card.classList.contains("collapsed");
+        if (nowCollapsed) homeCollapsed.add(key);
+        else homeCollapsed.delete(key);
+        saveHomeCollapsed();
+        setCardCollapsed(card, nowCollapsed);
+      });
+      card.appendChild(btn);
+      setCardCollapsed(card, homeCollapsed.has(key));
+    });
 }
 
 // ---------- status chips ----------

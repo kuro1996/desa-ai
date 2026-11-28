@@ -313,7 +313,7 @@
               terms of office — all from the data already in this browser.
             </p>
             <div class="bento">
-              <div class="bento-card bento-search">
+              <div class="bento-card bento-search" data-card="search">
                 <label class="field">
                   <span data-i18n="homeSearch">Search everything</span>
                   <input
@@ -328,7 +328,7 @@
 
               <!-- Paket 27 — Anin, pemandu DesaAI (SVG murni, offline): sapaan +
                    satu tips kontekstual + langkah berikutnya. -->
-              <div id="home-anin" class="bento-card bento-anin">
+              <div id="home-anin" class="bento-card bento-anin" data-card="anin">
                 <div class="anin-face" aria-hidden="true">
                   <img
                     id="home-anin-img"
@@ -355,9 +355,9 @@
               </div>
 
               <!-- Paket 10 — Briefing Pagi: daily digest + copy to WhatsApp -->
-              <div id="home-briefing" class="bento-card bento-briefing">
+              <div id="home-briefing" class="bento-card bento-briefing" data-card="briefing">
                 <p class="bento-label"><span data-i18n="briefingTitle">Briefing Pagi</span> — <span id="home-briefing-date"></span></p>
-                <p id="home-briefing-summary" class="briefing-summary"></p>
+                <p id="home-briefing-summary" class="briefing-summary bento-keep"></p>
                 <p class="bento-sub"><span data-i18n="briefingFocus">Fokus hari ini</span>:</p>
                 <ul id="home-briefing-focus" class="notif-list"></ul>
                 <p id="home-briefing-empty" class="hint" hidden data-i18n="briefingEmpty">
@@ -374,9 +374,9 @@
               <!-- Paket 34, Ide 6 — Dashboard Pagi Camat: ringkasan harian
                    satu halaman untuk Camat, khusus petugas (disembunyikan
                    di Mode Warga). Diisi main.ts dari data aplikasi. -->
-              <div id="home-camat" class="bento-card bento-camat" hidden>
+              <div id="home-camat" class="bento-card bento-camat" data-card="camat" hidden>
                 <p class="bento-label" data-i18n="camatTitle">Dashboard Pagi Camat</p>
-                <p class="hint" data-i18n="camatHint">
+                <p class="hint bento-keep" data-i18n="camatHint">
                   Ringkasan pagi untuk Camat — dari data yang sudah ada di aplikasi ini. Khusus petugas.
                 </p>
                 <div id="home-camat-body"></div>
@@ -385,9 +385,9 @@
                 </p>
               </div>
 
-              <div id="home-warga-card" class="bento-card bento-warga" hidden>
+              <div id="home-warga-card" class="bento-card bento-warga" data-card="warga" hidden>
                 <p class="bento-label" data-i18n="wargaCardTitle">Layanan warga</p>
-                <p class="hint" data-i18n="wargaCardHint">
+                <p class="hint bento-keep" data-i18n="wargaCardHint">
                   Untuk warga: tiga hal yang bisa dilakukan di sini, tanpa login.
                 </p>
                 <div class="actions actions-col">
@@ -403,14 +403,14 @@
                 </div>
               </div>
 
-              <div class="bento-card bento-ikm">
+              <div class="bento-card bento-ikm" data-card="ikm-score">
                 <p class="bento-label" data-i18n="homeIkm">IKM score</p>
-                <p class="bento-num"><strong id="home-ikm-score">–</strong></p>
-                <p>
+                <p class="bento-num bento-keep"><strong id="home-ikm-score">–</strong></p>
+                <p class="bento-keep">
                   <span id="home-ikm-cat" class="badge badge-cloud"></span>
                   <span id="home-ikm-count" class="bento-sub"></span>
                 </p>
-                <p class="bento-sub">
+                <p class="bento-sub bento-keep">
                   <span data-i18n="homeIkmLowest">Lowest element</span>:
                   <strong id="home-ikm-lowest">–</strong>
                 </p>
@@ -421,9 +421,9 @@
                 </div>
               </div>
 
-              <div class="bento-card bento-kpi">
+              <div class="bento-card bento-kpi" data-card="letters-today">
                 <p class="bento-label" data-i18n="homeLettersToday">Letters today</p>
-                <p class="bento-num"><strong id="home-letters-today">0</strong></p>
+                <p class="bento-num bento-keep"><strong id="home-letters-today">0</strong></p>
                 <p class="bento-sub" data-i18n="homeLettersTodayHint">drafts saved today</p>
                 <div class="actions">
                   <button id="home-go-letters" class="btn" type="button">
@@ -432,9 +432,9 @@
                 </div>
               </div>
 
-              <div class="bento-card bento-kpi">
+              <div class="bento-card bento-kpi" data-card="aduan-baru">
                 <p class="bento-label" data-i18n="homeAduanBaru">New complaints</p>
-                <p class="bento-num"><strong id="home-aduan-baru">0</strong></p>
+                <p class="bento-num bento-keep"><strong id="home-aduan-baru">0</strong></p>
                 <p class="bento-sub" data-i18n="homeAduanBaruHint">waiting for follow-up</p>
                 <ul id="home-aduan-list" class="notif-list"></ul>
                 <p id="home-aduan-empty" class="hint" hidden data-i18n="homeAduanEmpty">
@@ -447,9 +447,9 @@
                 </div>
               </div>
 
-              <div class="bento-card bento-masa">
+              <div class="bento-card bento-masa" data-card="masa">
                 <p class="bento-label" data-i18n="homeMasaTitle">Terms of office — needs attention</p>
-                <p class="masa-counts">
+                <p class="masa-counts bento-keep">
                   <span><strong id="home-masa-akan">0</strong> <span data-i18n="homeMasaAkanHabis">Expiring ≤ 90 days</span></span>
                   <span><strong id="home-masa-habis">0</strong> <span data-i18n="homeMasaHabis">Expired</span></span>
                 </p>
@@ -464,9 +464,9 @@
                 </div>
               </div>
 
-              <div class="bento-card bento-month">
+              <div class="bento-card bento-month" data-card="month">
                 <p class="bento-label"><span data-i18n="homeMonthTitle">This month</span> — <span id="home-month-name"></span></p>
-                <p class="month-rows">
+                <p class="month-rows bento-keep">
                   <span><strong id="home-month-letters">0</strong> <span data-i18n="homeMonthLetters">Letters saved</span></span>
                   <span><strong id="home-month-ikm">0</strong> <span data-i18n="homeMonthIkm">Survey answers</span></span>
                   <span><strong id="home-month-aduan">0</strong> <span data-i18n="homeMonthAduan">Complaints</span></span>
@@ -482,7 +482,7 @@
                 </p>
               </div>
 
-              <div class="bento-card bento-chart">
+              <div class="bento-card bento-chart" data-card="aduan-chart">
                 <p class="bento-label" data-i18n="aduanChartTitle">Pengaduan per jenis</p>
                 <p class="hint" data-i18n="aduanChartHint">
                   Semua pengaduan di browser ini, dikelompokkan per jenis.
@@ -495,7 +495,7 @@
 
               <!-- Paket 28 — grafik model SIAP AKAD, data live (SVG murni, offline):
                    distribusi perangkat per desa + komposisi jabatan. -->
-              <div class="bento-card bento-desa-chart">
+              <div class="bento-card bento-desa-chart" data-card="desa-chart">
                 <p class="bento-label" data-i18n="homeDesaChartTitle">Distribusi Perangkat per Desa</p>
                 <p class="hint" data-i18n="homeDesaChartHint">
                   Perangkat desa di browser ini, dikelompokkan per desa.
@@ -506,7 +506,7 @@
                 </p>
               </div>
 
-              <div class="bento-card bento-jabatan-chart">
+              <div class="bento-card bento-jabatan-chart" data-card="jabatan-chart">
                 <p class="bento-label" data-i18n="homeJabatanTitle">Komposisi Jabatan</p>
                 <p class="hint" data-i18n="homeJabatanHint">
                   Perangkat desa di browser ini, dikelompokkan per jabatan.
@@ -520,7 +520,7 @@
                 </p>
               </div>
 
-              <div class="bento-card bento-report">
+              <div class="bento-card bento-report" data-card="report">
                 <p class="bento-label" data-i18n="homeReportTitle">Monthly report</p>
                 <p class="hint" data-i18n="homeReportHint">
                   Recap of this month's letters, survey and complaints — printable for
@@ -558,9 +558,9 @@
                    28 Nov 10:40 WIB — jangan diubah/dikoreksi). Nama sosmed
                    tampil sebagai teks saja: tidak ada URL profil di gambar,
                    jadi tidak ada tautan yang dikarang. -->
-              <div class="bento-card bento-contact" id="home-contact-card">
+              <div class="bento-card bento-contact" id="home-contact-card" data-card="contact">
                 <p class="bento-label" data-i18n="contactTitle">Hubungi Kami</p>
-                <p class="hint" data-i18n="contactHint">
+                <p class="hint bento-keep" data-i18n="contactHint">
                   Kantor Kecamatan Simpangkatis — kunjungi, telepon, atau kirim pesan.
                 </p>
                 <ul class="contact-list">
@@ -610,9 +610,9 @@
               </div>
 
               <!-- Paket 27 — Paket Adopsi Desa Lain: checklist + unduh paket JSON -->
-              <div class="bento-card bento-adopsi" id="home-adopsi-card">
+              <div class="bento-card bento-adopsi" id="home-adopsi-card" data-card="adopsi">
                 <p class="bento-label" data-i18n="adopsiTitle">Paket Adopsi Desa Lain</p>
-                <p class="hint" data-i18n="adopsiHint">
+                <p class="hint bento-keep" data-i18n="adopsiHint">
                   DesaAI gratis dan open-source — kantor desa mana pun bisa memakainya.
                   Lima langkah, tanpa akun, tanpa server.
                 </p>
@@ -636,7 +636,7 @@
               </div>
 
               <!-- Paket 16 — Perlu Ditindaklanjuti: open complaints + register items, oldest first. -->
-              <div class="bento-card bento-followup" id="home-followup-card">
+              <div class="bento-card bento-followup" id="home-followup-card" data-card="followup">
                 <p class="bento-label">
                   <span data-i18n="homeFollowupTitle">Needs follow-up</span>
                   <span class="followup-badge" id="home-followup-count">0</span>
@@ -645,7 +645,7 @@
                   Open complaints and mail-register items, oldest first — tap an
                   item to open it.
                 </p>
-                <p class="followup-summary" id="home-followup-summary"></p>
+                <p class="followup-summary bento-keep" id="home-followup-summary"></p>
                 <ul class="followup-list" id="home-followup-list"></ul>
                 <p class="hint" id="home-followup-empty" hidden data-i18n="homeFollowupEmpty">
                   All followed up ✓
@@ -1868,7 +1868,7 @@
               <h3 data-i18n="setHelp">Bantuan &amp; Tentang</h3>
               <div class="set-row">
                 <span data-i18n="setVersion">Versi</span>
-                <strong id="set-version-number">0.1.0 · Paket 37</strong>
+                <strong id="set-version-number">0.1.0 · Paket 38</strong>
               </div>
               <div class="set-row">
                 <span data-i18n="setContactLink">Kontak kantor</span>

@@ -54,6 +54,9 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   homeTrendHint: { en: "Cumulative IKM score after each survey answer.", id: "Skor IKM kumulatif setelah tiap jawaban survei." },
   homeTrendEmpty: { en: "Not enough answers yet for a trend.", id: "Jawaban belum cukup untuk menampilkan tren." },
   homeReportTitle: { en: "Monthly report", id: "Laporan bulanan" },
+  // Paket 38 — tombol lipat kartu Beranda.
+  homeCollapse: { en: "Collapse card", id: "Kecilkan kartu" },
+  homeExpand: { en: "Show details", id: "Tampilkan detail" },
   homeReportHint: {
     en: "Recap of this month's letters, survey and complaints — printable for the office file.",
     id: "Rekap surat, survei, dan pengaduan bulan berjalan — bisa dicetak untuk arsip kantor.",
