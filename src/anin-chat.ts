@@ -125,6 +125,13 @@ const ARCHIVE_RE =
 const CHECK_RE = /\b(periksa|cek)\b.*\b(surat|draf)\b/i;
 const REMINDERS_RE =
   /pengingat|tenggat|deadline|agenda besok|yang harus (dilakukan|dikerjakan|ditindaklanjuti)/i;
+// Paket 47 — pertanyaan DEFINISI tentang radar ("Apa itu radar tenggat?",
+// "Jelaskan radar tenggat") harus dijawab FAQ Radar, bukan ringkasan
+// pengingat: REMINDERS_RE di bawah juga cocok dengan kata "tenggat" dan
+// selalu menang bila diperiksa duluan. Pertanyaan DATA ("surat apa yang
+// mendekati tenggat?") tetap jatuh ke ringkasan pengingat.
+const RADAR_KB_RE =
+  /\bradar\b|apa itu.*(tenggat|deadline)|jelaskan.*(tenggat|radar)|cara (pakai|menggunakan|melihat).*radar|fungsi radar/i;
 
 /**
  * Route one user message. Order matters: greetings, navigation (explicit
@@ -161,6 +168,11 @@ export function classifyAninText(raw: string): AninIntent {
     return { kind: "archive", templateId: detectLetterType(text) };
   }
   if (CHECK_RE.test(text)) return { kind: "check" };
+  // Paket 47 — definisi radar dulu, sebelum ringkasan pengingat.
+  if (RADAR_KB_RE.test(text)) {
+    const entry = ANIN_KB.find((e) => e.id === "radar-tenggat");
+    if (entry) return { kind: "appkb", entry };
+  }
   if (REMINDERS_RE.test(text)) return { kind: "reminders" };
 
   // 3. Letter command: create verb + "surat" → Surat Cepat parser.

@@ -33,8 +33,41 @@ export interface AgendaEntry {
   createdAt: number; // epoch ms (recorded at)
 }
 
+/** Tanggal contoh relatif terhadap hari ini (Paket 47) — sama seperti
+ * pengaduan: data contoh tidak boleh membusuk. `days` negatif = hari
+ * lalu, positif = hari depan. */
+function seedDate(now: Date, days: number, hour: number, minute: number): number {
+  const d = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + days,
+    hour,
+    minute,
+    0,
+    0,
+  );
+  return d.getTime();
+}
+
+/** "Dicatat pada" tidak boleh di masa depan (Paket 47): tanggal surat
+ * boleh jatuh besok/lusa (undangan acara mendatang), tapi pencatatan
+ * di buku agenda terjadi hari ini. */
+function seedRecordedAt(now: Date, t: number, deltaMs: number): number {
+  return Math.min(t + deltaMs, now.getTime() - 60_000);
+}
+
 // 4 SAMPLE agenda entries (2 masuk, 2 keluar; 2 belum selesai).
-export const AGENDA_SEED: AgendaEntry[] = [
+// Paket 47 — tanggal RELATIF terhadap hari penyemaian (dulu tetap
+// 18–21 Nov 2026). Offset hari: ags-1 -1 (masuk, baru → lewat 1 hari),
+// ags-2 +1 (masuk, diproses → besok), ags-3 +2 (keluar, selesai),
+// ags-4 -3 (keluar, selesai). Radar mendapat campuran: 1 lewat + 1
+// mendekati dari agenda, ditambah 2 pengaduan lama.
+export function buildAgendaSeed(now = new Date()): AgendaEntry[] {
+  const t1 = seedDate(now, -1, 8, 0);
+  const t2 = seedDate(now, 1, 10, 0);
+  const t3 = seedDate(now, 2, 9, 0);
+  const t4 = seedDate(now, -3, 13, 0);
+  return [
   {
     id: "ags-demo-1",
     nomorAgenda: "001/AGS/2026",
@@ -42,10 +75,10 @@ export const AGENDA_SEED: AgendaEntry[] = [
     nomorSurat: "470/12/DS-KTS/XI/2026",
     pihak: "Desa Katis",
     perihal: "Permohonan rekomendasi bantuan sosial",
-    tanggal: Date.UTC(2026, 10, 20, 8, 0),
+    tanggal: t1,
     disposisi: "Camat",
     status: "baru",
-    createdAt: Date.UTC(2026, 10, 20, 8, 5),
+    createdAt: seedRecordedAt(now, t1, 5 * 60_000),
   },
   {
     id: "ags-demo-2",
@@ -54,10 +87,10 @@ export const AGENDA_SEED: AgendaEntry[] = [
     nomorSurat: "421/88/Dindik/XI/2026",
     pihak: "Dinas Pendidikan Kab. Bangka Tengah",
     perihal: "Undangan sosialisasi BOS 2026",
-    tanggal: Date.UTC(2026, 10, 19, 10, 0),
+    tanggal: t2,
     disposisi: "Sekretaris",
     status: "diproses",
-    createdAt: Date.UTC(2026, 10, 19, 10, 15),
+    createdAt: seedRecordedAt(now, t2, 15 * 60_000),
   },
   {
     id: "ags-demo-3",
@@ -66,10 +99,10 @@ export const AGENDA_SEED: AgendaEntry[] = [
     nomorSurat: "470/45/Kec-Simp/XI/2026",
     pihak: "Desa Terak",
     perihal: "Balasan permohonan data penduduk",
-    tanggal: Date.UTC(2026, 10, 21, 9, 0),
+    tanggal: t3,
     disposisi: "Arsip",
     status: "selesai",
-    createdAt: Date.UTC(2026, 10, 21, 9, 10),
+    createdAt: seedRecordedAt(now, t3, 10 * 60_000),
   },
   {
     id: "ags-demo-4",
@@ -78,12 +111,13 @@ export const AGENDA_SEED: AgendaEntry[] = [
     nomorSurat: "005/Kec-Simp/XI/2026",
     pihak: "Bupati Bangka Tengah",
     perihal: "Laporan bulanan Kecamatan Oktober 2026",
-    tanggal: Date.UTC(2026, 10, 18, 13, 0),
+    tanggal: t4,
     disposisi: "Arsip",
     status: "selesai",
-    createdAt: Date.UTC(2026, 10, 18, 13, 20),
+    createdAt: seedRecordedAt(now, t4, 20 * 60_000),
   },
-];
+  ];
+}
 
 export interface AgendaStats {
   total: number;
@@ -189,6 +223,24 @@ function writeMeta(seeded: boolean): void {
   }
 }
 
+/** Demo contoh yang sudah lebih dari 6 hari tidak segar lagi (Paket 47)
+ * — lihat penjelasan di pengaduan.ts. HANYA bila semua rekaman masih
+ * data contoh; tanggal terbaru yang diperiksa adalah tanggal surat. */
+const DEMO_STALE_DAYS = 6;
+
+function demoSeedIsStale(items: AgendaEntry[]): boolean {
+  if (items.length === 0) return false;
+  if (!items.every((e) => isAgendaDemoRecord(e))) return false;
+  const newest = Math.max(...items.map((e) => e.tanggal));
+  const today = new Date();
+  const cutoff = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() - DEMO_STALE_DAYS,
+  ).getTime();
+  return newest < cutoff;
+}
+
 /** Load agenda entries; on first run seeds the 4 demo entries. */
 export function loadAgenda(): AgendaEntry[] {
   if (memoryItems) return [...memoryItems];
@@ -202,14 +254,19 @@ export function loadAgenda(): AgendaEntry[] {
     }
     seeded = readMeta().seeded;
     if (items.length === 0 && !seeded) {
-      items = AGENDA_SEED.map((e) => ({ ...e }));
+      items = buildAgendaSeed();
       seeded = true;
       saveAgenda(items);
       writeMeta(true);
     }
   } catch {
-    items = AGENDA_SEED.map((e) => ({ ...e }));
+    items = buildAgendaSeed();
     seeded = true;
+  }
+  // Paket 47 — data contoh lama disegarkan tanggalnya.
+  if (demoSeedIsStale(items)) {
+    items = buildAgendaSeed();
+    saveAgenda(items);
   }
   memoryItems = items;
   memoryDemo = seeded && items.every((e) => e.id.startsWith("ags-demo-"));

@@ -948,6 +948,11 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     en: "Agenda in %d day(s): %s — %s",
     id: "Agenda %d hari lagi: %s — %s",
   },
+  // Paket 47 — jatuh tempo hari ini (bukan "0 hari lagi").
+  p34ReminderAgendaHariIni: {
+    en: "Agenda today: %s — %s",
+    id: "Agenda hari ini: %s — %s",
+  },
   p34ReminderAgendaLewat: {
     en: "Agenda overdue %d day(s), not done: %s — %s",
     id: "Agenda lewat %d hari (belum selesai): %s — %s",
@@ -960,6 +965,12 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
   p34ReminderSummary: {
     en: "There are %d reminder(s) today: %s",
     id: "Ada %d pengingat hari ini: %s",
+  },
+  // Paket 47 — ringkasan pengingat menunjuk ke kartu Radar Tenggat
+  // (daftar lengkap dengan tanggal jatuh tempo ada di sana).
+  p34ReminderRadarHint: {
+    en: "See the Letter Deadline Radar card on Home for the full list with due dates.",
+    id: "Lihat kartu Radar Tenggat di Beranda untuk daftar lengkap dengan tanggal jatuh tempo.",
   },
   p34ReminderChip: {
     en: "Any reminders today?",
@@ -1000,8 +1011,8 @@ export const STRINGS: Record<string, { en: string; id: string }> = {
     id: "Lacak surat: di Beranda, cari kartu “Lacak Status Surat” lalu masukkan nomor tiket pengaduan (contoh ADU-2026-0001) atau nomor surat dari buku agenda — tanpa login. Statusnya tampil — Baru, Diproses, atau Selesai — beserta tanggal tiap langkah. Bila nomor tidak ditemukan, periksa lagi atau tanya petugas. Yang tampil hanya status surat itu, bukan data pribadi orang lain.",
   },
   aninFaqRadar: {
-    en: "The Letter Deadline Radar on the Home dashboard lists letters and complaints whose deadlines are near (within 3 days) or already past, from the app's own data. A mail-register entry is due 3 days after its letter date; a complaint is due 3 days after it was filed. When nothing is near its deadline, the card says so honestly.",
-    id: "Radar Tenggat Surat di Beranda menampilkan surat dan pengaduan yang jatuh temponya dekat (≤3 hari) atau sudah lewat, dari data aplikasi sendiri. Surat agenda jatuh tempo 3 hari setelah tanggal suratnya; pengaduan jatuh tempo 3 hari setelah dilaporkan. Bila tidak ada yang mendekati tenggat, kartunya menulis jujur.",
+    en: "The Letter Deadline Radar on the Home dashboard lists letters and complaints whose deadlines are near (within 3 days) or already past, from the app's own data. A mail-register entry is due on its letter date; a complaint is due 3 days after it was filed. When nothing is near its deadline, the card says so honestly.",
+    id: "Radar Tenggat Surat di Beranda menampilkan surat dan pengaduan yang jatuh temponya dekat (≤3 hari) atau sudah lewat, dari data aplikasi sendiri. Surat agenda jatuh tempo pada tanggal suratnya; pengaduan jatuh tempo 3 hari setelah dilaporkan. Bila tidak ada yang mendekati tenggat, kartunya menulis jujur.",
   },
   aninFaqStatistik: {
     en: "The Subdistrict Statistics card on the Home dashboard shows open figures for residents — letters saved this month, mail-register entries this month, IKM respondents, and resolved complaints — all from the DesaAI app's own data. The IKM score itself is shown only once on the Home dashboard, in the IKM Score card; the statistics card shows the number of respondents and a button to the IKM tab.",

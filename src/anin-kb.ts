@@ -217,7 +217,7 @@ export const ANIN_KB: AninKbEntry[] = [
     id: "statistik-warga",
     titleId: "Statistik Kecamatan",
     titleEn: "Subdistrict statistics",
-    keywords: ["statistik kecamatan", "statistik warga", "data kecamatan", "jumlah surat bulan", "statistik desaai", "angka kecamatan", "statistik pelayanan", "data terbuka"],
+    keywords: ["statistik kecamatan", "statistik warga", "statistik untuk warga", "warga bisa melihat", "data kecamatan", "jumlah surat bulan", "statistik desaai", "angka kecamatan", "statistik pelayanan", "data terbuka"],
     answerKey: "aninFaqStatistik",
   },
   {
@@ -275,19 +275,39 @@ export const ANIN_KB: AninKbEntry[] = [
   },
 ];
 
-/** Best-matching app entry for a question, or null. Keyword scoring like kb.ts. */
+/** Best-matching app entry for a question, or null. Keyword scoring like kb.ts.
+ * Paket 47 — seri skor diputus oleh KEKHUSUSAN, bukan urutan daftar:
+ * dulu "Di mana warga bisa melihat statistik kecamatan?" seri 3–3 antara
+ * "warga bisa" (Mode Warga) dan "statistik kecamatan" (Statistik
+ * Kecamatan), dan Mode Warga menang hanya karena lebih dulu di daftar.
+ * Kini kata kunci yang lebih panjang (lebih spesifik) menang; bila masih
+ * seri, yang cocok dengan lebih banyak kata kunci menang. */
 export function matchAninKb(question: string): AninKbEntry | null {
   const q = question.toLowerCase();
   let best: AninKbEntry | null = null;
   let bestScore = 0;
+  let bestKwLen = 0;
+  let bestKwCount = 0;
   for (const e of ANIN_KB) {
     let score = 0;
+    let kwLen = 0;
+    let kwCount = 0;
     for (const kw of e.keywords) {
-      if (q.includes(kw)) score += kw.length > 4 ? 3 : 1;
+      if (q.includes(kw)) {
+        score += kw.length > 4 ? 3 : 1;
+        kwCount += 1;
+        kwLen = Math.max(kwLen, kw.length);
+      }
     }
-    if (score > bestScore) {
+    const moreSpecific =
+      score === bestScore &&
+      score > 0 &&
+      (kwLen > bestKwLen || (kwLen === bestKwLen && kwCount > bestKwCount));
+    if (score > bestScore || moreSpecific) {
       bestScore = score;
       best = e;
+      bestKwLen = kwLen;
+      bestKwCount = kwCount;
     }
   }
   return bestScore >= 3 ? best : null;

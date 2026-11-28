@@ -48,20 +48,67 @@ export interface IkmResponse {
 
 // 12 SAMPLE responses (scores are a mix of 3 and 4 only — never all 4).
 // Mean = 390 / (12 x 9) = 3.611 -> IKM 90.28, category A.
-export const IKM_SEED: IkmResponse[] = [
-  { id: "ikm-demo-1", nama: "Sari Wulandari", jenisSurat: "pengantar", scores: [4, 4, 3, 4, 3, 4, 4, 3, 3], komentar: "Pelayanan cepat, mohon ruang tunggu ditambah kursi.", createdAt: Date.UTC(2026, 10, 3, 9, 12) },
-  { id: "ikm-demo-2", nama: "", jenisSurat: "keterangan", scores: [3, 4, 4, 3, 4, 3, 4, 4, 3], komentar: "", createdAt: Date.UTC(2026, 10, 4, 10, 5) },
-  { id: "ikm-demo-3", nama: "Joko Santoso", jenisSurat: "undangan", scores: [4, 3, 4, 4, 3, 4, 3, 4, 3], komentar: "", createdAt: Date.UTC(2026, 10, 5, 13, 40) },
-  { id: "ikm-demo-4", nama: "", jenisSurat: "surat-dinas", scores: [3, 4, 3, 4, 4, 3, 4, 3, 4], komentar: "Petugas ramah dan menjelaskan syarat dengan jelas.", createdAt: Date.UTC(2026, 10, 6, 8, 55) },
-  { id: "ikm-demo-5", nama: "Maya Putri", jenisSurat: "sk-pengangkatan", scores: [4, 4, 4, 3, 3, 4, 4, 3, 3], komentar: "", createdAt: Date.UTC(2026, 10, 9, 11, 20) },
-  { id: "ikm-demo-6", nama: "", jenisSurat: "pengantar", scores: [3, 3, 4, 4, 4, 4, 3, 4, 3], komentar: "", createdAt: Date.UTC(2026, 10, 10, 14, 2) },
-  { id: "ikm-demo-7", nama: "Andi Firmansyah", jenisSurat: "keterangan", scores: [4, 4, 4, 4, 4, 4, 3, 3, 3], komentar: "Sudah bagus, dipertahankan.", createdAt: Date.UTC(2026, 10, 11, 9, 47) },
-  { id: "ikm-demo-8", nama: "", jenisSurat: "sk", scores: [4, 3, 4, 4, 4, 4, 4, 3, 3], komentar: "", createdAt: Date.UTC(2026, 10, 12, 15, 18) },
-  { id: "ikm-demo-9", nama: "Rina Marlina", jenisSurat: "undangan", scores: [3, 4, 4, 4, 4, 3, 4, 4, 3], komentar: "", createdAt: Date.UTC(2026, 10, 13, 10, 31) },
-  { id: "ikm-demo-10", nama: "", jenisSurat: "pengantar", scores: [4, 4, 3, 4, 4, 4, 3, 4, 3], komentar: "", createdAt: Date.UTC(2026, 10, 16, 12, 8) },
-  { id: "ikm-demo-11", nama: "Dedi Supriadi", jenisSurat: "keterangan", scores: [4, 4, 4, 3, 4, 4, 4, 3, 3], komentar: "Sarana parkir perlu diperluas.", createdAt: Date.UTC(2026, 10, 17, 9, 26) },
-  { id: "ikm-demo-12", nama: "", jenisSurat: "surat-dinas", scores: [3, 4, 4, 4, 4, 4, 4, 3, 3], komentar: "", createdAt: Date.UTC(2026, 10, 18, 16, 44) },
+// Paket 47 — tanggal contoh RELATIF terhadap hari ini (dulu tetap
+// 3–18 Nov 2026, sehingga begitu Desember tiba, laporan bulan berjalan
+// kehilangan semua jawaban IKM dan skor 90,28 hilang). Kini 12 jawaban
+// disebar merata di tanggal 1 s.d. hari ini pada bulan berjalan —
+// skornya (dari nilai yang sama) tetap 90,28 di bulan apa pun, dan
+// laporan bulan berjalan selalu punya data.
+interface IkmSeedBase {
+  id: string;
+  nama: string;
+  jenisSurat: string;
+  scores: number[];
+  komentar: string;
+  hour: number;
+  minute: number;
+}
+
+const IKM_SEED_BASE: IkmSeedBase[] = [
+  { id: "ikm-demo-1", nama: "Sari Wulandari", jenisSurat: "pengantar", scores: [4, 4, 3, 4, 3, 4, 4, 3, 3], komentar: "Pelayanan cepat, mohon ruang tunggu ditambah kursi.", hour: 9, minute: 12 },
+  { id: "ikm-demo-2", nama: "", jenisSurat: "keterangan", scores: [3, 4, 4, 3, 4, 3, 4, 4, 3], komentar: "", hour: 10, minute: 5 },
+  { id: "ikm-demo-3", nama: "Joko Santoso", jenisSurat: "undangan", scores: [4, 3, 4, 4, 3, 4, 3, 4, 3], komentar: "", hour: 13, minute: 40 },
+  { id: "ikm-demo-4", nama: "", jenisSurat: "surat-dinas", scores: [3, 4, 3, 4, 4, 3, 4, 3, 4], komentar: "Petugas ramah dan menjelaskan syarat dengan jelas.", hour: 8, minute: 55 },
+  { id: "ikm-demo-5", nama: "Maya Putri", jenisSurat: "sk-pengangkatan", scores: [4, 4, 4, 3, 3, 4, 4, 3, 3], komentar: "", hour: 11, minute: 20 },
+  { id: "ikm-demo-6", nama: "", jenisSurat: "pengantar", scores: [3, 3, 4, 4, 4, 4, 3, 4, 3], komentar: "", hour: 14, minute: 2 },
+  { id: "ikm-demo-7", nama: "Andi Firmansyah", jenisSurat: "keterangan", scores: [4, 4, 4, 4, 4, 4, 3, 3, 3], komentar: "Sudah bagus, dipertahankan.", hour: 9, minute: 47 },
+  { id: "ikm-demo-8", nama: "", jenisSurat: "sk", scores: [4, 3, 4, 4, 4, 4, 4, 3, 3], komentar: "", hour: 15, minute: 18 },
+  { id: "ikm-demo-9", nama: "Rina Marlina", jenisSurat: "undangan", scores: [3, 4, 4, 4, 4, 3, 4, 4, 3], komentar: "", hour: 10, minute: 31 },
+  { id: "ikm-demo-10", nama: "", jenisSurat: "pengantar", scores: [4, 4, 3, 4, 4, 4, 3, 4, 3], komentar: "", hour: 12, minute: 8 },
+  { id: "ikm-demo-11", nama: "Dedi Supriadi", jenisSurat: "keterangan", scores: [4, 4, 4, 3, 4, 4, 4, 3, 3], komentar: "Sarana parkir perlu diperluas.", hour: 9, minute: 26 },
+  { id: "ikm-demo-12", nama: "", jenisSurat: "surat-dinas", scores: [3, 4, 4, 4, 4, 4, 4, 3, 3], komentar: "", hour: 16, minute: 44 },
 ];
+
+export function buildIkmSeed(now = new Date()): IkmResponse[] {
+  const dom = now.getDate();
+  return IKM_SEED_BASE.map((r, i) => {
+    // Sebar merata di tanggal 1..hari ini (tanggal 1 bila bulan baru
+    // dimulai — semua jawaban jatuh di hari yang sama, tetap jujur).
+    const day = 1 + Math.floor((i * (dom - 1)) / (IKM_SEED_BASE.length - 1));
+    return {
+      id: r.id,
+      nama: r.nama,
+      jenisSurat: r.jenisSurat,
+      scores: [...r.scores],
+      komentar: r.komentar,
+      createdAt: Math.min(
+        // Jam jawaban terakhir (16:44) bisa jatuh setelah jam buka
+        // aplikasi bila tes berjalan pagi hari — jawaban tidak bisa
+        // dicatat di masa depan (Paket 47).
+        new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          day,
+          r.hour,
+          r.minute,
+          0,
+          0,
+        ).getTime(),
+        now.getTime() - 60_000,
+      ),
+    };
+  });
+}
 
 export type IkmCategory = "A" | "B" | "C" | "D";
 
@@ -133,6 +180,24 @@ function writeMeta(seeded: boolean): void {
   }
 }
 
+/** Demo contoh yang sudah lebih dari 6 hari tidak segar lagi (Paket 47)
+ * — lihat penjelasan di pengaduan.ts. HANYA bila semua jawaban masih
+ * data contoh; jawaban petugas tidak pernah disentuh. */
+const DEMO_STALE_DAYS = 6;
+
+function demoSeedIsStale(items: IkmResponse[]): boolean {
+  if (items.length === 0) return false;
+  if (!items.every((r) => isIkmDemoRecord(r))) return false;
+  const newest = Math.max(...items.map((r) => r.createdAt));
+  const today = new Date();
+  const cutoff = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() - DEMO_STALE_DAYS,
+  ).getTime();
+  return newest < cutoff;
+}
+
 /** Load responses; on first run seeds the 12 demo responses. */
 export function loadIkm(): IkmResponse[] {
   if (memoryItems) return [...memoryItems];
@@ -146,14 +211,20 @@ export function loadIkm(): IkmResponse[] {
     }
     seeded = readMeta().seeded;
     if (items.length === 0 && !seeded) {
-      items = IKM_SEED.map((r) => ({ ...r, scores: [...r.scores] }));
+      items = buildIkmSeed();
       seeded = true;
       saveIkm(items);
       writeMeta(true);
     }
   } catch {
-    items = IKM_SEED.map((r) => ({ ...r, scores: [...r.scores] }));
+    items = buildIkmSeed();
     seeded = true;
+  }
+  // Paket 47 — data contoh lama disegarkan tanggalnya (tetap di bulan
+  // berjalan, supaya skor IKM bulan ini tidak hilang).
+  if (demoSeedIsStale(items)) {
+    items = buildIkmSeed();
+    saveIkm(items);
   }
   memoryItems = items;
   memoryDemo = seeded && items.every((r) => r.id.startsWith("ikm-demo-"));

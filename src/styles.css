@@ -3150,7 +3150,10 @@ html[data-theme="dark"] .darurat-btn:hover {
   max-width: 1100px;
   width: 100%;
   margin: 0 auto;
-  padding: 16px 24px 48px;
+  /* Paket 47 — bantalan bawah 96px supaya kartu terakhir bisa di-scroll
+     sampai di atas FAB "Tanya Anin" (FAB ~56px + 16px dari bawah = 72px);
+     sebelumnya 48px sehingga ujung kartu bawah tertutup FAB di HP. */
+  padding: 16px 24px 96px;
 }
 
 /* Page head: judul + subjudul kiri, pill tanggal + lonceng kanan.

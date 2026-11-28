@@ -66,8 +66,40 @@ export function aduTimeline(a: Aduan): Array<{ status: AduanStatus; at: number |
   return steps;
 }
 
+/** Tanggal contoh relatif terhadap hari ini (Paket 47): data contoh
+ * tidak boleh membusuk. `days` negatif = hari lalu, positif = hari
+ * depan; jam/menit mengikuti jam contoh aslinya. */
+function seedDate(now: Date, days: number, hour: number, minute: number): number {
+  const d = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + days,
+    hour,
+    minute,
+    0,
+    0,
+  );
+  return d.getTime();
+}
+
+/** "Dicatat pada" tidak boleh berada di masa depan: pengaduan tidak
+ * bisa diajukan setelah sekarang (Paket 47 — jam contoh 13:55 bisa
+ * jatuh setelah jam buka aplikasi bila tes berjalan pagi hari UTC,
+ * sehingga urutan daftar berubah dan pengaduan baru tidak lagi
+ * tampil paling atas). */
+function seedCreatedAt(now: Date, days: number, hour: number, minute: number): number {
+  return Math.min(seedDate(now, days, hour, minute), now.getTime() - 60_000);
+}
+
 // 6 SAMPLE complaints (mixed statuses: 3 baru, 2 diproses, 1 selesai).
-export const ADUAN_SEED: Aduan[] = [
+// Paket 47 — tanggalnya RELATIF terhadap hari penyemaian (dulu tetap
+// 10–19 Nov 2026, sehingga begitu November lewat, semua contoh sudah
+// menunggu >3 hari dan Radar Tenggat menampilkan semuanya "lewat
+// tenggat"). Offset hari: demo-1 -1, demo-2 -2, demo-3 -5, demo-4 -8,
+// demo-5 -10, demo-6 0 — campuran jujur: 2 pengaduan lama (masuk radar
+// sebagai lewat tenggat) + sisanya belum masuk radar.
+export function buildAduanSeed(now = new Date()): Aduan[] {
+  return [
   {
     id: "adu-demo-1",
     // Paket 46 — tiket lacak diisi pada data contoh supaya warga bisa
@@ -79,7 +111,7 @@ export const ADUAN_SEED: Aduan[] = [
     isi: "Surat pengantar KTP sudah tiga hari belum selesai, padahal dijanjikan satu hari.",
     kontak: "0812-3456-8001",
     status: "baru",
-    createdAt: Date.UTC(2026, 10, 17, 9, 5),
+    createdAt: seedCreatedAt(now, -1, 9, 5),
   },
   {
     id: "adu-demo-2",
@@ -90,7 +122,7 @@ export const ADUAN_SEED: Aduan[] = [
     isi: "Syarat surat keterangan domisili berbeda-beda tiap kali ditanyakan, mohon daftar syarat dipasang di papan pengumuman.",
     kontak: "",
     status: "baru",
-    createdAt: Date.UTC(2026, 10, 18, 11, 30),
+    createdAt: seedCreatedAt(now, -2, 11, 30),
   },
   {
     id: "adu-demo-3",
@@ -101,7 +133,7 @@ export const ADUAN_SEED: Aduan[] = [
     isi: "Petugas di loket menjawab dengan nada tinggi saat ditanya prosedur.",
     kontak: "0812-3456-8002",
     status: "diproses",
-    createdAt: Date.UTC(2026, 10, 15, 14, 12),
+    createdAt: seedCreatedAt(now, -5, 14, 12),
   },
   {
     id: "adu-demo-4",
@@ -112,7 +144,7 @@ export const ADUAN_SEED: Aduan[] = [
     isi: "Diminta biaya administrasi padahal di papan informasi tertulis gratis.",
     kontak: "",
     status: "diproses",
-    createdAt: Date.UTC(2026, 10, 14, 10, 45),
+    createdAt: seedCreatedAt(now, -8, 10, 45),
   },
   {
     id: "adu-demo-5",
@@ -123,7 +155,7 @@ export const ADUAN_SEED: Aduan[] = [
     isi: "Ruang tunggu sempit dan panas, mohon ditambah kipas angin.",
     kontak: "",
     status: "selesai",
-    createdAt: Date.UTC(2026, 10, 10, 8, 20),
+    createdAt: seedCreatedAt(now, -10, 8, 20),
   },
   {
     id: "adu-demo-6",
@@ -134,9 +166,10 @@ export const ADUAN_SEED: Aduan[] = [
     isi: "Undangan musyawarah diterima H-1 sehingga banyak warga tidak sempat hadir.",
     kontak: "0812-3456-8003",
     status: "baru",
-    createdAt: Date.UTC(2026, 10, 19, 13, 55),
+    createdAt: seedCreatedAt(now, 0, 13, 55),
   },
-];
+  ];
+}
 
 export interface AduanStats {
   total: number;
@@ -203,6 +236,25 @@ function writeMeta(seeded: boolean): void {
   }
 }
 
+/** Demo contoh yang sudah lebih dari 6 hari tidak segar lagi (Paket 47):
+ * perbarui tanggalnya supaya radar + laporan bulanan tetap hidup di
+ * perangkat yang sudah lama memasang data contoh. HANYA bila semua
+ * rekaman masih data contoh — data petugas tidak pernah disentuh. */
+const DEMO_STALE_DAYS = 6;
+
+function demoSeedIsStale(items: Aduan[]): boolean {
+  if (items.length === 0) return false;
+  if (!items.every((a) => isAduanDemoRecord(a))) return false;
+  const newest = Math.max(...items.map((a) => a.createdAt));
+  const today = new Date();
+  const cutoff = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() - DEMO_STALE_DAYS,
+  ).getTime();
+  return newest < cutoff;
+}
+
 /** Load complaints; on first run seeds the 6 demo complaints. */
 export function loadAduan(): Aduan[] {
   if (memoryItems) return [...memoryItems];
@@ -216,14 +268,20 @@ export function loadAduan(): Aduan[] {
     }
     seeded = readMeta().seeded;
     if (items.length === 0 && !seeded) {
-      items = ADUAN_SEED.map((a) => ({ ...a }));
+      items = buildAduanSeed();
       seeded = true;
       saveAduan(items);
       writeMeta(true);
     }
   } catch {
-    items = ADUAN_SEED.map((a) => ({ ...a }));
+    items = buildAduanSeed();
     seeded = true;
+  }
+  // Paket 47 — data contoh lama (mis. November) disegarkan tanggalnya
+  // supaya radar tidak menampilkan semuanya "lewat tenggat".
+  if (demoSeedIsStale(items)) {
+    items = buildAduanSeed();
+    saveAduan(items);
   }
   memoryItems = items;
   memoryDemo = seeded && items.every((a) => a.id.startsWith("adu-demo-"));

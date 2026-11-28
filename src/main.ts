@@ -85,12 +85,7 @@ import {
   saveLetterhead,
   type LetterheadSettings,
 } from "./letterhead";
-import {
-  buildKegDocx,
-  buildMonthlyReportDocx,
-  DOCX_MIME,
-  type LaporanAgendaRow,
-} from "./laporan-docx";
+import { type LaporanAgendaRow } from "./laporan-docx";
 import {
   AGAMA_LIST,
   buildKepegawaianSummary,
@@ -1429,6 +1424,21 @@ function monthlyAttentionLines(): string[] {
   return attention;
 }
 
+/** Paket 47 — baris teks TTE CONTOH DEMO untuk area cetak (laporan,
+ * surat, arsip). Sama dengan blok di lembar layar: penandatangan dari
+ * kop surat (kosong = "—"), waktu + kode CONTOH yang tetap. BUKAN TTE
+ * resmi dan tidak berkekuatan hukum. */
+function tteDemoPrintLines(): string[] {
+  const lh = loadLetterhead();
+  return [
+    `${t("tteDemoTitle", lang)} — ${t("tteDemoLabel", lang)}`,
+    `${t("tteDemoSigner", lang)}: ${lh.camatNama.trim() || "—"}`,
+    `${t("tteDemoTime", lang)}: 01 Jan 2026 00:00 (CONTOH)`,
+    `${t("tteDemoCode", lang)}: CONTOH-XXXX-0000`,
+    t("tteDemoNote", lang),
+  ];
+}
+
 function printMonthlyReport(): void {
   const d = monthlyReportData(reportMonthDate);
   const lh = loadLetterhead();
@@ -1482,14 +1492,10 @@ function printMonthlyReport(): void {
     "Data contoh ditandai pada masing-masing modul (bukan data asli).",
   );
   // Paket 46 — TTE CONTOH DEMO di lembar laporan (bukan TTE resmi).
-  lines.push(
-    "",
-    `${t("tteDemoTitle", lang)} — ${t("tteDemoLabel", lang)}`,
-    `${t("tteDemoSigner", lang)}: ${lh.camatNama.trim() || "—"}`,
-    `${t("tteDemoTime", lang)}: 01 Jan 2026 00:00 (CONTOH)`,
-    `${t("tteDemoCode", lang)}: CONTOH-XXXX-0000`,
-    t("tteDemoNote", lang),
-  );
+  // Paket 47 — barisnya dipakai bersama tiga area cetak (laporan, surat,
+  // arsip) supaya cetakan tidak diam-diam menghilangkan blok demo yang
+  // ada di lembar layar.
+  lines.push("", ...tteDemoPrintLines());
   $("report-print-body").textContent = lines.join("\n");
   document.body.dataset.printTarget = "report";
   window.print();
@@ -1523,6 +1529,12 @@ async function exportMonthlyReportDocx(): Promise<void> {
   });
   const filename = `laporan-bulanan-${reportMonthYm()}.docx`;
   try {
+    // Paket 47 — `docx` di-load dinamis (chunk terpisah, bukan bagian
+    // bundle awal): bundle awal mengecil, dan ekspor tetap bekerja
+    // offline — chunk ter-cache service worker (cache-first, aset
+    // hashed) + modulepreload, dan modul yang sudah dimuat sekali
+    // tinggal di module map halaman.
+    const { buildMonthlyReportDocx } = await import("./laporan-docx");
     const blob = await buildMonthlyReportDocx({
       monthLabel: d.monthLabel,
       generatedLabel,
@@ -2287,7 +2299,11 @@ function renderRadar(): void {
       } else if (r.kind === "agenda-besok") {
         detail.textContent = `${r.detail} — ${t("radarDue", lang)} ${due} · ${lang === "id" ? "besok" : "tomorrow"}`;
       } else if (r.kind === "agenda-dekat") {
-        detail.textContent = `${r.detail} — ${t("radarDue", lang)} ${due} · ${r.days} ${t("radarDaysLeft", lang)}`;
+        // Paket 47 — jatuh tempo hari ini bukan "0 hari lagi".
+        detail.textContent =
+          r.days === 0
+            ? `${r.detail} — ${t("radarDue", lang)} ${due} · ${lang === "id" ? "hari ini" : "today"}`
+            : `${r.detail} — ${t("radarDue", lang)} ${due} · ${r.days} ${t("radarDaysLeft", lang)}`;
       } else {
         detail.textContent = `${t("radarDue", lang)} ${due} · ${r.days} ${t("radarWaiting", lang)}`;
       }
@@ -3217,6 +3233,9 @@ function initLetters(): void {
       year: "numeric",
     });
     $("letter-print-body").textContent = text;
+    // Paket 47 — cetakan membawa blok TTE CONTOH DEMO seperti lembar
+    // layar (sebelumnya cetakan diam-diam menghilangkannya).
+    $("letter-print-tte").textContent = tteDemoPrintLines().join("\n");
     // Which print area the @media print stylesheet shows.
     document.body.dataset.printTarget = "letter";
     window.print();
@@ -3756,6 +3775,10 @@ function initQa(): void {
         }
       };
       rec.onerror = (ev) => {
+        // Paket 47 — bila onend tidak menyusul error, tombol tidak boleh
+        // macet dalam keadaan mendengarkan + nonaktif.
+        qaMicBtn.classList.remove("listening");
+        qaMicBtn.disabled = false;
         setStatus(
           status,
           t("aninVoiceMicError", lang).replace("%s", String(ev.error ?? "?")),
@@ -3905,28 +3928,38 @@ async function speakText(text: string): Promise<boolean> {
 // pengingat (Ide 3). All local, all from real data; Anin never invents
 // a number, a template, or a reminder.
 
-/** One reminder as a full sentence (chat answers). */
+/** One reminder as a full sentence (chat answers). Paket 47 — tiap
+ * kalimat menyertakan tanggal jatuh tempo eksplisit (dari `dueAt`,
+ * sama seperti kartu Radar Tenggat), supaya jawaban "tenggat" Anin
+ * lengkap, bukan sekadar hitungan hari. */
 function formatReminderSentence(r: Reminder): string {
+  let base: string;
   if (r.kind === "agenda-besok") {
-    return t("p34ReminderAgendaBesok", lang)
+    base = t("p34ReminderAgendaBesok", lang)
       .replace("%s", r.title)
       .replace("%s", r.detail);
-  }
-  if (r.kind === "agenda-dekat") {
-    return t("p34ReminderAgendaDekat", lang)
+  } else if (r.kind === "agenda-dekat") {
+    // Paket 47 — jatuh tempo hari ini bukan "0 hari lagi".
+    base =
+      r.days === 0
+        ? t("p34ReminderAgendaHariIni", lang)
+            .replace("%s", r.title)
+            .replace("%s", r.detail)
+        : t("p34ReminderAgendaDekat", lang)
+            .replace("%d", String(r.days))
+            .replace("%s", r.title)
+            .replace("%s", r.detail);
+  } else if (r.kind === "agenda-lewat") {
+    base = t("p34ReminderAgendaLewat", lang)
       .replace("%d", String(r.days))
       .replace("%s", r.title)
       .replace("%s", r.detail);
-  }
-  if (r.kind === "agenda-lewat") {
-    return t("p34ReminderAgendaLewat", lang)
-      .replace("%d", String(r.days))
+  } else {
+    base = t("p34ReminderAduanLama", lang)
       .replace("%s", r.title)
-      .replace("%s", r.detail);
+      .replace("%d", String(r.days));
   }
-  return t("p34ReminderAduanLama", lang)
-    .replace("%s", r.title)
-    .replace("%d", String(r.days));
+  return `${base} · ${t("radarDue", lang)} ${fmtTanggalSingkat(r.dueAt)}`;
 }
 
 /** Chat answer for "ada pengingat apa hari ini" — honest "none" when empty. */
@@ -3945,7 +3978,7 @@ function formatReminderSummary(s: ReminderSummary): string {
     .replace("%d", String(s.total))
     .replace("%s", parts.join(", "));
   const lines = s.items.slice(0, 5).map((r) => `• ${formatReminderSentence(r)}`);
-  return [head, ...lines].join("\n");
+  return [head, ...lines, t("p34ReminderRadarHint", lang)].join("\n");
 }
 
 /** Fill one reminder list (Home widget or the Anin panel card). */
@@ -3972,7 +4005,11 @@ function renderReminderList(
     const detail = document.createElement("span");
     if (r.kind === "agenda-besok") detail.textContent = `${r.detail} — ${lang === "id" ? "besok" : "tomorrow"}`;
     else if (r.kind === "agenda-dekat")
-      detail.textContent = `${r.detail} — ${r.days} ${lang === "id" ? "hari lagi" : "day(s) left"}`;
+      // Paket 47 — jatuh tempo hari ini bukan "0 hari lagi".
+      detail.textContent =
+        r.days === 0
+          ? `${r.detail} — ${lang === "id" ? "hari ini" : "today"}`
+          : `${r.detail} — ${r.days} ${lang === "id" ? "hari lagi" : "day(s) left"}`;
     else if (r.kind === "agenda-lewat")
       detail.textContent = `${r.detail} — ${lang === "id" ? "lewat" : "overdue"} ${r.days} ${lang === "id" ? "hari" : "day(s)"}`;
     else
@@ -4338,6 +4375,11 @@ function initAninChat(): void {
         }
       };
       rec.onerror = (ev) => {
+        // Paket 47 — seperti mikrofon Tanya Prosedur: bila onend tidak
+        // menyusul error, tombol tidak boleh macet dalam keadaan
+        // mendengarkan.
+        micBtn.classList.remove("listening");
+        setChatStatus(t("aninChatStatusReady", lang));
         addMessage("anin", t("aninVoiceMicError", lang).replace("%s", String(ev.error ?? "?")));
       };
       rec.onend = () => {
@@ -5170,6 +5212,8 @@ function doArchivePrint(): void {
     printMetaRow("Kepada Yth.", printForm.tujuan),
   );
   $("archive-print-body").textContent = printForm.isi;
+  // Paket 47 — cetakan membawa blok TTE CONTOH DEMO seperti lembar layar.
+  $("archive-print-tte").textContent = tteDemoPrintLines().join("\n");
   const sign = $("archive-print-sign");
   sign.innerHTML = "";
   sign.appendChild(printSignBlock(printForm.tanggal));
@@ -5782,6 +5826,8 @@ async function exportKegDocx(): Promise<void> {
     year: "numeric",
   });
   try {
+    // Paket 47 — lihat exportMonthlyReportDocx: `docx` di-load dinamis.
+    const { buildKegDocx } = await import("./laporan-docx");
     const blob = await buildKegDocx(
       headRow,
       rows,
@@ -7068,6 +7114,20 @@ async function boot(): Promise<void> {
         e,
       );
     });
+  }
+
+  // Paket 47 — pemanasan chunk `docx` di latar belakang (setelah first
+  // paint, prioritas rendah): ekspor .docx pertama tetap instan, dan
+  // ekspor offline tetap bekerja walau pengguna belum pernah mengekspor
+  // sebelumnya — chunk sudah ada di module map + cache service worker.
+  // Gagal pemanasan tidak masalah: ekspor akan memuat chunk saat ditekan.
+  const warmDocx = (): void => {
+    void import("./laporan-docx").catch(() => undefined);
+  };
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(warmDocx, { timeout: 5000 });
+  } else {
+    window.setTimeout(warmDocx, 3000);
   }
 
   // Paket 34, Ide 4 — di mode verifikasi, tampilkan hasil dari arsip lokal

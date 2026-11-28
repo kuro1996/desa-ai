@@ -2,6 +2,9 @@
 node_modules/
 dist/
 
+# Headless-test artifacts (captured .docx files for python-docx validation).
+test-out/
+
 # Firebase web config — real values live ONLY here (never committed).
 # Copy firebase-config.example.js to src/firebase-config.js and fill it in.
 src/firebase-config.js

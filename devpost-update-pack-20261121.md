@@ -1,9 +1,11 @@
 # Devpost Update Pack — DesaAI (project 1305863)
-Disiapkan 2026-11-21 (Paket 6). **Diperbarui 2026-11-28 (Paket 44 LIVE)** —
-Paket 30–44 LIVE di https://kuro1996.github.io/desa-ai/ (gh-pages
-`0fea5e3`, main `1ac26a4`); Paket 45 (Laporan Bulanan .docx) SELESAI
-dibangun (main `4136a99`, headless 426/426, PWA 16/16) tapi BELUM
-di-deploy — JANGAN klaim di Devpost sebelum LIVE.
+Disiapkan 2026-11-21 (Paket 6). **Diperbarui 2026-11-28 (Paket 47
+SELESAI DIBANGUN, belum live)** — Paket 45 + 46 LIVE di
+https://kuro1996.github.io/desa-ai/ (gh-pages `a741fa7`, main
+`40b3207`); Paket 47 (maksimalisasi 45+46: tanggal contoh relatif,
+KB radar, lazy-load docx, validasi python-docx) SELESAI dibangun
+(headless 449/449, PWA 16/16) tapi BELUM di-deploy — JANGAN klaim
+Paket 47 di Devpost sebelum LIVE.
 **Bos yang edit + submit sendiri** di
 https://devpost.com/software/desaai — batas edit **1 Des 2026 05:00 WIB**.
 Live: https://kuro1996.github.io/desa-ai/ — Repo: https://github.com/kuro1996/desa-ai
@@ -101,7 +103,8 @@ availability, and cost decide the routing, not convenience.
   community-satisfaction survey (PermenPAN-RB 14/2017, 9 elements,
   score = mean × 25), complaints tracked Baru → Diproses → Selesai,
   mail register with agenda numbers and disposition, personnel
-  administration for 10 villages, and a monthly report.
+  administration for 10 villages, and a monthly report that exports
+  a real .docx (plus print/PDF).
 - Real usage, not a demo dataset: survey answers are already being
   written to Firestore from the office (14 answers verified in the
   database), and the app is live at https://kuro1996.github.io/desa-ai/.
@@ -131,8 +134,8 @@ Prosedur (Procedure Q&A) · Arsip & Draf (Archive) · Data Kepegawaian
 
 **Tech:** Vite + TypeScript, Firebase AI Logic (Gemini Nano 4 on-device +
 cloud Gemini fallback), Firestore mirror (best-effort), localStorage-first
-so the office keeps working offline. 435 automated checks on every build
-(426 headless-Chrome + 16 PWA; see §4 for the one known flaky check).
+so the office keeps working offline. 453 automated checks on every build
+(437 headless-Chrome + 16 PWA; see §4 for the one known flaky check).
 Apache-2.0, public repo with a headless-Chrome verification script.
 
 ## 2. Yang baru sejak submit (untuk kolom "What's new" / pembaruan deskripsi)
@@ -600,14 +603,34 @@ Apache-2.0, public repo with a headless-Chrome verification script.
   surat", fragmen IKM dihapus dari ringkasan Briefing Pagi, baris
   Camat kini hanya "12 Responden"); garis tren IKM TETAP di tab IKM.
   Tes: **419/419 hijau**, PWA 16/16. **Status: LIVE (gh-pages
-  0fea5e3, main 3c7eb30 + addendum 1ac26a4) — INI yang live sekarang.**
-- **Paket 45 (28 Nov sore, SELESAI DIBANGUN — main `4136a99`,
-  headless 426/426, PWA 16/16 — tapi BELUM LIVE):**
-  Laporan Bulanan Otomatis — rekap surat/IKM/pengaduan per bulan,
-  ekspor **.docx asli** + cetak PDF; menutup celah lama "Export Word"
-  yang masih mengunduh CSV (termasuk tombol Export Word di tabel
-  kepegawaian — kini .docx asli). **Hanya sebut di Devpost bila Paket 45
-  sudah LIVE sebelum Bos submit.****
+  0fea5e3, main 3c7eb30 + addendum 1ac26a4) — digantikan Paket 45+46
+  (gh-pages a741fa7).**
+- **Paket 45 (28 Nov sore): Laporan Bulanan Otomatis** — rekap
+  surat/IKM/pengaduan per bulan, ekspor **.docx asli** + cetak PDF;
+  menutup celah lama "Export Word" yang masih mengunduh CSV
+  (termasuk tombol Export Word di tabel kepegawaian — kini .docx
+  asli). Tes: **426/426 hijau**, PWA 16/16. **Status: LIVE
+  (gh-pages a741fa7, main `4136a99`) — sudah boleh disebut di Devpost.**
+- **Paket 46 (28 Nov sore): Lacak Status Surat + Anin Suara +
+  Radar Tenggat + Statistik Warga + TTE Demo** — lacak nomor
+  tiket/surat tanpa login, tanya jawab pakai suara (Web Speech API,
+  fallback jujur bila tidak didukung), radar tenggat surat dengan
+  tanggal jatuh tempo eksplisit, statistik kecamatan untuk warga
+  (tanpa skor IKM — aturan Paket 44), blok TTE berlabel CONTOH DEMO
+  (bukan TTE resmi). Tes: **437/437 hijau**, PWA 16/16. **Status:
+  LIVE (gh-pages a741fa7, main `40b3207`) — INI yang live sekarang.**
+- **Paket 47 (28 Nov malam, SELESAI DIBANGUN — headless 449/449,
+  PWA 16/16 — tapi BELUM LIVE):** maksimalisasi 45+46 — tanggal
+  data contoh dibuat relatif terhadap hari ini (radar kini campuran
+  lewat + mendekati tenggat, bukan semuanya lewat; data contoh basi
+  disegarkan otomatis saat dibuka), jawaban Anin soal tenggat/radar
+  diperbaiki (definisi radar terjangkau, ringkasan pengingat kini
+  menyertakan tanggal jatuh tempo + petunjuk radar), routing KB
+  "warga" diperbaiki, tombol mikrofon tidak macet bila
+  SpeechRecognition tidak ada, pustaka `docx` di-load dinamis
+  (bundle awal 1,33 MB → 1,15 MB), .docx hasil ekspor divalidasi
+  dengan python-docx (bukan hanya cek struktural). **Hanya sebut di
+  Devpost bila Paket 47 sudah LIVE sebelum Bos submit.**
 
 ## 3. Checklist sebelum Bos tekan submit
 
@@ -622,9 +645,13 @@ Apache-2.0, public repo with a headless-Chrome verification script.
 - [ ] Video demo baru — dibuat TERAKHIR, setelah semua fix selesai
       (perintah Bos 28 Nov 17:05 WIB). Jangan submit video lama bila
       video baru sudah jadi; ganti link YouTube-nya di Devpost.
-- [ ] Bila Paket 45 sudah LIVE sebelum submit: tambahkan satu baris
-      ke §1 ("Monthly report exports a real .docx") dan ke §2.
-      Bila belum live: JANGAN sebut .docx di Devpost.
+- [ ] Paket 45 + 46 SUDAH LIVE — baris §1 "monthly report that
+      exports a real .docx" sudah ditambahkan di atas; tidak ada
+      lagi syarat "jangan sebut .docx".
+- [ ] Bila Paket 47 sudah LIVE sebelum submit: ubah angka §1 jadi
+      "465 automated checks (449 headless-Chrome + 16 PWA)" dan
+      tambahkan satu baris ke §2. Bila belum live: JANGAN sebut
+      Paket 47 di Devpost (angka §1 tetap 453/437).
 - [ ] Tambah screenshot baru (opsional tapi dianjurkan): Beranda
       Paket 44 (grid ikon + strip quick-stats) + panel chat Anin +
       tab IKM (tren).
@@ -646,9 +673,11 @@ Apache-2.0, public repo with a headless-Chrome verification script.
   melaporkan keduanya, saga cloud DITUTUP. Bila masih gagal,
   tersangka berikutnya: nilai kunci reCAPTCHA itu sendiri, atau
   override model di Remote Config.
-- **Paket 45 SELESAI DIBANGUN** (main `4136a99`, Laporan Bulanan
-  .docx asli + cetak PDF) tapi BELUM LIVE.
-  Jangan klaim di Devpost sebelum live.
+- **Paket 45 + 46 LIVE** (gh-pages `a741fa7`, main `40b3207`,
+  headless 437/437, PWA 16/16). Klaim .docx di Devpost sudah boleh.
+- **Paket 47 SELESAI DIBANGUN** (headless 449/449 dua run
+  berturut-turut, PWA 16/16) tapi BELUM LIVE. Jangan klaim di
+  Devpost sebelum deploy.
 - **Login masih demo** (`demo` / `demo123`, tertulis jelas di layar
   login). Login sungguhan DITUNDA Bos sampai aplikasi solid — jangan
   klaim keamanan login di Devpost.
@@ -666,8 +695,10 @@ Apache-2.0, public repo with a headless-Chrome verification script.
   offline) — butuh cek "Add to Home Screen" + chip Online.
 - **"Export Word" di tabel kepegawaian SUDAH diperbaiki Paket 45**
   (kini mengunduh .docx asli; tombol CSV tetap CSV sesuai label) —
-  tapi baru terverifikasi struktural (ZIP/MIME), belum dibuka di Word
-  sungguhan dan belum LIVE. Jangan klaim sebelum live.
+  terverifikasi dengan python-docx (dokumen terbaca kembali:
+  judul + tabel pegawai 25 baris) dan sudah LIVE. Yang belum:
+  dibuka di Word/LibreOffice sungguhan di perangkat nyata — jangan
+  klaim "teruji di Word" sebelum itu.
 - **Data kontak kantor (JANGAN diubah/dikarang):** Jl. Merdeka No 02
   Desa Katis, Kode Pos 33674 · 08117121844 · kec.spkatis2014@gmail.com
   · Facebook "kantor kecamatan simpangkatis" (teks saja, TANPA URL) ·
@@ -677,7 +708,12 @@ Apache-2.0, public repo with a headless-Chrome verification script.
 - **Tes headless tidak 100% stabil di VM ini** — baseline main bersih
   390/401; 1 cek flaky bawaan ("kepegawaian summary renders an
   offline recap without AI") gagal di baseline pra-Paket-12 juga.
-  Angka 419/419 adalah hasil run terakhir yang hijau, bukan jaminan
-  tiap run.
+  Angka 449/449 adalah hasil dua run hijau berturut-turut Paket 47
+  (28 Nov malam). Catatan: dua run pra-perbaikan Paket 47 hanya
+  mengeksekusi 445 dari 449 cek (4 cek tidak berjalan, penyebab
+  tidak teridentifikasi — hanya 1 cek yang kondisional menurut kode);
+  setelah perbaikan, dua run mengeksekusi semua 449 cek dan lolos.
+  Angka yang diklaim adalah hasil run terakhir yang hijau, bukan
+  jaminan tiap run.
 - **Nama tetap DesaAI** — rename Besuyak DIBATALKAN Bos 27 Nov 23:41.
   Jangan sebut nama lain di Devpost.

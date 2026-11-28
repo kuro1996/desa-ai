@@ -23,7 +23,8 @@
 // the "0 console errors / 0 failed requests" assertions and asserts zero
 // for everything else (local assets, app JS errors).
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { inflateRawSync } from "node:zlib";
 import puppeteer from "puppeteer-core";
@@ -63,6 +64,27 @@ function docxCheck(bytes) {
   const hasDocXml = buf.includes(Buffer.from("word/document.xml"));
   const hasContentTypes = buf.includes(Buffer.from("[Content_Types].xml"));
   return { buf, isZip, hasDocXml, hasContentTypes, xml: docxXml(buf) };
+}
+
+// Paket 47 — validate a captured .docx by READING it back with
+// python-docx (scripts/validate-docx.py): proves Word/LibreOffice can
+// actually open it, not just that the bytes look like OOXML. Writes the
+// bytes to test-out/ (gitignored) and returns the parsed document.
+const TEST_OUT = join(ROOT, "test-out");
+function validateDocxWithPython(bytes, filename) {
+  mkdirSync(TEST_OUT, { recursive: true });
+  const file = join(TEST_OUT, filename);
+  writeFileSync(file, Buffer.from(bytes));
+  try {
+    const out = execFileSync(
+      "python3",
+      [join(ROOT, "scripts", "validate-docx.py"), file],
+      { encoding: "utf8", timeout: 30000 },
+    );
+    return JSON.parse(out.trim().split("\n").pop());
+  } catch (e) {
+    return { file, ok: false, paragraphs: [], tables: [], error: String(e?.message ?? e) };
+  }
 }
 
 // Inflate word/document.xml from the .docx bytes via the central directory
@@ -1103,20 +1125,21 @@ async function main() {
       backToNow.emptyHidden && backToNow.hasScore,
       JSON.stringify(backToNow),
     );
-    // Tombol ‹ › menggeser bulan satu langkah.
+    // Tombol ‹ › menggeser bulan satu langkah. Paket 47 — hanya
+    // pergeserannya yang diuji di sini: dengan seed tanggal relatif,
+    // bulan sebelumnya bisa saja berisi data (agenda/pengaduan akhir
+    // bulan lalu), jadi "bulan sebelumnya kosong" bukan lagi jaminan.
+    // State kosong diuji terpisah lewat Januari 2026 di atas.
     await page.click("#home-report-prev");
     await sleep(300);
     const prevYm = await page.$eval("#home-report-month", (el) => el.value);
-    const prevEmpty = await page.evaluate(
-      () => document.getElementById("home-report-empty")?.hidden === false,
-    );
     await page.click("#home-report-next");
     await sleep(300);
     const nextYm = await page.$eval("#home-report-month", (el) => el.value);
     check(
       "prev/next buttons shift the report month by one",
-      prevYm !== nowYm && prevEmpty && nextYm === nowYm,
-      `prev=${prevYm} next=${nextYm} prevEmpty=${prevEmpty}`,
+      prevYm !== nowYm && nextYm === nowYm,
+      `prev=${prevYm} next=${nextYm}`,
     );
     // Ekspor .docx: tangkap Blob-nya dan periksa struktur ZIP + isi XML.
     const reportExportBtn = await page.$("#home-report-export");
@@ -1149,6 +1172,9 @@ async function main() {
     const docxCheck1 = docxCheck(docx1.bytes);
     const reportStatus = await page.$eval("#home-report-status", (el) => el.textContent ?? "");
     const expectFile = `laporan-bulanan-${nowYm}.docx`;
+    // Paket 47 — label bulan dihitung dari bulan berjalan (dulu
+    // hardcode "November 2026" — tes akan gagal tiap pergantian bulan).
+    const monthLabelId = nowDate.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
     check(
       "monthly report .docx is a real OOXML file (ZIP + word/document.xml + content)",
       docx1.type ===
@@ -1157,10 +1183,24 @@ async function main() {
         docxCheck1.hasDocXml &&
         docxCheck1.hasContentTypes &&
         /Laporan Bulanan/.test(docxCheck1.xml) &&
-        /November 2026/.test(docxCheck1.xml) &&
+        docxCheck1.xml.includes(monthLabelId) &&
         /90,28/.test(docxCheck1.xml) &&
         /Kecamatan Simpangkatis/.test(docxCheck1.xml),
       `type=${docx1.type} zip=${docxCheck1.isZip} docXml=${docxCheck1.hasDocXml} xmlLen=${docxCheck1.xml.length}`,
+    );
+    // Paket 47 — baca kembali .docx dengan python-docx: Word/LibreOffice
+    // harus bisa membukanya, bukan sekadar bytes yang tampak seperti OOXML.
+    const docx1Parsed = validateDocxWithPython(docx1.bytes, expectFile);
+    const docx1Text = [...docx1Parsed.paragraphs, ...docx1Parsed.tables.flat(2)].join("\n");
+    check(
+      "monthly report .docx opens in python-docx (readable document: title + month + score + tables)",
+      docx1Parsed.ok &&
+        /Laporan Bulanan/.test(docx1Text) &&
+        docx1Text.includes(monthLabelId) &&
+        /90,28/.test(docx1Text) &&
+        /Kecamatan Simpangkatis/.test(docx1Text) &&
+        docx1Parsed.tables.length >= 5,
+      `ok=${docx1Parsed.ok} tables=${docx1Parsed.tables.length} err=${docx1Parsed.error ?? ""}`,
     );
     check(
       "monthly report .docx export reports the filename",
@@ -1789,11 +1829,21 @@ async function main() {
       printed: window.__printed === true,
       body: document.getElementById("letter-print-body")?.textContent ?? "",
       title: document.getElementById("letter-print-title")?.textContent ?? "",
+      tte: document.getElementById("letter-print-tte")?.textContent ?? "",
     }));
     check(
       "letter print fills the print area and calls window.print()",
       printOk.printed && /musyawarah desa/i.test(printOk.body) && printOk.title.length > 0,
       `printed=${printOk.printed} title=${printOk.title}`,
+    );
+    // Paket 47 — cetakan surat membawa blok TTE CONTOH DEMO seperti
+    // lembar layar (sebelumnya cetakan diam-diam menghilangkannya).
+    check(
+      "Paket 47: letter print includes the labelled TTE demo block",
+      /CONTOH DEMO|DEMO EXAMPLE/.test(printOk.tte) &&
+        /CONTOH-XXXX-0000/.test(printOk.tte) &&
+        /bukan tanda tangan elektronik resmi|not an official electronic signature/.test(printOk.tte),
+      printOk.tte.slice(0, 120),
     );
     // The built CSS carries a real print stylesheet (checked on disk).
     const cssFiles = readdirSync(join(DIST, "assets")).filter((f) => f.endsWith(".css"));
@@ -2075,12 +2125,117 @@ async function main() {
       items: document.querySelectorAll("#home-radar-groups .notif-item").length,
       emptyHidden: document.getElementById("home-radar-empty")?.hidden ?? true,
       emptyText: document.getElementById("home-radar-empty")?.textContent ?? "",
+      groups: [...document.querySelectorAll("#home-radar-groups .radar-group-title")].map(
+        (h) => ({
+          title: h.textContent ?? "",
+          items: h.nextElementSibling?.querySelectorAll(".notif-item").length ?? 0,
+        }),
+      ),
     }));
     check(
       "Paket 46: radar tenggat — badge = jumlah baris, atau empty state jujur",
       Number(radar.count) === radar.items &&
         (radar.items > 0 ? radar.emptyHidden : !radar.emptyHidden && /Belum ada surat|No letters near/.test(radar.emptyText)),
       `count=${radar.count} items=${radar.items} emptyHidden=${radar.emptyHidden}`,
+    );
+    // Paket 47 — seed tanggal relatif: radar harus berisi CAMPURAN
+    // jujur (kelompok "Lewat tenggat" DAN "Mendekati tenggat"), bukan
+    // semuanya lewat tenggat seperti dulu.
+    check(
+      "Paket 47: radar tenggat berisi campuran lewat + mendekati (seed tanggal relatif)",
+      radar.groups.length === 2 &&
+        radar.groups.some((g) => /Lewat tenggat|Past deadline/.test(g.title) && g.items > 0) &&
+        radar.groups.some((g) => /Mendekati tenggat|Due within 3 days/.test(g.title) && g.items > 0),
+      JSON.stringify(radar.groups),
+    );
+    // Paket 47 — migrasi demo basi: data contoh lama (November 2026)
+    // yang sudah tersimpan di perangkat harus disegarkan tanggalnya
+    // saat aplikasi dibuka, supaya radar + laporan tidak membusuk.
+    // Tulis tanggal lama ke localStorage, reload, lalu periksa tanggal
+    // terbaru sudah segar (< 6 hari) dan radar tetap campuran.
+    await page.evaluate(() => {
+      const stale = (key, dateField) => {
+        try {
+          const items = JSON.parse(localStorage.getItem(key) ?? "[]");
+          items.forEach((it, i) => {
+            it[dateField] = Date.UTC(2026, 10, 3 + i, 9, 0);
+            if (it.createdAt !== undefined && dateField !== "createdAt") {
+              it.createdAt = Date.UTC(2026, 10, 3 + i, 9, 5);
+            }
+          });
+          localStorage.setItem(key, JSON.stringify(items));
+        } catch { /* keep old data */ }
+      };
+      stale("desaai-pengaduan-v1", "createdAt");
+      stale("desaai-agenda-v1", "tanggal");
+      stale("desaai-ikm-v1", "createdAt");
+    });
+    await page.reload({ waitUntil: "load" });
+    await sleep(1200);
+    const gateAfterReload = await page.evaluate(() => {
+      const scr = document.getElementById("login-screen");
+      return !!scr && !scr.hidden;
+    });
+    if (gateAfterReload) await loginDemo();
+    await sleep(500);
+    const refreshed = await page.evaluate(() => {
+      const newest = (key, field) => {
+        try {
+          const items = JSON.parse(localStorage.getItem(key) ?? "[]");
+          return items.length ? Math.max(...items.map((it) => it[field] ?? 0)) : 0;
+        } catch {
+          return 0;
+        }
+      };
+      const sixDaysAgo = Date.now() - 6 * 86400000;
+      return {
+        aduan: newest("desaai-pengaduan-v1", "createdAt") >= sixDaysAgo,
+        agenda: newest("desaai-agenda-v1", "tanggal") >= sixDaysAgo,
+        ikm: newest("desaai-ikm-v1", "createdAt") >= sixDaysAgo,
+      };
+    });
+    check(
+      "Paket 47: data contoh basi disegarkan tanggalnya saat dibuka (migrasi demo)",
+      refreshed.aduan && refreshed.agenda && refreshed.ikm,
+      JSON.stringify(refreshed),
+    );
+    const radarAfter = await page.evaluate(() => ({
+      groups: [...document.querySelectorAll("#home-radar-groups .radar-group-title")].map(
+        (h) => ({
+          title: h.textContent ?? "",
+          items: h.nextElementSibling?.querySelectorAll(".notif-item").length ?? 0,
+        }),
+      ),
+    }));
+    check(
+      "Paket 47: radar tetap campuran setelah migrasi demo basi",
+      radarAfter.groups.length === 2 &&
+        radarAfter.groups.some((g) => /Lewat tenggat|Past deadline/.test(g.title) && g.items > 0) &&
+        radarAfter.groups.some((g) => /Mendekati tenggat|Due within 3 days/.test(g.title) && g.items > 0),
+      JSON.stringify(radarAfter.groups),
+    );
+    // Paket 47 — bantalan bawah konten (96px) supaya kartu Beranda
+    // terakhir bisa di-scroll sampai di atas FAB "Tanya Anin"
+    // (dulu 48px: ujung kartu bawah tertutup FAB di HP).
+    const mainPadBottom = await page.evaluate(() => {
+      const m = document.querySelector(".app-content main");
+      return m ? getComputedStyle(m).paddingBottom : "";
+    });
+    check(
+      "Paket 47: bottom padding clears the floating Anin button",
+      Number.parseInt(mainPadBottom, 10) >= 80,
+      `padding-bottom=${mainPadBottom}`,
+    );
+    // Paket 47 — `docx` di-load dinamis: chunk terpisah ada di dist dan
+    // bundle awal mengecil (dulu 1.332 kB, kini < 1,2 MB).
+    const jsAssets47 = readdirSync(join(DIST, "assets")).filter((f) => f.endsWith(".js"));
+    const mainJs47 = jsAssets47.find((f) => f.startsWith("index-"));
+    const docxChunk47 = jsAssets47.find((f) => f.startsWith("laporan-docx-"));
+    check(
+      "Paket 47: docx lazy-loaded as a separate chunk (smaller initial bundle)",
+      !!docxChunk47 && !!mainJs47 &&
+        readFileSync(join(DIST, "assets", mainJs47)).length < 1_200_000,
+      jsAssets47.join(","),
     );
     const stat = await page.evaluate(() => {
       const card = document.querySelector('[data-card="statistik"]');
@@ -2134,8 +2289,36 @@ async function main() {
     const micStatus = await page.$eval("#qa-status", (el) => el.textContent);
     check(
       "Paket 46: Anin Suara — tombol mikrofon ada + fallback jujur bila API tidak tersedia",
-      micExists && /belum mendukung suara|does not support voice|couldn'?t be used|could not be used|tidak bisa dipakai/i.test(micStatus),
+      micExists && /belum mendukung suara|tidak didukung browser|not supported by this browser|couldn'?t be used|could not be used|tidak bisa dipakai/i.test(micStatus),
       micStatus.slice(0, 80),
+    );
+    // Paket 47 — bila SpeechRecognition TIDAK ADA SAMA SEKALI
+    // (peramban lama), klik mikrofon harus langsung memberi pesan
+    // jujur "belum mendukung suara" — tanpa crash, tanpa tombol macet
+    // nonaktif. Bayangi konstruktornya, lalu kembalikan lagi supaya
+    // tes mic chat Anin di bawah tidak terpengaruh.
+    await page.evaluate(() => {
+      try {
+        Object.defineProperty(window, "SpeechRecognition", { value: undefined, configurable: true });
+      } catch { /* already absent */ }
+      try {
+        Object.defineProperty(window, "webkitSpeechRecognition", { value: undefined, configurable: true });
+      } catch { /* already absent */ }
+    });
+    await page.click("#qa-mic");
+    await sleep(400);
+    const micNoApi = await page.evaluate(() => ({
+      status: document.getElementById("qa-status")?.textContent ?? "",
+      disabled: document.getElementById("qa-mic")?.disabled ?? true,
+    }));
+    await page.evaluate(() => {
+      try { delete window.SpeechRecognition; } catch { /* ignore */ }
+      try { delete window.webkitSpeechRecognition; } catch { /* ignore */ }
+    });
+    check(
+      "Paket 47: Anin Suara — tanpa SpeechRecognition, pesan jujur + tombol tidak macet",
+      /tidak didukung browser|not supported by this browser/i.test(micNoApi.status) && !micNoApi.disabled,
+      `${micNoApi.status.slice(0, 80)} disabled=${micNoApi.disabled}`,
     );
 
     // 4f. Paket 46 — FAQ fitur baru hidup di KB Anin (anin-kb.ts), BUKAN
@@ -3159,6 +3342,20 @@ async function main() {
         kegDocxStatus.includes(`daftar-pegawai-${todayStamp()}.docx`),
       `type=${kegDocx.type} zip=${kegDocxCheck.isZip} docXml=${kegDocxCheck.hasDocXml} status=${kegDocxStatus}`,
     );
+    // Paket 47 — baca kembali .docx kepegawaian dengan python-docx:
+    // tabel harus utuh (header + 24 baris pegawai, sama seperti layar).
+    const kegParsed = validateDocxWithPython(kegDocx.bytes, `daftar-pegawai-${todayStamp()}.docx`);
+    const kegTable = kegParsed.tables[0] ?? [];
+    const kegText = [...kegParsed.paragraphs, ...kegParsed.tables.flat(2)].join("\n");
+    check(
+      "kepegawaian .docx opens in python-docx (title + full staff table)",
+      kegParsed.ok &&
+        /Administrasi Kecamatan Simpangkatis|Simpangkatis Subdistrict Administration/.test(kegText) &&
+        kegTable.length === 25 &&
+        kegTable[0]?.includes("Nama") &&
+        kegText.includes("Ahmad Fauzi"),
+      `ok=${kegParsed.ok} rows=${kegTable.length} err=${kegParsed.error ?? ""}`,
+    );
     // Mode Warga hides the whole staff tab, export button included.
     await page.click("#mode-toggle");
     await sleep(200);
@@ -3495,6 +3692,7 @@ async function main() {
       body: document.getElementById("archive-print-body")?.textContent ?? "",
       meta: document.getElementById("archive-print-meta")?.textContent ?? "",
       target: document.body.dataset.printTarget ?? "",
+      tte: document.getElementById("archive-print-tte")?.textContent ?? "",
     }));
     check(
       "archive print fills the print area and calls window.print()",
@@ -3504,6 +3702,15 @@ async function main() {
         /140\/\d{3}\/DS\//.test(archivePrint.meta) &&
         archivePrint.target === "archive-letter",
       `printed=${archivePrint.printed} target=${archivePrint.target} meta=${archivePrint.meta.slice(0, 80)}`,
+    );
+    // Paket 47 — cetakan arsip membawa blok TTE CONTOH DEMO seperti
+    // lembar layar (sebelumnya cetakan diam-diam menghilangkannya).
+    check(
+      "Paket 47: archive print includes the labelled TTE demo block",
+      /CONTOH DEMO|DEMO EXAMPLE/.test(archivePrint.tte) &&
+        /CONTOH-XXXX-0000/.test(archivePrint.tte) &&
+        /bukan tanda tangan elektronik resmi|not an official electronic signature/.test(archivePrint.tte),
+      archivePrint.tte.slice(0, 120),
     );
     // Offline: printing still works with the preview already open (no new
     // fetches — the logo is already cached from the page header).
@@ -3864,12 +4071,15 @@ async function main() {
     const aduAfterAdd = await page.evaluate(() => ({
       baru: Number(document.getElementById("adu-stat-baru")?.textContent ?? 0),
       items: document.querySelectorAll("#adu-list .aduan-item").length,
-      firstText: document.querySelector("#adu-list .aduan-item")?.textContent ?? "",
+      // Paket 47 — cari berdasarkan isi, bukan posisi pertama: urutan
+      // daftar mengikuti tanggal, dan entri contoh bisa lebih baru.
+      found: [...document.querySelectorAll("#adu-list .aduan-item")].some((li) =>
+        /tertunda tiga hari/.test(li.textContent ?? "")),
     }));
     check(
       "pengaduan submit adds a complaint",
-      aduAfterAdd.items === 7 && aduAfterAdd.baru === 4 && /tertunda tiga hari/.test(aduAfterAdd.firstText),
-      `items=${aduAfterAdd.items} baru=${aduAfterAdd.baru}`,
+      aduAfterAdd.items === 7 && aduAfterAdd.baru === 4 && aduAfterAdd.found,
+      `items=${aduAfterAdd.items} baru=${aduAfterAdd.baru} found=${aduAfterAdd.found}`,
     );
     await page.select("#adu-list .aduan-item:first-child .aduan-status", "selesai");
     await sleep(400);
@@ -4206,18 +4416,23 @@ async function main() {
     await page.type("#agenda-in-perihal", "Permohonan data warga pindah");
     await page.click("#agenda-submit");
     await sleep(400);
-    const agsAfterAdd = await page.evaluate(() => ({
-      masuk: Number(document.getElementById("agenda-stat-masuk")?.textContent ?? 0),
-      belum: Number(document.getElementById("agenda-stat-belum")?.textContent ?? 0),
-      items: document.querySelectorAll("#agenda-list .aduan-item").length,
-      firstText: document.querySelector("#agenda-list .aduan-item")?.textContent ?? "",
-    }));
+    const agsAfterAdd = await page.evaluate((year) => {
+      const items = [...document.querySelectorAll("#agenda-list .aduan-item")];
+      // Paket 47 — cari entri baru berdasarkan nomor + perihal, bukan
+      // posisi pertama: daftar diurutkan menurut tanggal surat, dan
+      // entri contoh ada yang bertanggal besok/lusa.
+      const found = items.find((li) => /Permohonan data warga pindah/.test(li.textContent ?? ""));
+      return {
+        masuk: Number(document.getElementById("agenda-stat-masuk")?.textContent ?? 0),
+        belum: Number(document.getElementById("agenda-stat-belum")?.textContent ?? 0),
+        items: items.length,
+        found: !!found && new RegExp(`005/AGS/${year}`).test(found.textContent ?? ""),
+      };
+    }, agsYear);
     check(
       "agenda submit adds an entry with the next auto number",
-      agsAfterAdd.items === 5 && agsAfterAdd.masuk === 3 && agsAfterAdd.belum === 3 &&
-        new RegExp(`005/AGS/${agsYear}`).test(agsAfterAdd.firstText) &&
-        /Permohonan data warga pindah/.test(agsAfterAdd.firstText),
-      `items=${agsAfterAdd.items} masuk=${agsAfterAdd.masuk} belum=${agsAfterAdd.belum}`,
+      agsAfterAdd.items === 5 && agsAfterAdd.masuk === 3 && agsAfterAdd.belum === 3 && agsAfterAdd.found,
+      `items=${agsAfterAdd.items} masuk=${agsAfterAdd.masuk} belum=${agsAfterAdd.belum} found=${agsAfterAdd.found}`,
     );
     await page.select("#agenda-filter-arah", "keluar");
     await sleep(300);
@@ -4225,7 +4440,21 @@ async function main() {
     check("agenda direction filter shows outgoing letters", agsKeluar === 2, `${agsKeluar} items`);
     await page.select("#agenda-filter-arah", "");
     await sleep(200);
-    await page.select("#agenda-list .aduan-item:first-child .aduan-status", "selesai");
+    // Paket 47 — ubah status entri yang MASIH belum selesai (bukan
+    // item pertama: daftar diurutkan menurut tanggal surat, item
+    // pertama bisa jadi surat bertanggal lusa yang sudah selesai).
+    await page.evaluate(() => {
+      const items = [...document.querySelectorAll("#agenda-list .aduan-item")];
+      const target = items.find((li) => {
+        const sel = li.querySelector(".aduan-status");
+        return sel && (sel.value === "baru" || sel.value === "diproses");
+      });
+      const sel = target?.querySelector(".aduan-status");
+      if (sel) {
+        sel.value = "selesai";
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
     await sleep(400);
     const agsAfterStatus = await page.evaluate(() => ({
       belum: Number(document.getElementById("agenda-stat-belum")?.textContent ?? 0),
@@ -5408,9 +5637,28 @@ async function main() {
       /Radar Tenggat|Deadline Radar/.test(radarAnswer) && /3 hari|3 days/.test(radarAnswer),
       radarAnswer.slice(0, 120),
     );
-    // Tanpa kata "warga" — kata itu saja sudah seri skor dengan entri
-    // Mode Warga yang lebih dulu di KB.
-    const statAnswer = await aninAsk("Di mana saya bisa melihat statistik kecamatan?");
+    // Paket 47 — pertanyaan DEFINISI radar ("Apa itu radar tenggat?")
+    // harus dijawab FAQ Radar, bukan ringkasan pengingat.
+    const radarDefAnswer = await aninAsk("Apa itu radar tenggat?");
+    check(
+      "Paket 47: Anin menjawab definisi radar tenggat (bukan ringkasan pengingat)",
+      /Radar Tenggat|Deadline Radar/.test(radarDefAnswer) && /tanggal suratnya|letter date/.test(radarDefAnswer),
+      radarDefAnswer.slice(0, 120),
+    );
+    // Paket 47 — ringkasan pengingat kini menyertakan tanggal jatuh
+    // tempo tiap item + petunjuk ke kartu Radar Tenggat.
+    const reminderAnswer = await aninAsk("Ada pengingat apa hari ini?");
+    check(
+      "Paket 47: Anin menjawab pengingat dengan tanggal jatuh tempo + petunjuk radar",
+      /pengingat|reminder/i.test(reminderAnswer) &&
+        /Jatuh tempo|Due/.test(reminderAnswer) &&
+        /Radar Tenggat|Deadline Radar/.test(reminderAnswer),
+      reminderAnswer.slice(0, 200),
+    );
+    // Paket 47 — kata "warga" tidak lagi menjebak ke Mode Warga: seri
+    // skor kini diputus kekhususan kata kunci ("statistik kecamatan"
+    // lebih panjang dari "warga bisa").
+    const statAnswer = await aninAsk("Di mana warga bisa melihat statistik kecamatan?");
     check(
       "Paket 46: Anin menjawab FAQ statistik warga dari KB Anin",
       /Statistik Kecamatan|Subdistrict Statistics/.test(statAnswer) &&
