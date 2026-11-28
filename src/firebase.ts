@@ -109,11 +109,18 @@ export async function initFirebase(): Promise<FirebaseServices> {
       appCheckEnabled = true;
     }
 
-    // Gemini Developer API backend. Limited-use App Check tokens are required
-    // by generative models when App Check is enforced.
+    // Gemini Developer API backend.
+    // NOTE (Paket 32.2, 28 Nov 2026): do NOT pass useLimitedUseAppCheckTokens
+    // while App Check enforcement for AI Logic is OFF (console: "Unenforced",
+    // enforcement starts 21 Jan 2027). With the flag on, every AI call first
+    // fetches a limited-use reCAPTCHA Enterprise token; when that fetch fails
+    // the call dies client-side and ZERO requests reach the AI Logic API
+    // (proven: console showed no requests; Node test with site Referer got a
+    // real Gemini answer in 11s). Re-enable the flag ONLY after the
+    // reCAPTCHA key is verified (domain allowlist includes
+    // kuro1996.github.io) and enforcement is actually on.
     const ai = getAI(app, {
       backend: new GoogleAIBackend(),
-      ...(appCheckEnabled ? { useLimitedUseAppCheckTokens: true } : {}),
     });
 
     const auth = getAuth(app);
